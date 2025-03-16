@@ -23,6 +23,12 @@ doc:
   cp -r src/install doc/public/
   deno run --allow-all npm:vitepress build .
 
+# Build documentation.
+[windows]
+doc:
+  Copy-Item -Recurse -Path src/install -Destination doc/public/
+  deno run --allow-all npm:vitepress build .
+
 # Check code formatting.
 [unix]
 format:
@@ -60,12 +66,14 @@ setup: _setup
 _setup:
   #!/usr/bin/env sh
   set -eu
+  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ | sed s/aarch64/arm64/)"
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if [ ! -x "$(command -v jq)" ]; then
-    ./src/install/jq.sh --dest .vendor/bin
+    src/install/jq.sh --dest .vendor/bin
   fi
   jq --version
   if [ ! -x "$(command -v nu)" ]; then
-    ./src/install/nushell.sh --dest .vendor/bin
+    src/install/nushell.sh --dest .vendor/bin
   fi
   echo "Nushell $(nu --version)"
   if [ ! -x "$(command -v deno)" ]; then
@@ -82,6 +90,14 @@ _setup:
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
+  if [ ! -x "$(command -v shfmt)" ]; then
+    shfmt_version="$(curl  --fail --location --show-error \
+      https://formulae.brew.sh/api/formula/shfmt.json |
+      jq --exit-status --raw-output .versions.stable)"
+    curl --fail --location --show-error --output /tmp/shfmt \
+      "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${arch}"
+    install /tmp/shfmt .vendor/bin/
+  fi
   bats --version
 
 [windows]

@@ -271,7 +271,7 @@ main() {
         shift 2
         ;;
       -g | --global)
-        dst_dir="${dst_dir:-'/usr/local/bin'}"
+        dst_dir="${dst_dir:-/usr/local/bin}"
         shift 1
         ;;
       -h | --help)

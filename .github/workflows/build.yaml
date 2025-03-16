@@ -50,10 +50,9 @@ jobs:
         # run: "& src/install/just.ps1 --dest 'C:/Windows'"
       - name: Install Just for Unix
         if: ${{ runner.os != 'Windows' }}
-        run: src/install/just.sh --dest /usr/local/bin
+        run: src/install/just.sh --global
       - name: Run commands
-        run: just setup format lint test
-        # run: just setup format lint test doc
+        run: just setup format lint test doc
       - name: Setup Tmate session if debug enabled
         if: >-
           ${{ always() && github.event_name == 'workflow_dispatch' &&
