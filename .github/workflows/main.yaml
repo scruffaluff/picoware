@@ -1,0 +1,119 @@
+# GitHub Actions workflow file.
+#
+# For more information, visit
+# https://docs.github.com/actions/learn-github-actions.
+
+---
+name: main
+
+# Makes workflow run on any push or pull request.
+on:
+  pull_request:
+    branches:
+      - "**"
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      debug:
+        default: false
+        description: Use Tmate session for debugging
+        type: boolean
+
+env:
+  DENO_DIR: "${{ github.workspace }}/.vendor/deno"
+
+jobs:
+  build:
+    if: github.ref_type == 'branch'
+    name: Run code analyses and test suites
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu
+          - windows
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          path: |
+            .vendor
+            node_modules
+      - name: Install Just for Windows
+        if: ${{ runner.os == 'Windows' }}
+        run: choco install --yes just
+        # run: "& src/install/just.ps1 --dest 'C:/Windows'"
+      - name: Install Just for Unix
+        if: ${{ runner.os != 'Windows' }}
+        run: src/install/just.sh --global
+      - name: Run CI workflow commands
+        run: just ci
+      - name: Setup Tmate session if debug enabled
+        if: >-
+          ${{ always() && github.event_name == 'workflow_dispatch' &&
+          inputs.debug }}
+        timeout-minutes: 60
+        uses: mxschmitt/action-tmate@v3
+
+  pages:
+    environment:
+      name: github-pages
+    if: github.ref == 'refs/heads/main'
+    name: Build and publish documentation
+    permissions:
+      id-token: write
+      pages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          path: |
+            .vendor
+            node_modules
+      - name: Install Just
+        run: src/install/just.sh --dest /usr/local/bin
+      - name: Build documentation
+        run: just setup doc
+      - name: Upload documentation
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages
+          path: build/site
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages
+      - name: Setup Tmate session if debug enabled
+        if: >-
+          ${{ always() && github.event_name == 'workflow_dispatch' &&
+          inputs.debug }}
+        timeout-minutes: 60
+        uses: mxschmitt/action-tmate@v3
+
+  release:
+    if: github.ref_type == 'tag'
+    name: Make GitHub release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: >-
+            See the [changelog](https://github.com/scruffaluff/scripts/blob/${{
+            github.ref_name }}/CHANGELOG.md) for more information.
+          name: Scripts ${{ github.ref_name }}
+          tag_name: ${{ github.ref }}
