@@ -55,19 +55,20 @@ jobs:
           path: |
             .vendor
             node_modules
-      - name: Install Just for Windows
-        if: ${{ runner.os == 'Windows' }}
-        run: choco install --yes just
-        # run: "& src/install/just.ps1 --dest 'C:/Windows'"
-      - name: Install Just for Unix
-        if: ${{ runner.os != 'Windows' }}
+      - if: ${{ runner.os == 'Windows' }}
+        name: Install Just for Windows
+        run: "& src/install/just.ps1 --dest 'C:/Windows'"
+      - if: ${{ runner.os != 'Windows' }}
+        name: Install Just for Unix
         run: src/install/just.sh --global
-      - name: Run CI workflow commands
+      - if: ${{ runner.os == 'Windows' }}
+        name: Run CI workflow commands
+        run: just setup format lint test
+      - if: ${{ runner.os != 'Windows' }}
+        name: Run CI workflow commands
         run: just ci
-      - name: Setup Tmate session if debug enabled
-        if: >-
-          ${{ always() && github.event_name == 'workflow_dispatch' &&
-          inputs.debug }}
+      - if: ${{ always() && inputs.debug }}
+        name: Launch Tmate session if debug enabled
         timeout-minutes: 60
         uses: mxschmitt/action-tmate@v3
 
@@ -103,10 +104,8 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages
-      - name: Setup Tmate session if debug enabled
-        if: >-
-          ${{ always() && github.event_name == 'workflow_dispatch' &&
-          inputs.debug }}
+      - if: ${{ always() && inputs.debug }}
+        name: Launch Tmate session if debug enabled
         timeout-minutes: 60
         uses: mxschmitt/action-tmate@v3
 
@@ -125,3 +124,7 @@ jobs:
             github.ref_name }}/CHANGELOG.md) for more information.
           name: Scripts ${{ github.ref_name }}
           tag_name: ${{ github.ref }}
+      - if: ${{ always() && inputs.debug }}
+        name: Launch Tmate session if debug enabled
+        timeout-minutes: 60
+        uses: mxschmitt/action-tmate@v3
