@@ -23,7 +23,6 @@ on:
 
 env:
   DENO_DIR: "${{ github.workspace }}/.vendor/deno"
-  PATH: "${{ github.workspace }}/.vendor/bin:${{ env.PATH }}"
 
 jobs:
   build:
@@ -47,10 +46,10 @@ jobs:
             node_modules
       - name: Install Just for Windows
         if: ${{ runner.os == 'Windows' }}
-        run: "& src/install/just.ps1 --dest .vendor/bin"
+        run: "& /install/just.ps1 --dest 'C:/Windows'"
       - name: Install Just for Unix
         if: ${{ runner.os != 'Windows' }}
-        run: src/install/just.sh --dest .vendor/bin
+        run: src/install/just.sh --dest /usr/local/bin
       - name: Run commands
         run: just setup format lint test doc
       - name: Setup Tmate session if debug enabled

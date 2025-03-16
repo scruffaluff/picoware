@@ -1,9 +1,10 @@
 #!/usr/bin/env bats
 
 setup() {
-  export PATH="${BATS_TEST_DIRNAME}/..:${PATH}"
-  load '../node_modules/bats-assert/load'
-  load '../node_modules/bats-support/load'
+  REPO_PATH="${BATS_TEST_DIRNAME}/.."
+  cd "${REPO_PATH}" || exit
+  load "${REPO_PATH}/.vendor/lib/bats-assert/load"
+  load "${REPO_PATH}/.vendor/lib/bats-support/load"
 
   # Disable logging to simplify stdout for testing.
   export SCRIPTS_NOLOG='true'
@@ -30,7 +31,7 @@ setup() {
   export -f curl
 }
 
-@test 'Installer passes local path to Curl' {
+installer_passes_local_path_to_curl() { # @test
   local actual expected
   expected="curl --fail --location --show-error --silent --output \
 ${HOME}/.local/bin/otherscript \
@@ -40,7 +41,7 @@ https://raw.githubusercontent.com/scruffaluff/scripts/develop/src/script/othersc
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'JSON parser finds all POSIX scripts' {
+json_parser_finds_all_posix_scripts() { # @test
   local actual expected
   expected=$'mockscript\notherscript'
 
@@ -48,13 +49,14 @@ https://raw.githubusercontent.com/scruffaluff/scripts/develop/src/script/othersc
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Installer uses sudo when destination is not writable' {
+installer_uses_sudo_when_destination_is_not_writable() { # @test
   local actual expected
 
   # Mock functions for child processes by printing received arguments.
   #
   # Args:
   #   -f: Use override as a function instead of a variable.
+  # shellcheck disable=SC2317
   sudo() {
     echo "sudo $*"
     exit 0

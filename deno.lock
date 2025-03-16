@@ -1,7 +1,6 @@
 {
   "version": "4",
   "specifiers": {
-    "npm:bats@^1.11.0": "1.11.1",
     "npm:prettier-plugin-sh@0.15": "0.15.0_prettier@3.5.3",
     "npm:prettier@^3.5.3": "3.5.3",
     "npm:vitepress@^1.6.3": "1.6.3_vite@5.4.14_vue@3.5.13_focus-trap@7.6.4"
@@ -553,9 +552,6 @@
         "@algolia/requester-node-http"
       ]
     },
-    "bats@1.11.1": {
-      "integrity": "sha512-Dh26FsiLog+wwQeTkboYo2xYj9rUaPEbibUobnYb3G3M9hva/Kby00wrAN9VB9qqGVhl/pYjjt/LVBWwjXlD2A=="
-    },
     "birpc@0.2.19": {
       "integrity": "sha512-5WeXXAvTmitV1RqJFppT5QtUiz2p1mRSYU000Jkft5ZUCLJIk4uQriYNO50HknxKwM6jd8utNc66K1qGIwwWBQ=="
     },
@@ -957,7 +953,6 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:bats@^1.11.0",
         "npm:prettier-plugin-sh@0.15",
         "npm:prettier@^3.5.3",
         "npm:vitepress@^1.6.3"

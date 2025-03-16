@@ -6,7 +6,8 @@ set windows-shell := ['powershell.exe', '-NoLogo', '-Command']
 export PATH := if os() == "windows" {
   justfile_dir() / ".vendor/bin;" + env_var("Path")
 } else {
-  justfile_dir() / ".vendor/bin:" + env_var("PATH")
+  justfile_dir() / ".vendor/bin:" + justfile_dir() / 
+  ".vendor/lib/bats-core/bin:" + env_var("PATH")
 }
 
 # List all commands available in justfile.
@@ -39,12 +40,8 @@ format:
 lint:
   #!/usr/bin/env sh
   set -eu
-  bats_files="$(find . -type f -name '*.bats' -not -path '*/node_modules/*')"
-  for file in ${bats_files}; do
-    shellcheck --shell bash "${file}"
-  done
-  sh_files="$(find . -type f -name '*.sh' -not -path '*/node_modules/*')"
-  for file in ${sh_files}; do
+  files="$(find src test -type f -name '*.sh' -o -name '*.bats')"
+  for file in ${files}; do
     shellcheck "${file}"
   done
 
@@ -75,6 +72,16 @@ _setup:
       sh -s -- --no-modify-path --yes
   fi
   deno --version
+  mkdir -p .vendor/bin .vendor/lib
+  for spec in 'assert:v2.1.0' 'core:v1.11.1' 'support:v0.3.0'; do
+    pkg="${spec%:*}"
+    tag="${spec#*:}"
+    if [ ! -d ".vendor/lib/bats-${pkg}" ]; then
+      git clone --branch "${tag}" --depth 1 \
+        "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
+    fi
+  done
+  bats --version
 
 [windows]
 _setup:
@@ -114,7 +121,7 @@ _setup:
 # Run test suites.
 [unix]
 test:
-  deno run --allow-all npm:bats --recursive test
+  bats --recursive test
 
 # Run test suites.
 [windows]

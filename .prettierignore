@@ -3,7 +3,6 @@
 # For more information, visit https://prettier.io/docs/en/ignore.html.
 
 .git/
-*.bats
 *.nu
 /.vendor/
 /.vitepress/cache/
