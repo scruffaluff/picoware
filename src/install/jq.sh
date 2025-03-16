@@ -38,7 +38,8 @@ EOF
 #   Optional permissions for file.
 #######################################
 download() {
-  super="${1}" url="${2}" dst_file="${3}" mode="${4:-}"
+  local super="${1}" url="${2}" dst_file="${3}" mode="${4:-}"
+  local dst_dir=''
 
   # Create parent directory if it does not exist.
   #
@@ -62,12 +63,8 @@ download() {
   elif [ -x "$(command -v wget)" ]; then
     ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
-    log error "$(
-      cat << EOF
-Unable to find a network file downloader.
-Install curl, https://curl.se, manually before continuing.
-EOF
-    )"
+    log --stderr 'error: Unable to find a network file downloader.'
+    log --stderr 'Install curl, https://curl.se, manually before continuing.'
     exit 1
   fi
 
@@ -84,7 +81,7 @@ EOF
 # Find command to elevate as super user.
 #######################################
 find_super() {
-  # Do not use long form --user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
@@ -96,7 +93,7 @@ find_super() {
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
   else
-    log error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation'
     exit 1
   fi
 }
@@ -109,10 +106,11 @@ find_super() {
 #   Path to temporary Jq binary.
 #######################################
 install_jq() {
-  target="${1}" version="${2}" dst_dir="${3}"
-  dst_file="${dst_dir}/jq"
+  local user="${1}" version="${2}" dst_dir="${3}"
+  local dst_file="${dst_dir}/jq"
 
-  # Do not use long form --machine flag for uname. It is not supported on MacOS.
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
   #   -m: Show system architecture name.
@@ -122,7 +120,7 @@ install_jq() {
   os="$(uname -s | sed s/Darwin/macos/ | sed s/Linux/linux/)"
 
   # Get super user elevation command for system installation if necessary.
-  if [ "${target}" = 'system' ]; then
+  if [ -z "${user}" ]; then
     super="$(find_super)"
   else
     super=''
@@ -145,6 +143,8 @@ install_jq() {
 #   Message.
 #######################################
 log() {
+  local file='1' newline="\n" text=''
+
   # Exit early if environment variable is set.
   #
   # Flags:
@@ -153,28 +153,28 @@ log() {
     return
   fi
 
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
   case "${1}" in
-    error)
+    -e | --stderr)
+      file='2'
       shift 1
-      if [ -t 2 ]; then
-        printf "\033[1;31mError: %s\033[0m\n" "${1}" >&2
-      else
-        printf "Error: %s\n" "${1}" >&2
-      fi
+      ;;
+    -n | --no-newline)
+      newline=''
+      shift 1
       ;;
     *)
-      echo "${1}"
+      text="${1}"
       ;;
   esac
+
+  printf '%s%s' "${text}" "${newline}" >&"${file}"
 }
 
 #######################################
 # Script entrypoint.
 #######################################
 main() {
-  dst_dir='/usr/local/bin' target='system' version=''
+  local dst_dir='/usr/local/bin' user='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -193,7 +193,7 @@ main() {
         ;;
       -u | --user)
         dst_dir="${HOME}/.local/bin"
-        target='user'
+        user='true'
         shift 1
         ;;
       -v | --version)
@@ -201,14 +201,14 @@ main() {
         shift 2
         ;;
       *)
-        log error "No such option '${1}'."
-        echo "Run 'install-jq --help' for usage" >&2
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'install-jq --help' for usage"
         exit 2
         ;;
     esac
   done
 
-  install_jq "${target}" "${version}" "${dst_dir}"
+  install_jq "${user}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

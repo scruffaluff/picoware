@@ -68,8 +68,8 @@ _setup:
   fi
   echo "Nushell $(nu --version)"
   if [ ! -x "$(command -v deno)" ]; then
-    DENO_INSTALL="$(pwd)/.vendor" curl -fsSL https://deno.land/install.sh | \
-      sh -s -- --no-modify-path --yes
+    export DENO_INSTALL="$(pwd)/.vendor"
+    curl -fsSL https://deno.land/install.sh | sh -s -- --no-modify-path --yes
   fi
   deno --version
   mkdir -p .vendor/bin .vendor/lib

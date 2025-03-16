@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 #
 # Install Just for MacOS and Linux systems. This script differs from
-# https://just.systems/install.sh by the Homebrew API to find the latest Just
-# version and avoid GitHub API rate limits.
+# https://just.systems/install.sh by using the Homebrew API to avoid GitHub API
+# rate limits.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -122,7 +122,7 @@ find_latest() {
   elif [ -x "$(command -v wget)" ]; then
     response="$(wget -q -O - "${url}")"
   else
-    log --stderr 'Error: Unable to find a network file downloader.'
+    log --stderr 'error: Unable to find a network file downloader.'
     log --stderr 'Install curl, https://curl.se, manually before continuing.'
     exit 1
   fi
@@ -148,7 +148,7 @@ find_super() {
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
   else
-    log --stderr 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation'
     exit 1
   fi
 }
@@ -161,7 +161,7 @@ find_super() {
 #   Path to temporary Just binary.
 #######################################
 install_just() {
-  local system="${1}" version="${2}" dst_dir="${3}"
+  local user="${1}" version="${2}" dst_dir="${3}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
   # Parse Just build target.
@@ -183,13 +183,13 @@ install_just() {
       target="${arch}-unknown-linux-musl"
       ;;
     *)
-      log --stderr "Error: Unsupported operating system '${os}'."
+      log --stderr "error: Unsupported operating system '${os}'."
       exit 1
       ;;
   esac
 
   # Get super user elevation command for system installation if necessary.
-  if [ "${system}" = 'system' ]; then
+  if [ -z "${user}" ]; then
     super="$(find_super)"
   else
     super=''
@@ -217,7 +217,6 @@ install_just() {
 
 #######################################
 # Print message if logging is enabled.
-# https://www.nushell.sh/commands/docs/print.html
 # Globals:
 #   SCRIPTS_NOLOG
 # Outputs:
@@ -255,7 +254,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='/usr/local/bin' system='system' version=''
+  local dst_dir='/usr/local/bin' user='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -274,7 +273,7 @@ main() {
         ;;
       -u | --user)
         dst_dir="${HOME}/.local/bin"
-        system='user'
+        user='true'
         shift 1
         ;;
       -v | --version)
@@ -282,7 +281,7 @@ main() {
         shift 2
         ;;
       *)
-        log --stderr "No such option '${1}'."
+        log --stderr "error: No such option '${1}'."
         echo "Run 'install-just --help' for usage" >&2
         exit 2
         ;;
@@ -292,7 +291,7 @@ main() {
   if [ -z "${version}" ]; then
     version="$(find_latest)"
   fi
-  install_just "${system}" "${version}" "${dst_dir}"
+  install_just "${user}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.
