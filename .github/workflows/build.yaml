@@ -52,7 +52,8 @@ jobs:
         if: ${{ runner.os != 'Windows' }}
         run: src/install/just.sh --dest /usr/local/bin
       - name: Run commands
-        run: just setup format lint test doc
+        run: just setup format lint test
+        # run: just setup format lint test doc
       - name: Setup Tmate session if debug enabled
         if: >-
           ${{ always() && github.event_name == 'workflow_dispatch' &&

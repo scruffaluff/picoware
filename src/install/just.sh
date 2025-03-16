@@ -56,7 +56,7 @@ download() {
   # Download with Curl or Wget.
   #
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -122,7 +122,7 @@ find_latest() {
   local response='' url='https://formulae.brew.sh/api/formula/just.json'
 
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -143,6 +143,8 @@ find_latest() {
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
   # Do not use long form flags for id. They are not supported on some systems.
@@ -163,11 +165,11 @@ find_super() {
 }
 
 #######################################
-# Download Just binary to temporary path.
+# Download and install Just.
 # Arguments:
-#   Operating system name.
-# Outputs:
-#   Path to temporary Just binary.
+#   Super user command for installation.
+#   Just version.
+#   Destination path.
 #######################################
 install_just() {
   local super="${1}" version="${2}" dst_dir="${3}"
@@ -260,7 +262,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir="${HOME}/.local/bin" super='' version=''
+  local dst_dir='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -275,7 +277,6 @@ main() {
         ;;
       -g | --global)
         dst_dir="${dst_dir:-'/usr/local/bin'}"
-        super="$(find_super)"
         shift 1
         ;;
       -h | --help)
@@ -298,7 +299,15 @@ main() {
     esac
   done
 
+  # Find super user command if destination is not writable.
+  #
+  # Flags:
+  #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  if ! mkdir -p "${dst_dir}" > /dev/null 2>&1 || [ ! -w "${dst_dir}" ]; then
+    super="$(find_super)"
+  fi
+
   if [ -z "${version}" ]; then
     version="$(find_latest)"
   fi

@@ -1,7 +1,6 @@
 {
   "devDependencies": {
     "prettier": "^3.5.3",
-    "prettier-plugin-sh": "^0.15.0",
     "vitepress": "^1.6.3"
   },
   "private": true,

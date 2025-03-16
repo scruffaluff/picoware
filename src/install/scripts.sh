@@ -95,7 +95,7 @@ download() {
   # Download with Curl or Wget.
   #
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -231,7 +231,7 @@ find_scripts() {
   url="https://api.github.com/repos/scruffaluff/scripts/git/trees/${1}?recursive=true"
 
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -255,6 +255,8 @@ EOF
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
   # Do not use long form flags for id. They are not supported on some systems.
@@ -404,7 +406,6 @@ main() {
     esac
   done
 
-  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   scripts="$(find_scripts "${version}")"
 
   # Flags:
@@ -414,21 +415,31 @@ main() {
     for script in ${scripts}; do
       echo "${script%.*}"
     done
-  else
-    for name in ${names}; do
-      match_found=''
-      for script in ${scripts}; do
-        if [ "${script%.*}" = "${name}" ]; then
-          match_found='true'
-          install_script "${super}" "${version}" "${dst_dir}" "${script}"
-        fi
-      done
+    return
+  fi
 
-      if [ -z "${match_found:-}" ]; then
-        error_usage "No script found for '${names}'."
+  # Find super user command if destination is not writable.
+  #
+  # Flags:
+  #   -w: Check if file exists and is writable.
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  if ! mkdir -p "${dst_dir}" > /dev/null 2>&1 || [ ! -w "${dst_dir}" ]; then
+    super="$(find_super)"
+  fi
+
+  for name in ${names}; do
+    match_found=''
+    for script in ${scripts}; do
+      if [ "${script%.*}" = "${name}" ]; then
+        match_found='true'
+        install_script "${super}" "${version}" "${dst_dir}" "${script}"
       fi
     done
-  fi
+
+    if [ -z "${match_found:-}" ]; then
+      error_usage "No script found for '${names}'."
+    fi
+  done
 }
 
 # Add ability to selectively skip main function during test suite.

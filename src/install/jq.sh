@@ -54,7 +54,7 @@ download() {
   # Download with Curl or Wget.
   #
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -80,6 +80,8 @@ download() {
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
   # Do not use long form flags for id. They are not supported on some systems.
@@ -187,7 +189,6 @@ main() {
         ;;
       -g | --global)
         dst_dir="${dst_dir:-'/usr/local/bin'}"
-        super="$(find_super)"
         shift 1
         ;;
       -h | --help)
@@ -210,7 +211,15 @@ main() {
     esac
   done
 
+  # Find super user command if destination is not writable.
+  #
+  # Flags:
+  #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  if ! mkdir -p "${dst_dir}" > /dev/null 2>&1 || [ ! -w "${dst_dir}" ]; then
+    super="$(find_super)"
+  fi
+
   install_jq "${super}" "${version}" "${dst_dir}"
 }
 

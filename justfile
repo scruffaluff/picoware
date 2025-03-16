@@ -27,6 +27,7 @@ doc:
 [unix]
 format:
   deno run --allow-all npm:prettier --check .
+  shfmt --diff src test
 
 # Check code formatting.
 [windows]

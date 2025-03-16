@@ -54,7 +54,7 @@ download() {
   # Download with Curl or Wget.
   #
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -84,7 +84,7 @@ download() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin=''
+  local jq_bin='' tmp_dir='' url='https://scruffaluff.github.io/scripts/install/jq.sh'
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -97,9 +97,18 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
+    if [ -x "$(command -v curl)" ]; then
+      response="$(curl --fail --location --show-error --silent "${url}")"
+    elif [ -x "$(command -v wget)" ]; then
+      response="$(wget -q -O - "${url}")"
+    else
+      log --stderr 'error: Unable to find a network file downloader.'
+      log --stderr 'Install curl, https://curl.se, manually before continuing.'
+      exit 1
+    fi
+
     tmp_dir="$(mktemp -d)"
-    curl -LSfs https://scruffaluff.github.io/scripts/install/jq/sh | sh -s -- \
-      --quiet --dest "${tmp_dir}"
+    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi
 }
@@ -111,7 +120,7 @@ find_latest() {
   local response='' url='https://formulae.brew.sh/api/formula/nushell.json'
 
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
@@ -132,6 +141,8 @@ find_latest() {
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
   # Do not use long form --user flag for id. It is not supported on MacOS.
@@ -153,22 +164,19 @@ find_super() {
 #######################################
 # Download and install Nushell.
 # Arguments:
-#   Super user command for installation
-#   Nushell version
-#   Destination path
-# Globals:
-#   SCRIPTS_NOLOG
-# Outputs:
-#   Log message to stdout.
+#   Super user command for installation.
+#   Nushell version.
+#   Destination path.
 #######################################
 install_nushell() {
-  super="${1}" version="${2}" dst_dir="${3}"
+  local super="${1}" version="${2}" dst_dir="${3}"
+  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
   arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
   os="$(uname -s)"
   case "${os}" in
     Darwin)
-      stem="nu-${version}-${arch}-apple-darwin"
+      target="nu-${version}-${arch}-apple-darwin"
       ;;
     FreeBSD)
       log "Installing Nushell to '/usr/local/bin/nu'."
@@ -178,7 +186,7 @@ install_nushell() {
       exit 0
       ;;
     Linux)
-      stem="nu-${version}-${arch}-unknown-linux-musl"
+      target="nu-${version}-${arch}-unknown-linux-musl"
       ;;
     *)
       error "Unsupported operating system '${os}'."
@@ -196,11 +204,11 @@ install_nushell() {
   log "Installing Nushell to '${dst_dir}/nu'."
   tmp_dir="$(mktemp -d)"
   download '' \
-    "https://github.com/nushell/nushell/releases/download/${version}/${stem}.tar.gz" \
-    "${tmp_dir}/${stem}.tar.gz"
+    "https://github.com/nushell/nushell/releases/download/${version}/${target}.tar.gz" \
+    "${tmp_dir}/${target}.tar.gz"
 
-  tar fx "${tmp_dir}/${stem}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} cp "${tmp_dir}/${stem}/nu" "${tmp_dir}/${stem}/"nu_* "${dst_dir}/"
+  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
+  ${super:+"${super}"} cp "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
 
   export PATH="${dst_dir}:${PATH}"
   log "Installed Nushell $(nu --version)."
@@ -249,7 +257,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  dst_dir='' version=''
+  local dst_dir='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -264,7 +272,6 @@ main() {
         ;;
       -g | --global)
         dst_dir="${dst_dir:-'/usr/local/bin'}"
-        super="$(find_super)"
         shift 1
         ;;
       -h | --help)
@@ -286,7 +293,15 @@ main() {
     esac
   done
 
+  # Find super user command if destination is not writable.
+  #
+  # Flags:
+  #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  if ! mkdir -p "${dst_dir}" > /dev/null 2>&1 || [ ! -w "${dst_dir}" ]; then
+    super="$(find_super)"
+  fi
+
   if [ -z "${version}" ]; then
     version="$(find_latest)"
   fi

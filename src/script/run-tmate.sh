@@ -144,8 +144,8 @@ install_tmate_linux() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v curl)" ] || [ ! -x "$(command -v ssh)" ] \
-    || [ ! -x "$(command -v tar)" ] || [ ! -x "$(command -v xz)" ]; then
+  if [ ! -x "$(command -v curl)" ] || [ ! -x "$(command -v ssh)" ] ||
+    [ ! -x "$(command -v tar)" ] || [ ! -x "$(command -v xz)" ]; then
     if [ -x "$(command -v apk)" ]; then
       ${1:+"${1}"} apk add curl openssh-client tar xz
     elif [ -x "$(command -v apt-get)" ]; then

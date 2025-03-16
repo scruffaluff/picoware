@@ -139,9 +139,9 @@ upgrade() {
 
   if [ -x "$(command -v opkg)" ]; then
     ${super:+"${super}"} opkg update
-    ${super:+"${super}"} opkg list-upgradable \
-      | cut -f 1 -d ' ' \
-      | xargs -r ${super:+"${super}"} opkg upgrade
+    ${super:+"${super}"} opkg list-upgradable |
+      cut -f 1 -d ' ' |
+      xargs -r ${super:+"${super}"} opkg upgrade
   fi
 
   if [ -x "$(command -v pacman)" ]; then

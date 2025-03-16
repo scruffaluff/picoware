@@ -1,7 +1,6 @@
 {
   "version": "4",
   "specifiers": {
-    "npm:prettier-plugin-sh@0.15": "0.15.0_prettier@3.5.3",
     "npm:prettier@^3.5.3": "3.5.3",
     "npm:vitepress@^1.6.3": "1.6.3_vite@5.4.14_vue@3.5.13_focus-trap@7.6.4"
   },
@@ -715,9 +714,6 @@
     "mitt@3.0.1": {
       "integrity": "sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw=="
     },
-    "mvdan-sh@0.10.1": {
-      "integrity": "sha512-kMbrH0EObaKmK3nVRKUIIya1dpASHIEusM13S4V1ViHFuxuNxCo+arxoa6j/dbV22YBGjl7UKJm9QQKJ2Crzhg=="
-    },
     "nanoid@3.3.9": {
       "integrity": "sha512-SppoicMGpZvbF1l3z4x7No3OlIjP7QJvC9XR7AhZr1kL133KHnKPztkKDc+Ir4aJ/1VhTySrtKhrsycmrMQfvg=="
     },
@@ -745,14 +741,6 @@
     },
     "preact@10.26.4": {
       "integrity": "sha512-KJhO7LBFTjP71d83trW+Ilnjbo+ySsaAgCfXOXUlmGzJ4ygYPWmysm77yg4emwfmoz3b22yvH5IsVFHbhUaH5w=="
-    },
-    "prettier-plugin-sh@0.15.0_prettier@3.5.3": {
-      "integrity": "sha512-U0PikJr/yr2bzzARl43qI0mApBj0C1xdAfA04AZa6LnvIKawXHhuy2fFo6LNA7weRzGlAiNbaEFfKMFo0nZr/A==",
-      "dependencies": [
-        "mvdan-sh",
-        "prettier",
-        "sh-syntax"
-      ]
     },
     "prettier@3.5.3": {
       "integrity": "sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw=="
@@ -807,12 +795,6 @@
     "search-insights@2.17.3": {
       "integrity": "sha512-RQPdCYTa8A68uM2jwxoY842xDhvx3E5LFL1LxvxCNMev4o5mLuokczhzjAgGwUZBAmOKZknArSxLKmXtIi2AxQ=="
     },
-    "sh-syntax@0.4.2": {
-      "integrity": "sha512-/l2UZ5fhGZLVZa16XQM9/Vq/hezGGbdHeVEA01uWjOL1+7Ek/gt6FquW0iKKws4a9AYPYvlz6RyVvjh3JxOteg==",
-      "dependencies": [
-        "tslib"
-      ]
-    },
     "shiki@2.5.0": {
       "integrity": "sha512-mI//trrsaiCIPsja5CNfsyNOqgAZUb6VpJA+340toL42UpzQlXpwRV9nch69X6gaUxrr9kaOOa6e3y3uAkGFxQ==",
       "dependencies": [
@@ -853,9 +835,6 @@
     },
     "trim-lines@3.0.1": {
       "integrity": "sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg=="
-    },
-    "tslib@2.8.1": {
-      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
     "unist-util-is@6.0.0": {
       "integrity": "sha512-2qCTHimwdxLfz+YzdGfkqNlH0tLi9xjTnHddPmJwtIG9MGsdbutfTc4P+haPD7l7Cjxf/WZj+we5qfVPvvxfYw==",
@@ -953,7 +932,6 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:prettier-plugin-sh@0.15",
         "npm:prettier@^3.5.3",
         "npm:vitepress@^1.6.3"
       ]
