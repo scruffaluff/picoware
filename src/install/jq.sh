@@ -23,8 +23,9 @@ Usage: install-jq [OPTIONS]
 Options:
       --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install Jq
+  -g, --global              Install Jq for all users
   -h, --help                Print help information
-  -u, --user                Install Jq for current user
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Jq to install
 EOF
 }
@@ -101,12 +102,12 @@ find_super() {
 #######################################
 # Download Jq binary to temporary path.
 # Arguments:
-#   Operating system name.
+#   Super user command for installation.
 # Outputs:
 #   Path to temporary Jq binary.
 #######################################
 install_jq() {
-  local user="${1}" version="${2}" dst_dir="${3}"
+  local super="${1}" version="${2}" dst_dir="${3}"
   local dst_file="${dst_dir}/jq"
 
   # Do not use long form flags for uname. They are not supported on some
@@ -115,16 +116,9 @@ install_jq() {
   # Flags:
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ \
-    | sed s/aarch64/arm64/)"
+  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
+    sed s/aarch64/arm64/)"
   os="$(uname -s | sed s/Darwin/macos/ | sed s/Linux/linux/)"
-
-  # Get super user elevation command for system installation if necessary.
-  if [ -z "${user}" ]; then
-    super="$(find_super)"
-  else
-    super=''
-  fi
 
   log "Installing Jq to '${dst_file}'."
   download "${super}" \
@@ -136,45 +130,49 @@ install_jq() {
 }
 
 #######################################
-# Print message if logging is enabled.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
 # Globals:
 #   SCRIPTS_NOLOG
 # Outputs:
-#   Message.
+#   Message argument.
 #######################################
 log() {
   local file='1' newline="\n" text=''
 
-  # Exit early if environment variable is set.
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
   #
   # Flags:
   #   -z: Check if string has nonzero length.
-  if [ -n "${SCRIPTS_NOLOG:-}" ]; then
-    return
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
-
-  case "${1}" in
-    -e | --stderr)
-      file='2'
-      shift 1
-      ;;
-    -n | --no-newline)
-      newline=''
-      shift 1
-      ;;
-    *)
-      text="${1}"
-      ;;
-  esac
-
-  printf '%s%s' "${text}" "${newline}" >&"${file}"
 }
 
 #######################################
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='/usr/local/bin' user='' version=''
+  local dst_dir='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -187,13 +185,17 @@ main() {
         dst_dir="${2}"
         shift 2
         ;;
+      -g | --global)
+        dst_dir="${dst_dir:-'/usr/local/bin'}"
+        super="$(find_super)"
+        shift 1
+        ;;
       -h | --help)
         usage
         exit 0
         ;;
-      -u | --user)
-        dst_dir="${HOME}/.local/bin"
-        user='true'
+      -q | --quiet)
+        export SCRIPTS_NOLOG='true'
         shift 1
         ;;
       -v | --version)
@@ -208,7 +210,8 @@ main() {
     esac
   done
 
-  install_jq "${user}" "${version}" "${dst_dir}"
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  install_jq "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

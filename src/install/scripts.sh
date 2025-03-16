@@ -23,9 +23,10 @@ Usage: install [OPTIONS] [SCRIPTS]...
 Options:
       --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install scripts
+  -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
-  -u, --user                Install scripts for current user
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 EOF
 }
@@ -133,8 +134,8 @@ download_jq() {
   #
   # Flags:
   #   -m: Show system architecture name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ \
-    | sed s/aarch64/arm64/)"
+  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
+    sed s/aarch64/arm64/)"
   tmp_path="$(mktemp)"
   download '' \
     "https://github.com/jqlang/jq/releases/latest/download/jq-${1}-${arch}" \
@@ -256,7 +257,7 @@ EOF
 # Find command to elevate as super user.
 #######################################
 find_super() {
-  # Do not use long form --user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
@@ -268,7 +269,8 @@ find_super() {
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
   else
-    error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation'
+    exit 1
   fi
 }
 
@@ -285,25 +287,10 @@ find_super() {
 #   Log message to stdout.
 #######################################
 install_script() {
-  name="${4%.*}"
-  dst_dir="${3}"
-  dst_file="${dst_dir}/${name}"
-  repo="https://raw.githubusercontent.com/scruffaluff/scripts/${2}"
-  src_url="${repo}/src/script/${4}"
-
-  # Use super user elevation command for system installation if user did not
-  # give the --user, does not own the file, and is not root.
-  #
-  # Do not use long form --user flag for id. It is not supported on MacOS.
-  #
-  # Flags:
-  #   -w: Check if folder exists and is writable.
-  #   -z: Check if the string is empty.
-  if [ -z "${1}" ] && [ ! -w "${dst_dir}" ]; then
-    super="$(find_super)"
-  else
-    super=''
-  fi
+  local super="${1}" dst_dir="${3}" name="${4%.*}"
+  local dst_file="${dst_dir}/${name}"
+  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${2}"
+  local src_url="${repo}/src/script/${4}"
 
   if [ "${4##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
     if [ -z "${1}" ]; then
@@ -330,19 +317,41 @@ install_script() {
 }
 
 #######################################
-# Print log message to stdout if logging is enabled.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
 # Globals:
 #   SCRIPTS_NOLOG
 # Outputs:
-#   Log message to stdout.
+#   Message argument.
 #######################################
 log() {
-  # Log if environment variable is not set.
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
   #
   # Flags:
-  #   -z: Check if string has zero length.
-  if [ -z "${SCRIPTS_NOLOG:-}" ]; then
-    echo "$@"
+  #   -z: Check if string has nonzero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
 }
 
@@ -350,7 +359,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  dst_dir='' names='' version='main'
+  dst_dir='' names='' super='' version='main'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -363,6 +372,11 @@ main() {
         dst_dir="${2}"
         shift 2
         ;;
+      -g | --global)
+        dst_dir="${dst_dir:-'/usr/local/bin'}"
+        super="$(find_super)"
+        shift 1
+        ;;
       -h | --help)
         usage
         exit 0
@@ -371,11 +385,8 @@ main() {
         list_scripts='true'
         shift 1
         ;;
-      -u | --user)
-        if [ -z "${dst_dir}" ]; then
-          dst_dir="${HOME}/.local/bin"
-        fi
-        user_install='true'
+      -q | --quiet)
+        export SCRIPTS_NOLOG='true'
         shift 1
         ;;
       -v | --version)
@@ -393,10 +404,8 @@ main() {
     esac
   done
 
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   scripts="$(find_scripts "${version}")"
-  if [ -z "${dst_dir}" ]; then
-    dst_dir='/usr/local/bin'
-  fi
 
   # Flags:
   #   -n: Check if string has nonzero length.
@@ -411,8 +420,7 @@ main() {
       for script in ${scripts}; do
         if [ "${script%.*}" = "${name}" ]; then
           match_found='true'
-          install_script "${user_install:-}" "${version}" "${dst_dir}" \
-            "${script}"
+          install_script "${super}" "${version}" "${dst_dir}" "${script}"
         fi
       done
 

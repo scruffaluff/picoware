@@ -25,8 +25,9 @@ Usage: install-just [OPTIONS]
 Options:
       --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install Just
+  -g, --global              Install Just for all users
   -h, --help                Print help information
-  -u, --user                Install Just for current user
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Just to install
 EOF
 }
@@ -85,7 +86,7 @@ download() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin=''
+  local jq_bin='' tmp_dir='' url='https://scruffaluff.github.io/scripts/install/jq.sh'
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -98,10 +99,18 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
+    if [ -x "$(command -v curl)" ]; then
+      response="$(curl --fail --location --show-error --silent "${url}")"
+    elif [ -x "$(command -v wget)" ]; then
+      response="$(wget -q -O - "${url}")"
+    else
+      log --stderr 'error: Unable to find a network file downloader.'
+      log --stderr 'Install curl, https://curl.se, manually before continuing.'
+      exit 1
+    fi
+
     tmp_dir="$(mktemp -d)"
-    SCRIPTS_NOLOG='true' curl -LSfs \
-      https://scruffaluff.github.io/scripts/install/jq/sh | sh -s -- --dest \
-      "${tmp_dir}"
+    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi
 }
@@ -161,7 +170,7 @@ find_super() {
 #   Path to temporary Just binary.
 #######################################
 install_just() {
-  local user="${1}" version="${2}" dst_dir="${3}"
+  local super="${1}" version="${2}" dst_dir="${3}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
   # Parse Just build target.
@@ -172,8 +181,8 @@ install_just() {
   # Flags:
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ \
-    | sed s/arm64/aarch64/)"
+  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
+    sed s/arm64/aarch64/)"
   os="$(uname -s)"
   case "${os}" in
     Darwin)
@@ -187,13 +196,6 @@ install_just() {
       exit 1
       ;;
   esac
-
-  # Get super user elevation command for system installation if necessary.
-  if [ -z "${user}" ]; then
-    super="$(find_super)"
-  else
-    super=''
-  fi
 
   # Create installation directories.
   #
@@ -216,45 +218,49 @@ install_just() {
 }
 
 #######################################
-# Print message if logging is enabled.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
 # Globals:
 #   SCRIPTS_NOLOG
 # Outputs:
-#   Message.
+#   Message argument.
 #######################################
 log() {
   local file='1' newline="\n" text=''
 
-  # Exit early if environment variable is set.
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
   #
   # Flags:
   #   -z: Check if string has nonzero length.
-  if [ -n "${SCRIPTS_NOLOG:-}" ]; then
-    return
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
-
-  case "${1}" in
-    -e | --stderr)
-      file='2'
-      shift 1
-      ;;
-    -n | --no-newline)
-      newline=''
-      shift 1
-      ;;
-    *)
-      text="${1}"
-      ;;
-  esac
-
-  printf '%s%s' "${text}" "${newline}" >&"${file}"
 }
 
 #######################################
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='/usr/local/bin' user='' version=''
+  local dst_dir="${HOME}/.local/bin" super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -267,13 +273,17 @@ main() {
         dst_dir="${2}"
         shift 2
         ;;
+      -g | --global)
+        dst_dir="${dst_dir:-'/usr/local/bin'}"
+        super="$(find_super)"
+        shift 1
+        ;;
       -h | --help)
         usage
         exit 0
         ;;
-      -u | --user)
-        dst_dir="${HOME}/.local/bin"
-        user='true'
+      -q | --quiet)
+        export SCRIPTS_NOLOG='true'
         shift 1
         ;;
       -v | --version)
@@ -282,16 +292,17 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        echo "Run 'install-just --help' for usage" >&2
+        log --stderr "Run 'install-just --help' for usage."
         exit 2
         ;;
     esac
   done
 
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   if [ -z "${version}" ]; then
     version="$(find_latest)"
   fi
-  install_just "${user}" "${version}" "${dst_dir}"
+  install_just "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

@@ -23,8 +23,9 @@ Usage: install-nushell [OPTIONS]
 Options:
       --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install Nushell
+  -g, --global              Install Nushell for all users
   -h, --help                Print help information
-  -u, --user                Install Nushell for current user
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Nushell to install
 EOF
 }
@@ -38,13 +39,16 @@ EOF
 #   Optional permissions for file.
 #######################################
 download() {
+  local super="${1}" url="${2}" dst_file="${3}" mode="${4:-}"
+  local dst_dir=''
+
   # Create parent directory if it does not exist.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
-  folder="$(dirname "${3}")"
-  if [ ! -d "${folder}" ]; then
-    ${1:+"${1}"} mkdir -p "${folder}"
+  dst_dir="$(dirname "${dst_file}")"
+  if [ ! -d "${dst_dir}" ]; then
+    ${super:+"${super}"} mkdir -p "${dst_dir}"
   fi
 
   # Download with Curl or Wget.
@@ -55,82 +59,23 @@ download() {
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
   if [ -x "$(command -v curl)" ]; then
-    ${1:+"${1}"} curl --fail --location --show-error --silent --output "${3}" \
-      "${2}"
+    ${super:+"${super}"} curl --fail --location --show-error --silent --output \
+      "${dst_file}" "${url}"
   elif [ -x "$(command -v wget)" ]; then
-    ${1:+"${1}"} wget -q -O "${3}" "${2}"
+    ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
-    error "$(
-      cat << EOF
-Unable to find a network file downloader.
-Install curl, https://curl.se, manually before continuing.
-EOF
-    )"
+    log --stderr 'Unable to find a network file downloader.'
+    log --stderr 'Install curl, https://curl.se, manually before continuing.'
+    exit 1
   fi
 
   # Change file permissions if chmod parameter was passed.
   #
   # Flags:
   #   -n: Check if string has nonzero length.
-  if [ -n "${4:-}" ]; then
-    ${1:+"${1}"} chmod "${4}" "${3}"
+  if [ -n "${mode:-}" ]; then
+    ${super:+"${super}"} chmod "${mode}" "${dst_file}"
   fi
-}
-
-#######################################
-# Download Jq binary to temporary path.
-# Arguments:
-#   Operating system name.
-# Outputs:
-#   Path to temporary Jq binary.
-#######################################
-download_jq() {
-  # Do not use long form --machine flag for uname. It is not supported on MacOS.
-  #
-  # Flags:
-  #   -m: Show system architecture name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ \
-    | sed s/aarch64/arm64/)"
-  tmp_path="$(mktemp)"
-  download '' \
-    "https://github.com/jqlang/jq/releases/latest/download/jq-${1}-${arch}" \
-    "${tmp_path}" 755
-  echo "${tmp_path}"
-}
-
-#######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'install-nushell --help' for usage.\n" >&2
-  exit 2
 }
 
 #######################################
@@ -139,8 +84,10 @@ error_usage() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  # Do not use long form --kernel-name flag for uname. It is not supported on
-  # MacOS.
+  local jq_bin=''
+
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
   #   -s: Show operating system kernel name.
@@ -150,29 +97,37 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
-    case "$(uname -s)" in
-      Darwin)
-        download_jq macos
-        ;;
-      FreeBSD)
-        super="$(find_super)"
-        ${super:+"${super}"} pkg update > /dev/null 2>&1
-        ${super:+"${super}"} pkg install --yes jq > /dev/null 2>&1
-        command -v jq
-        ;;
-      Linux)
-        download_jq linux
-        ;;
-      *)
-        error "$(
-          cat << EOF
-Cannot find required 'jq' command on computer.
-Please install 'jq' and retry installation.
-EOF
-        )"
-        ;;
-    esac
+    tmp_dir="$(mktemp -d)"
+    curl -LSfs https://scruffaluff.github.io/scripts/install/jq/sh | sh -s -- \
+      --quiet --dest "${tmp_dir}"
+    echo "${tmp_dir}/jq"
   fi
+}
+
+#######################################
+# Find latest Just version.
+#######################################
+find_latest() {
+  local response='' url='https://formulae.brew.sh/api/formula/nushell.json'
+
+  # Flags:
+  #   -O path: Save download to path.
+  #   -q: Hide log output.
+  #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
+  if [ -x "$(command -v curl)" ]; then
+    response="$(curl --fail --location --show-error --silent "${url}")"
+  elif [ -x "$(command -v wget)" ]; then
+    response="$(wget -q -O - "${url}")"
+  else
+    log --stderr 'error: Unable to find a network file downloader.'
+    log --stderr 'Install curl, https://curl.se, manually before continuing.'
+    exit 1
+  fi
+
+  jq_bin="$(find_jq)"
+  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
+    '.versions.stable'
 }
 
 #######################################
@@ -195,31 +150,6 @@ find_super() {
   fi
 }
 
-find_version() {
-  url='https://api.github.com/repos/nushell/nushell/releases/latest'
-
-  # Flags:
-  #   -O path: Save download to path.
-  #   -q: Hide log output.
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
-    response="$(curl --fail --location --show-error --silent "${url}")"
-  elif [ -x "$(command -v wget)" ]; then
-    response="$(wget -q -O - "${url}")"
-  else
-    error "$(
-      cat << EOF
-Unable to find a network file downloader.
-Install curl, https://curl.se, manually before continuing.
-EOF
-    )"
-  fi
-
-  jq_bin="$(find_jq)"
-  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output '.tag_name'
-}
-
 #######################################
 # Download and install Nushell.
 # Arguments:
@@ -232,7 +162,7 @@ EOF
 #   Log message to stdout.
 #######################################
 install_nushell() {
-  version="${2}" dst_dir="${3}"
+  super="${1}" version="${2}" dst_dir="${3}"
 
   arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
   os="$(uname -s)"
@@ -241,7 +171,6 @@ install_nushell() {
       stem="nu-${version}-${arch}-apple-darwin"
       ;;
     FreeBSD)
-      super="$(find_super)"
       log "Installing Nushell to '/usr/local/bin/nu'."
       ${super:+"${super}"} pkg update > /dev/null 2>&1
       ${super:+"${super}"} pkg install --yes nushell > /dev/null 2>&1
@@ -256,26 +185,12 @@ install_nushell() {
       ;;
   esac
 
-  # Use super user elevation command for system installation if user did not
-  # give the --user, does not own the file, and is not root.
-  #
-  # Do not use long form --user flag for id. It is not supported on MacOS.
-  #
-  # Flags:
-  #   -w: Check if file exists and is writable.
-  #   -z: Check if the string is empty.
-  if [ -z "${1}" ] && [ ! -w "${dst_dir}" ]; then
-    super="$(find_super)"
-  else
-    super=''
-  fi
-
   # Make destination directory if it does not exist.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
   if [ ! -d "${dst_dir}" ]; then
-    mkdir -p "${dst_dir}"
+    ${super:+"${super}"} mkdir -p "${dst_dir}"
   fi
 
   log "Installing Nushell to '${dst_dir}/nu'."
@@ -292,19 +207,41 @@ install_nushell() {
 }
 
 #######################################
-# Print log message to stdout if logging is enabled.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
 # Globals:
 #   SCRIPTS_NOLOG
 # Outputs:
-#   Log message to stdout.
+#   Message argument.
 #######################################
 log() {
-  # Log if environment variable is not set.
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
   #
   # Flags:
-  #   -z: Check if string has zero length.
-  if [ -z "${SCRIPTS_NOLOG:-}" ]; then
-    echo "$@"
+  #   -z: Check if string has nonzero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
 }
 
@@ -312,7 +249,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  dst_dir='/usr/local/bin' version=''
+  dst_dir='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -325,13 +262,17 @@ main() {
         dst_dir="${2}"
         shift 2
         ;;
+      -g | --global)
+        dst_dir="${dst_dir:-'/usr/local/bin'}"
+        super="$(find_super)"
+        shift 1
+        ;;
       -h | --help)
         usage
         exit 0
         ;;
-      -u | --user)
-        dst_dir="${HOME}/.local/bin"
-        user_install='true'
+      -q | --quiet)
+        export SCRIPTS_NOLOG='true'
         shift 1
         ;;
       -v | --version)
@@ -345,10 +286,11 @@ main() {
     esac
   done
 
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   if [ -z "${version}" ]; then
-    version="$(find_version)"
+    version="$(find_latest)"
   fi
-  install_nushell "${user_install:-}" "${version}" "${dst_dir}"
+  install_nushell "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

@@ -13,8 +13,8 @@ setup() {
   #
   # Args:
   #   -f: Use override as a function instead of a variable.
+  # shellcheck disable=SC2317
   command() {
-    # shellcheck disable=SC2317
     which jq
   }
   export -f command

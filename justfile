@@ -77,7 +77,7 @@ _setup:
     pkg="${spec%:*}"
     tag="${spec#*:}"
     if [ ! -d ".vendor/lib/bats-${pkg}" ]; then
-      git clone --branch "${tag}" --depth 1 \
+      git clone -c advice.detachedHead=false --branch "${tag}" --depth 1 \
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
@@ -120,8 +120,8 @@ _setup:
 
 # Run test suites.
 [unix]
-test:
-  bats --recursive test
+test *args:
+  bats --recursive test {{args}}
 
 # Run test suites.
 [windows]
