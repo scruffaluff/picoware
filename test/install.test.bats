@@ -8,6 +8,7 @@ setup() {
   cd "${REPO_PATH}" || exit
   load "${REPO_PATH}/.vendor/lib/bats-assert/load"
   load "${REPO_PATH}/.vendor/lib/bats-file/load"
+  load "${REPO_PATH}/.vendor/lib/bats-mock/stub"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
 }
@@ -52,16 +53,8 @@ just_install_prints_version() { # @test
 
 just_install_downloads_jq_if_missing() { # @test
   # Ensure that local Jq binary is not found.
-  command() {
-    if [ "${2}" = 'jq' ]; then
-      echo ''
-    else
-      which "${2}"
-    fi
-  }
-  export -f command
+  stub command '-v jq : echo ""'
 
-  skip 'Disabled until Jq installer is published.'
   run src/install/just.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'

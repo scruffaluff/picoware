@@ -16,6 +16,8 @@ settings, and install each program for immediate use.
 
 | Name    | Description                                         |
 | ------- | --------------------------------------------------- |
+| jq      | Installs Jq.                                        |
+| just    | Installs Just.                                      |
 | nushell | Installs Nushell.                                   |
 | scripts | Installs programs from the following scripts table. |
 
