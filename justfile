@@ -92,6 +92,10 @@ _setup:
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
+  if [ ! -d '.vendor/lib/bats-mock' ]; then
+    git clone -c advice.detachedHead=false --branch v1.2.5 --depth 1 \
+      https://github.com/jasonkarns/bats-mock.git .vendor/lib/bats-mock
+  fi
   bats --version
   if [ ! -x "$(command -v shellcheck)" ]; then
     shellcheck_arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |

@@ -6,6 +6,7 @@ setup() {
   load "${REPO_PATH}/.vendor/lib/bats-assert/load"
   load "${REPO_PATH}/.vendor/lib/bats-file/load"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
+  bats_require_minimum_version 1.5.0
 
   export MLAB_PROGRAM='/bin/matlab'
   export SCRIPTS_NOLOG='true'
