@@ -33,24 +33,42 @@ EOF
 }
 
 #######################################
-# Download file to local path.
-# Arguments:
-#   Super user command for installation.
-#   Remote source URL.
-#   Local destination path.
-#   Optional permissions for file.
+# Perform network request.
 #######################################
-download() {
-  local super="${1}" url="${2}" dst_file="${3}" mode="${4:-}"
-  local dst_dir=''
+fetch() {
+  local url='' dst_dir='' dst_file='-' mode='' super=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -d | --dest)
+        dst_file="${2}"
+        shift 2
+        ;;
+      -m | --mode)
+        mode="${2}"
+        shift 2
+        ;;
+      -s | --super)
+        super="${2}"
+        shift 2
+        ;;
+      *)
+        url="${1}"
+        shift 1
+        ;;
+    esac
+  done
 
   # Create parent directory if it does not exist.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
-  dst_dir="$(dirname "${dst_file}")"
-  if [ ! -d "${dst_dir}" ]; then
-    ${super:+"${super}"} mkdir -p "${dst_dir}"
+  if [ "${dst_file}" != '-' ]; then
+    dst_dir="$(dirname "${dst_file}")"
+    if [ ! -d "${dst_dir}" ]; then
+      ${super:+"${super}"} mkdir -p "${dst_dir}"
+    fi
   fi
 
   # Download with Curl or Wget.
@@ -66,7 +84,7 @@ download() {
   elif [ -x "$(command -v wget)" ]; then
     ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
-    log --stderr 'Unable to find a network file downloader.'
+    log --stderr 'error: Unable to find a network file downloader.'
     log --stderr 'Install curl, https://curl.se, manually before continuing.'
     exit 1
   fi
@@ -86,7 +104,7 @@ download() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin='' tmp_dir='' url='https://scruffaluff.github.io/scripts/install/jq.sh'
+  local jq_bin='' tmp_dir=''
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -99,16 +117,7 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
-    if [ -x "$(command -v curl)" ]; then
-      response="$(curl --fail --location --show-error --silent "${url}")"
-    elif [ -x "$(command -v wget)" ]; then
-      response="$(wget -q -O - "${url}")"
-    else
-      log --stderr 'error: Unable to find a network file downloader.'
-      log --stderr 'Install curl, https://curl.se, manually before continuing.'
-      exit 1
-    fi
-
+    response="$(fetch 'https://scruffaluff.github.io/scripts/install/jq.sh')"
     tmp_dir="$(mktemp -d)"
     echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
@@ -119,23 +128,8 @@ find_jq() {
 # Find latest Just version.
 #######################################
 find_latest() {
-  local response='' url='https://formulae.brew.sh/api/formula/just.json'
-
-  # Flags:
-  #   -O <PATH>: Save download to path.
-  #   -q: Hide log output.
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
-    response="$(curl --fail --location --show-error --silent "${url}")"
-  elif [ -x "$(command -v wget)" ]; then
-    response="$(wget -q -O - "${url}")"
-  else
-    log --stderr 'error: Unable to find a network file downloader.'
-    log --stderr 'Install curl, https://curl.se, manually before continuing.'
-    exit 1
-  fi
-
+  local jq_bin='' response=''
+  response="$(fetch 'https://formulae.brew.sh/api/formula/just.json')"
   jq_bin="$(find_jq)"
   printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
     '.versions.stable'
@@ -209,9 +203,8 @@ install_just() {
   fi
 
   log "Installing Just to '${dst_file}'."
-  download "${super}" \
-    "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz" \
-    "${tmp_dir}/just.tar.gz" 755
+  fetch --dest "${tmp_dir}/just.tar.gz" \
+    "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz"
   tar fx "${tmp_dir}/just.tar.gz" -C "${tmp_dir}"
   ${super:+"${super}"} mv "${tmp_dir}/just" "${dst_file}"
 

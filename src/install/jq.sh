@@ -31,24 +31,42 @@ EOF
 }
 
 #######################################
-# Download file to local path.
-# Arguments:
-#   Super user command for installation.
-#   Remote source URL.
-#   Local destination path.
-#   Optional permissions for file.
+# Perform network request.
 #######################################
-download() {
-  local super="${1}" url="${2}" dst_file="${3}" mode="${4:-}"
-  local dst_dir=''
+fetch() {
+  local url='' dst_dir='' dst_file='-' mode='' super=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -d | --dest)
+        dst_file="${2}"
+        shift 2
+        ;;
+      -m | --mode)
+        mode="${2}"
+        shift 2
+        ;;
+      -s | --super)
+        super="${2}"
+        shift 2
+        ;;
+      *)
+        url="${1}"
+        shift 1
+        ;;
+    esac
+  done
 
   # Create parent directory if it does not exist.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
-  dst_dir="$(dirname "${dst_file}")"
-  if [ ! -d "${dst_dir}" ]; then
-    ${super:+"${super}"} mkdir -p "${dst_dir}"
+  if [ "${dst_file}" != '-' ]; then
+    dst_dir="$(dirname "${dst_file}")"
+    if [ ! -d "${dst_dir}" ]; then
+      ${super:+"${super}"} mkdir -p "${dst_dir}"
+    fi
   fi
 
   # Download with Curl or Wget.
@@ -123,10 +141,8 @@ install_jq() {
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
   log "Installing Jq to '${dst_file}'."
-  download "${super}" \
-    "https://github.com/jqlang/jq/releases/latest/download/jq-${os}-${arch}" \
-    "${dst_file}" 755
-
+  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
+    "https://github.com/jqlang/jq/releases/latest/download/jq-${os}-${arch}"
   export PATH="${dst_dir}:${PATH}"
   log "Installed $(jq --version)."
 }
