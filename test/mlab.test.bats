@@ -4,6 +4,7 @@ setup() {
   REPO_PATH="${BATS_TEST_DIRNAME}/.."
   cd "${REPO_PATH}" || exit
   load "${REPO_PATH}/.vendor/lib/bats-assert/load"
+  load "${REPO_PATH}/.vendor/lib/bats-file/load"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
 
   export MLAB_PROGRAM='/bin/matlab'

@@ -17,10 +17,13 @@ list:
 # Execute all commands.
 all: setup format lint doc test
 
+# Execute CI workflow commands.
+ci: setup format lint doc test
+
 # Build documentation.
 [unix]
 doc:
-  cp -r src/install doc/public/
+  cp -r src/install data/public/
   deno run --allow-all npm:vitepress build .
 
 # Build documentation.
@@ -81,7 +84,7 @@ _setup:
   fi
   deno --version
   mkdir -p .vendor/bin .vendor/lib
-  for spec in 'assert:v2.1.0' 'core:v1.11.1' 'support:v0.3.0'; do
+  for spec in 'assert:v2.1.0' 'core:v1.11.1' 'file:v0.4.0' 'support:v0.3.0'; do
     pkg="${spec%:*}"
     tag="${spec#*:}"
     if [ ! -d ".vendor/lib/bats-${pkg}" ]; then

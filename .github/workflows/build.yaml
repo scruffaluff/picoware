@@ -51,8 +51,8 @@ jobs:
       - name: Install Just for Unix
         if: ${{ runner.os != 'Windows' }}
         run: src/install/just.sh --global
-      - name: Run commands
-        run: just setup format lint test doc
+      - name: Run CI workflow commands
+        run: just ci
       - name: Setup Tmate session if debug enabled
         if: >-
           ${{ always() && github.event_name == 'workflow_dispatch' &&

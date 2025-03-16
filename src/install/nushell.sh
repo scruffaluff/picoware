@@ -244,7 +244,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' super='' version=''
+  local dst_dir='' global_='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -259,6 +259,7 @@ main() {
         ;;
       -g | --global)
         dst_dir="${dst_dir:-/usr/local/bin}"
+        global_='true'
         shift 1
         ;;
       -h | --help)
@@ -286,7 +287,8 @@ main() {
   # Flags:
   #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
-  if ! mkdir -p "${dst_dir}" > /dev/null 2>&1 || [ ! -w "${dst_dir}" ]; then
+  if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
+    [ ! -w "${dst_dir}" ]; then
     super="$(find_super)"
   fi
 

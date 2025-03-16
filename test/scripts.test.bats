@@ -7,6 +7,7 @@ setup() {
   REPO_PATH="${BATS_TEST_DIRNAME}/.."
   cd "${REPO_PATH}" || exit
   load "${REPO_PATH}/.vendor/lib/bats-assert/load"
+  load "${REPO_PATH}/.vendor/lib/bats-file/load"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
 
   command() {
@@ -18,7 +19,8 @@ setup() {
 }
 
 json_parser_finds_all_posix_scripts() { # @test
-  export -f command curl
+  export -f command
+  export -f curl
 
   run src/install/scripts.sh --list
   assert_success
