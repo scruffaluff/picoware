@@ -22,7 +22,7 @@ on:
         type: boolean
 
 env:
-  NPM_CONFIG_CACHE: "${{ github.workspace }}/.cache/npm"
+  DENO_DIR: "${{ github.workspace }}/.vendor/deno"
 
 jobs:
   build:
@@ -37,34 +37,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache packages
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           path: |
-            .cache
+            .vendor
             node_modules
-          key: >-
-            node-22_${{ runner.os }}_npm-${{ hashFiles('package-lock.json') }}
-      - if: ${{ runner.os == 'Windows' }}
-        name: Install Just for Windows
+      - name: Install Just for Windows
+        if: ${{ runner.os == 'Windows' }}
         run: choco install --yes just
-      - if: ${{ runner.os != 'Windows' }}
-        name: Install Just for Unix
-        run: >-
-          curl -LSfs https://just.systems/install.sh | sh -s -- --to
-          /usr/local/bin
-      - name: Install Node interpreter
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install development dependencies
-        run: just setup
-      - name: Check code formatting
-        run: just format
-      - name: Run code analyses
-        run: just lint
-      - name: Run test suites
-        run: just test
+        # run: "& src/install/just.ps1 --dest 'C:/Windows'"
+      - name: Install Just for Unix
+        if: ${{ runner.os != 'Windows' }}
+        run: src/install/just.sh --global
+      - name: Run CI workflow commands
+        run: just ci
       - name: Setup Tmate session if debug enabled
         if: >-
           ${{ always() && github.event_name == 'workflow_dispatch' &&

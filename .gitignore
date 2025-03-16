@@ -2,14 +2,12 @@
 #
 # For more information, visit https://git-scm.com/docs/gitignore.
 
-.cache/
 .DS_Store
-.local/
-.vitepress/cache/
-.vitepress/dist/
 *.xml
-/site/
-/tmp/
-assets/install/
-build/
+/.vendor/
+/.vitepress/cache/
+/.vitepress/dist/
+/build/
+/data/public/install/
 node_modules/
+tmp/

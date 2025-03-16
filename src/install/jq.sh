@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install Nushell for MacOS and Linux systems.
+# Install Jq for MacOS and Linux systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,17 +16,17 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Nushell.
+Installer script for Jq.
 
-Usage: install-nushell [OPTIONS]
+Usage: install-jq [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install Nushell
-  -g, --global              Install Nushell for all users
+  -d, --dest <PATH>         Directory to install Jq
+  -g, --global              Install Jq for all users
   -h, --help                Print help information
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Nushell to install
+  -v, --version <VERSION>   Version of Jq to install
 EOF
 }
 
@@ -97,43 +97,6 @@ fetch() {
 }
 
 #######################################
-# Find or download Jq JSON parser.
-# Outputs:
-#   Path to Jq binary.
-#######################################
-find_jq() {
-  local jq_bin='' tmp_dir=''
-
-  # Do not use long form flags for uname. They are not supported on some
-  # systems.
-  #
-  # Flags:
-  #   -s: Show operating system kernel name.
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  jq_bin="$(command -v jq || echo '')"
-  if [ -x "${jq_bin}" ]; then
-    echo "${jq_bin}"
-  else
-    response="$(fetch 'https://scruffaluff.github.io/scripts/install/jq.sh')"
-    tmp_dir="$(mktemp -d)"
-    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
-    echo "${tmp_dir}/jq"
-  fi
-}
-
-#######################################
-# Find latest Nushell version.
-#######################################
-find_latest() {
-  local jq_bin='' response=''
-  jq_bin="$(find_jq)"
-  response="$(fetch 'https://formulae.brew.sh/api/formula/nushell.json')"
-  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
-    '.versions.stable'
-}
-
-#######################################
 # Find command to elevate as super user.
 # Outputs:
 #   Super user command.
@@ -157,48 +120,31 @@ find_super() {
 }
 
 #######################################
-# Download and install Nushell.
+# Download Jq binary to temporary path.
 # Arguments:
 #   Super user command for installation.
-#   Nushell version.
-#   Destination path.
+# Outputs:
+#   Path to temporary Jq binary.
 #######################################
-install_nushell() {
+install_jq() {
   local super="${1}" version="${2}" dst_dir="${3}"
-  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
+  local dst_file="${dst_dir}/jq"
 
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
-  os="$(uname -s)"
-  case "${os}" in
-    Darwin)
-      target="nu-${version}-${arch}-apple-darwin"
-      ;;
-    Linux)
-      target="nu-${version}-${arch}-unknown-linux-musl"
-      ;;
-    *)
-      log --stderr "error: Unsupported operating system '${os}'."
-      exit 1
-      ;;
-  esac
-
-  # Create installation directories.
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
-  #   -d: Check if path exists and is a directory.
-  tmp_dir="$(mktemp -d)"
-  if [ ! -d "${dst_dir}" ]; then
-    ${super:+"${super}"} mkdir -p "${dst_dir}"
-  fi
+  #   -m: Show system architecture name.
+  #   -s: Show operating system kernel name.
+  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
+    sed s/aarch64/arm64/)"
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
-  log "Installing Nushell to '${dst_dir}/nu'."
-  fetch --dest "${tmp_dir}/${target}.tar.gz" \
-    "https://github.com/nushell/nushell/releases/download/${version}/${target}.tar.gz"
-  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} mv "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
-
+  log "Installing Jq to '${dst_file}'."
+  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
+    "https://github.com/jqlang/jq/releases/latest/download/jq-${os}-${arch}"
   export PATH="${dst_dir}:${PATH}"
-  log "Installed Nushell $(nu --version)."
+  log "Installed $(jq --version)."
 }
 
 #######################################
@@ -276,7 +222,7 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-nushell --help' for usage."
+        log --stderr "Run 'install-jq --help' for usage"
         exit 2
         ;;
     esac
@@ -292,10 +238,7 @@ main() {
     super="$(find_super)"
   fi
 
-  if [ -z "${version}" ]; then
-    version="$(find_latest)"
-  fi
-  install_nushell "${super}" "${version}" "${dst_dir}"
+  install_jq "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

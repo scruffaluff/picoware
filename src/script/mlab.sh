@@ -112,7 +112,7 @@ find_matlab() {
   # Search standard locations for first Matlab installation.
   #
   # Flags:
-  #   -n: Check if the string has nonzero length.
+  #   -n: Check if string has nonzero length.
   #   -s: Show operating system kernel name.
   if [ -n "${MLAB_PROGRAM:-}" ]; then
     program="${MLAB_PROGRAM}"
@@ -257,7 +257,7 @@ run() {
   # Defaults to batch mode for script execution and interactive mode otherwise.
   #
   # Flags:
-  #   -n: Check if the string has nonzero length.
+  #   -n: Check if string has nonzero length.
   module="$(get_module "${script}")"
   if [ -n "${script}" ]; then
     if [ -n "${debug}" ]; then
@@ -279,7 +279,7 @@ run() {
   # Add parent path to Matlab if command is a script.
   #
   # Flags:
-  #   -n: Check if the string has nonzero length.
+  #   -n: Check if string has nonzero length.
   if [ -n "${script}" ] && [ "${module}" != "${script}" ]; then
     folder="$(dirname "${script}")"
     case "$(basename "${folder}")" in

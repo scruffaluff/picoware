@@ -129,7 +129,7 @@ Function InstallNushell($Target, $Version, $DestDir) {
 
 # Print log message to stdout if logging is enabled.
 Function Log($Message) {
-    If (!"$Env:SHELL_SCRIPTS_NOLOG") {
+    If (!"$Env:SCRIPTS_NOLOG") {
         Write-Output "$Message"
     }
 }

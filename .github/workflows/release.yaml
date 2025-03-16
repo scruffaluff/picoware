@@ -11,20 +11,12 @@ on:
   push:
     tags:
       - "**"
-  workflow_dispatch:
-    inputs:
-      debug:
-        default: false
-        description: Use Tmate session for debugging
-        type: boolean
 
 jobs:
   release:
     name: Make GitHub release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -33,9 +25,3 @@ jobs:
             github.ref_name }}/CHANGELOG.md) for more information.
           name: Scripts ${{ github.ref_name }}
           tag_name: ${{ github.ref }}
-      - name: Setup Tmate session if debug enabled
-        if: >-
-          ${{ always() && github.event_name == 'workflow_dispatch' &&
-          inputs.debug }}
-        timeout-minutes: 60
-        uses: mxschmitt/action-tmate@v3

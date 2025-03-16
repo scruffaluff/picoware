@@ -23,9 +23,10 @@ Usage: install [OPTIONS] [SCRIPTS]...
 Options:
       --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install scripts
+  -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
-  -u, --user                Install scripts for current user
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 EOF
 }
@@ -40,7 +41,8 @@ EOF
 #   Parent directory of Scripts script.
 #######################################
 configure_shell() {
-  export_cmd="export PATH=\"${1}:\$PATH\""
+  local dst_dir="${1}" shell_name=''
+  local export_cmd="export PATH=\"${dst_dir}:\$PATH\""
   shell_name="$(basename "${SHELL}")"
 
   case "${shell_name}" in
@@ -48,11 +50,11 @@ configure_shell() {
       profile="${HOME}/.bashrc"
       ;;
     fish)
-      export_cmd="set -x PATH \"${1}\" \$PATH"
+      export_cmd="set -x PATH \"${dst_dir}\" \$PATH"
       profile="${HOME}/.config/fish/config.fish"
       ;;
     nu)
-      export_cmd="\$env.PATH = [\"${1}\" ...\$env.PATH]"
+      export_cmd="\$env.PATH = [\"${dst_dir}\" ...\$env.PATH]"
       if [ "$(uname -s)" = 'Darwin' ]; then
         profile="${HOME}/Library/Application Support/nushell/config.nu"
       else
@@ -74,107 +76,69 @@ configure_shell() {
 }
 
 #######################################
-# Download file to local path.
-# Arguments:
-#   Super user command for installation.
-#   Remote source URL.
-#   Local destination path.
-#   Optional permissions for file.
+# Perform network request.
 #######################################
-download() {
+fetch() {
+  local url='' dst_dir='' dst_file='-' mode='' super=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -d | --dest)
+        dst_file="${2}"
+        shift 2
+        ;;
+      -m | --mode)
+        mode="${2}"
+        shift 2
+        ;;
+      -s | --super)
+        super="${2}"
+        shift 2
+        ;;
+      *)
+        url="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
   # Create parent directory if it does not exist.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
-  folder="$(dirname "${3}")"
-  if [ ! -d "${folder}" ]; then
-    ${1:+"${1}"} mkdir -p "${folder}"
+  if [ "${dst_file}" != '-' ]; then
+    dst_dir="$(dirname "${dst_file}")"
+    if [ ! -d "${dst_dir}" ]; then
+      ${super:+"${super}"} mkdir -p "${dst_dir}"
+    fi
   fi
 
   # Download with Curl or Wget.
   #
   # Flags:
-  #   -O path: Save download to path.
+  #   -O <PATH>: Save download to path.
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
   if [ -x "$(command -v curl)" ]; then
-    ${1:+"${1}"} curl --fail --location --show-error --silent --output "${3}" \
-      "${2}"
+    ${super:+"${super}"} curl --fail --location --show-error --silent --output \
+      "${dst_file}" "${url}"
   elif [ -x "$(command -v wget)" ]; then
-    ${1:+"${1}"} wget -q -O "${3}" "${2}"
+    ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
-    error "$(
-      cat << EOF
-Unable to find a network file downloader.
-Install curl, https://curl.se, manually before continuing.
-EOF
-    )"
+    log --stderr 'error: Unable to find a network file downloader.'
+    log --stderr 'Install curl, https://curl.se, manually before continuing.'
+    exit 1
   fi
 
   # Change file permissions if chmod parameter was passed.
   #
   # Flags:
-  #   -n: Check if the string has nonzero length.
-  if [ -n "${4:-}" ]; then
-    ${1:+"${1}"} chmod "${4}" "${3}"
+  #   -n: Check if string has nonzero length.
+  if [ -n "${mode:-}" ]; then
+    ${super:+"${super}"} chmod "${mode}" "${dst_file}"
   fi
-}
-
-#######################################
-# Download Jq binary to temporary path.
-# Arguments:
-#   Operating system name.
-# Outputs:
-#   Path to temporary Jq binary.
-#######################################
-download_jq() {
-  # Do not use long form --machine flag for uname. It is not supported on MacOS.
-  #
-  # Flags:
-  #   -m: Show system architecture name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ \
-    | sed s/aarch64/arm64/)"
-  tmp_path="$(mktemp)"
-  download '' \
-    "https://github.com/jqlang/jq/releases/latest/download/jq-${1}-${arch}" \
-    "${tmp_path}" 755
-  echo "${tmp_path}"
-}
-
-#######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'install --help' for usage.\n" >&2
-  exit 2
 }
 
 #######################################
@@ -183,8 +147,10 @@ error_usage() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  # Do not use long form --kernel-name flag for uname. It is not supported on
-  # MacOS.
+  local jq_bin='' tmp_dir=''
+
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
   #   -s: Show operating system kernel name.
@@ -194,69 +160,38 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
-    case "$(uname -s)" in
-      Darwin)
-        download_jq macos
-        ;;
-      FreeBSD)
-        super="$(find_super)"
-        ${super:+"${super}"} pkg update > /dev/null 2>&1
-        ${super:+"${super}"} pkg install --yes jq > /dev/null 2>&1
-        command -v jq
-        ;;
-      Linux)
-        download_jq linux
-        ;;
-      *)
-        error "$(
-          cat << EOF
-Cannot find required 'jq' command on computer.
-Please install 'jq' and retry installation.
-EOF
-        )"
-        ;;
-    esac
+    response="$(fetch 'https://scruffaluff.github.io/scripts/install/jq.sh')"
+    tmp_dir="$(mktemp -d)"
+    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
+    echo "${tmp_dir}/jq"
   fi
 }
 
 #######################################
 # Find all scripts inside GitHub repository.
 # Arguments:
-#   Version
+#   Scripts version.
 # Returns:
 #   Array of script names.
 #######################################
 find_scripts() {
-  url="https://api.github.com/repos/scruffaluff/scripts/git/trees/${1}?recursive=true"
-
-  # Flags:
-  #   -O path: Save download to path.
-  #   -q: Hide log output.
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
-    response="$(curl --fail --location --show-error --silent "${url}")"
-  elif [ -x "$(command -v wget)" ]; then
-    response="$(wget -q -O - "${url}")"
-  else
-    error "$(
-      cat << EOF
-Unable to find a network file downloader.
-Install curl, https://curl.se, manually before continuing.
-EOF
-    )"
-  fi
+  local version="${1:-main}"
+  local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".sh")) | ltrimstr("src/script/")'
+  local jq_bin='' response=''
 
   jq_bin="$(find_jq)"
-  filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".sh")) | ltrimstr("src/script/")'
+  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
+
 }
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
-  # Do not use long form --user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
@@ -268,81 +203,75 @@ find_super() {
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
   else
-    error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation'
+    exit 1
   fi
 }
 
 #######################################
 # Install script and update path.
 # Arguments:
-#   Super user command for installation
-#   Script URL prefix
-#   Destination path prefix
-#   Script name
+#   Super user command for installation.
+#   Script version.
+#   Destination path.
+#   Script file name.
 # Globals:
-#   SHELL_SCRIPTS_NOLOG
+#   SCRIPTS_NOLOG
 # Outputs:
 #   Log message to stdout.
 #######################################
 install_script() {
-  name="${4%.*}"
-  dst_dir="${3}"
-  dst_file="${dst_dir}/${name}"
-  repo="https://raw.githubusercontent.com/scruffaluff/scripts/${2}"
-  src_url="${repo}/src/script/${4}"
+  local super="${1}" version="${2}" dst_dir="${3}" script="${4}" name="${4%.*}"
+  local dst_file="${dst_dir}/${name}"
+  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
 
-  # Use super user elevation command for system installation if user did not
-  # give the --user, does not own the file, and is not root.
-  #
-  # Do not use long form --user flag for id. It is not supported on MacOS.
-  #
-  # Flags:
-  #   -w: Check if folder exists and is writable.
-  #   -z: Check if the string is empty.
-  if [ -z "${1}" ] && [ ! -w "${dst_dir}" ]; then
-    super="$(find_super)"
-  else
-    super=''
-  fi
-
-  if [ "${4##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
-    if [ -z "${1}" ]; then
-      curl -LSfs "${repo}/src/install/nushell.sh" | sh
-    else
-      curl -LSfs "${repo}/src/install/nushell.sh" | sh -s -- --user
-    fi
+  if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
+    fetch "${repo}/install/nushell.sh" | sh -s -- --quiet
   fi
 
   log "Installing script ${name} to '${dst_file}'."
-  download "${super}" "${src_url}" "${dst_file}" 755
+  fetch --dest "${dst_file}" --mode 755 --super "${super}" "${repo}/script/${script}"
 
-  # Add Scripts to shell profile if not in system path.
-  #
-  # Flags:
-  #   -e: Check if file exists.
-  #   -v: Only show file path of command.
-  if [ ! -e "$(command -v "${name}")" ]; then
-    configure_shell "${dst_dir}"
-    export PATH="${dst_dir}:${PATH}"
-  fi
-
+  export PATH="${dst_dir}:${PATH}"
   log "Installed $("${name}" --version)."
 }
 
 #######################################
-# Print log message to stdout if logging is enabled.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
 # Globals:
-#   SHELL_SCRIPTS_NOLOG
+#   SCRIPTS_NOLOG
 # Outputs:
-#   Log message to stdout.
+#   Message argument.
 #######################################
 log() {
-  # Log if environment variable is not set.
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
   #
   # Flags:
-  #   -z: Check if string has zero length.
-  if [ -z "${SHELL_SCRIPTS_NOLOG:-}" ]; then
-    echo "$@"
+  #   -z: Check if string has nonzero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
 }
 
@@ -350,7 +279,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  dst_dir='' names='' version='main'
+  local dst_dir='' global_='' names='' super='' version='main'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -363,6 +292,11 @@ main() {
         dst_dir="${2}"
         shift 2
         ;;
+      -g | --global)
+        dst_dir="${dst_dir:-/usr/local/bin}"
+        global_='true'
+        shift 1
+        ;;
       -h | --help)
         usage
         exit 0
@@ -371,11 +305,8 @@ main() {
         list_scripts='true'
         shift 1
         ;;
-      -u | --user)
-        if [ -z "${dst_dir}" ]; then
-          dst_dir="${HOME}/.local/bin"
-        fi
-        user_install='true'
+      -q | --quiet)
+        export SCRIPTS_NOLOG='true'
         shift 1
         ;;
       -v | --version)
@@ -394,33 +325,40 @@ main() {
   done
 
   scripts="$(find_scripts "${version}")"
-  if [ -z "${dst_dir}" ]; then
-    dst_dir='/usr/local/bin'
-  fi
 
   # Flags:
-  #   -n: Check if the string has nonzero length.
+  #   -n: Check if string has nonzero length.
   #   -z: Check if string has zero length.
   if [ -n "${list_scripts:-}" ]; then
     for script in ${scripts}; do
       echo "${script%.*}"
     done
-  else
-    for name in ${names}; do
-      match_found=''
-      for script in ${scripts}; do
-        if [ "${script%.*}" = "${name}" ]; then
-          match_found='true'
-          install_script "${user_install:-}" "${version}" "${dst_dir}" \
-            "${script}"
-        fi
-      done
+    return
+  fi
 
-      if [ -z "${match_found:-}" ]; then
-        error_usage "No script found for '${names}'."
+  # Find super user command if destination is not writable.
+  #
+  # Flags:
+  #   -w: Check if file exists and is writable.
+  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+  if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
+    [ ! -w "${dst_dir}" ]; then
+    super="$(find_super)"
+  fi
+
+  for name in ${names}; do
+    match_found=''
+    for script in ${scripts}; do
+      if [ "${script%.*}" = "${name}" ]; then
+        match_found='true'
+        install_script "${super}" "${version}" "${dst_dir}" "${script}"
       fi
     done
-  fi
+
+    if [ -z "${match_found:-}" ]; then
+      log --stderr "error: No script found for '${names}'."
+    fi
+  done
 }
 
 # Add ability to selectively skip main function during test suite.

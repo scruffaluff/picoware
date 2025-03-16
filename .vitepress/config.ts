@@ -11,8 +11,8 @@ export default defineConfig({
   base: "/scripts/",
   description: "Personal collection of utility apps, installers, and scripts.",
   lastUpdated: true,
-  outDir: "site",
-  srcDir: "docs",
+  outDir: "build/site",
+  srcDir: "doc",
   themeConfig: {
     aside: false,
     footer: {
@@ -29,5 +29,5 @@ export default defineConfig({
     ],
   },
   title: "Scripts",
-  vite: { publicDir: "../assets" },
+  vite: { publicDir: "../data/public" },
 });

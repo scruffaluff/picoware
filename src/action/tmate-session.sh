@@ -144,8 +144,8 @@ install_tmate_linux() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v curl)" ] || [ ! -x "$(command -v ssh)" ] \
-    || [ ! -x "$(command -v tar)" ] || [ ! -x "$(command -v xz)" ]; then
+  if [ ! -x "$(command -v curl)" ] || [ ! -x "$(command -v ssh)" ] ||
+    [ ! -x "$(command -v tar)" ] || [ ! -x "$(command -v xz)" ]; then
     if [ -x "$(command -v apk)" ]; then
       ${1:+"${1}"} apk add curl openssh-client tar xz
     elif [ -x "$(command -v apt-get)" ]; then
@@ -161,7 +161,8 @@ install_tmate_linux() {
     fi
   fi
 
-  curl -LSfs "https://github.com/tmate-io/tmate/releases/download/${tmate_version}/tmate-${tmate_version}-static-linux-${tmate_arch}.tar.xz" -o /tmp/tmate.tar.xz
+  curl --fail --location --show-error --silent --output /tmp/tmate.tar.xz \
+    "https://github.com/tmate-io/tmate/releases/download/${tmate_version}/tmate-${tmate_version}-static-linux-${tmate_arch}.tar.xz"
   tar xvf /tmp/tmate.tar.xz --directory /tmp --strip-components 1
   ${1:+"${1}"} install /tmp/tmate /usr/local/bin/tmate
   rm /tmp/tmate /tmp/tmate.tar.xz

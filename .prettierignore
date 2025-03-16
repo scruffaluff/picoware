@@ -2,13 +2,13 @@
 #
 # For more information, visit https://prettier.io/docs/en/ignore.html.
 
-.cache/
 .git/
-.vitepress/cache/
-.vitepress/dist/
-*.bats
 *.nu
+/.vendor/
+/.vitepress/cache/
+/.vitepress/dist/
+/build/
+/data/public/
+deno.lock
 node_modules/
-package-lock.json
-site/
 tmp/

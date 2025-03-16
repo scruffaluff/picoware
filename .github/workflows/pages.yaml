@@ -19,40 +19,31 @@ on:
         type: boolean
 
 env:
-  NPM_CONFIG_CACHE: "${{ github.workspace }}/.cache/npm"
+  DENO_DIR: "${{ github.workspace }}/.vendor/deno"
 
 jobs:
-  docs:
+  doc:
     name: Build and publish documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Cache packages
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           path: |
-            .cache
+            .vendor
             node_modules
-          key: >-
-            node-22_${{ runner.os }}_npm-${{ hashFiles('package-lock.json') }}
       - name: Install Just
-        run: >-
-          curl -LSfs https://just.systems/install.sh | sh -s -- --to
-          /usr/local/bin
-      - name: Install Node interpreter
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install development dependencies
-        run: just setup
-      - name: Build documentation
-        run: just docs
+        run: src/install/just.sh --dest /usr/local/bin
+      - name: Run commands
+        run: just setup doc
       - name: Publish documentation
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ github.token }}
-          publish_dir: site
+          publish_dir: build/site
       - name: Setup Tmate session if debug enabled
         if: >-
           ${{ always() && github.event_name == 'workflow_dispatch' &&

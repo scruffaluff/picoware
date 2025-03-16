@@ -5,7 +5,7 @@ Describe 'Install' {
         . "$Mlab"
 
         $Env:MLAB_PROGRAM = 'C:/Windows/matlab'
-        $Env:SHELL_SCRIPTS_NOLOG = 'true'
+        $Env:SCRIPTS_NOLOG = 'true'
     }
 
     It 'Mlab argumentless call contains no commands' {

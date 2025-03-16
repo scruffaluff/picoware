@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 #
-# Install Nushell for MacOS and Linux systems.
+# Install Just for MacOS and Linux systems. This script differs from
+# https://just.systems/install.sh by using the Homebrew API to avoid GitHub API
+# rate limits.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,17 +18,17 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Nushell.
+Installer script for Just.
 
-Usage: install-nushell [OPTIONS]
+Usage: install-just [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install Nushell
-  -g, --global              Install Nushell for all users
+  -d, --dest <PATH>         Directory to install Just
+  -g, --global              Install Just for all users
   -h, --help                Print help information
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Nushell to install
+  -v, --version <VERSION>   Version of Just to install
 EOF
 }
 
@@ -123,12 +125,12 @@ find_jq() {
 }
 
 #######################################
-# Find latest Nushell version.
+# Find latest Just version.
 #######################################
 find_latest() {
   local jq_bin='' response=''
+  response="$(fetch 'https://formulae.brew.sh/api/formula/just.json')"
   jq_bin="$(find_jq)"
-  response="$(fetch 'https://formulae.brew.sh/api/formula/nushell.json')"
   printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
     '.versions.stable'
 }
@@ -157,24 +159,33 @@ find_super() {
 }
 
 #######################################
-# Download and install Nushell.
+# Download and install Just.
 # Arguments:
 #   Super user command for installation.
-#   Nushell version.
+#   Just version.
 #   Destination path.
 #######################################
-install_nushell() {
+install_just() {
   local super="${1}" version="${2}" dst_dir="${3}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
+  # Parse Just build target.
+  #
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
+  #
+  # Flags:
+  #   -m: Show system architecture name.
+  #   -s: Show operating system kernel name.
+  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
+    sed s/arm64/aarch64/)"
   os="$(uname -s)"
   case "${os}" in
     Darwin)
-      target="nu-${version}-${arch}-apple-darwin"
+      target="${arch}-apple-darwin"
       ;;
     Linux)
-      target="nu-${version}-${arch}-unknown-linux-musl"
+      target="${arch}-unknown-linux-musl"
       ;;
     *)
       log --stderr "error: Unsupported operating system '${os}'."
@@ -191,14 +202,14 @@ install_nushell() {
     ${super:+"${super}"} mkdir -p "${dst_dir}"
   fi
 
-  log "Installing Nushell to '${dst_dir}/nu'."
-  fetch --dest "${tmp_dir}/${target}.tar.gz" \
-    "https://github.com/nushell/nushell/releases/download/${version}/${target}.tar.gz"
-  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} mv "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
+  log "Installing Just to '${dst_file}'."
+  fetch --dest "${tmp_dir}/just.tar.gz" \
+    "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz"
+  tar fx "${tmp_dir}/just.tar.gz" -C "${tmp_dir}"
+  ${super:+"${super}"} mv "${tmp_dir}/just" "${dst_file}"
 
   export PATH="${dst_dir}:${PATH}"
-  log "Installed Nushell $(nu --version)."
+  log "Installed $(just --version)."
 }
 
 #######################################
@@ -276,7 +287,7 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-nushell --help' for usage."
+        log --stderr "Run 'install-just --help' for usage."
         exit 2
         ;;
     esac
@@ -295,7 +306,7 @@ main() {
   if [ -z "${version}" ]; then
     version="$(find_latest)"
   fi
-  install_nushell "${super}" "${version}" "${dst_dir}"
+  install_just "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.

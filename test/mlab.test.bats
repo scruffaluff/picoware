@@ -1,15 +1,18 @@
 #!/usr/bin/env bats
 
 setup() {
-  export PATH="${BATS_TEST_DIRNAME}/..:${PATH}"
-  load '../node_modules/bats-assert/load'
-  load '../node_modules/bats-support/load'
+  REPO_PATH="${BATS_TEST_DIRNAME}/.."
+  cd "${REPO_PATH}" || exit
+  load "${REPO_PATH}/.vendor/lib/bats-assert/load"
+  load "${REPO_PATH}/.vendor/lib/bats-file/load"
+  load "${REPO_PATH}/.vendor/lib/bats-support/load"
+  bats_require_minimum_version 1.5.0
 
   export MLAB_PROGRAM='/bin/matlab'
-  export SHELL_SCRIPTS_NOLOG='true'
+  export SCRIPTS_NOLOG='true'
 }
 
-@test 'Mlab argumentless call contains no commands' {
+argumentless_call_contains_no_commands() { # @test
   local actual expected
   expected='/bin/matlab -nodisplay -nosplash'
 
@@ -17,7 +20,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab debug call contains sets breakpoint on error' {
+debug_call_contains_sets_breakpoint_on_error() { # @test
   local actual expected
   expected='/bin/matlab -nodisplay -nosplash -r dbstop if error;'
 
@@ -25,7 +28,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab function call contains one batch command' {
+function_call_contains_one_batch_command() { # @test
   local actual expected
   expected='/bin/matlab -nodesktop -nosplash -batch script'
 
@@ -33,7 +36,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab genpath option call contains multiple path commands' {
+genpath_option_call_contains_multiple_path_commands() { # @test
   local actual expected
   expected="/bin/matlab -nodisplay -nosplash -r addpath(genpath('/tmp')); "
 
@@ -41,7 +44,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab path option call contains path command' {
+path_option_call_contains_path_command() { # @test
   local actual expected
   expected="/bin/matlab -nodisplay -nosplash -r addpath('/tmp'); "
 
@@ -49,7 +52,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab script call contains one batch command' {
+script_call_contains_one_batch_command() { # @test
   local actual expected
   expected="/bin/matlab -nodesktop -nosplash -batch addpath('src'); script"
 
@@ -57,7 +60,7 @@ setup() {
   assert_equal "${actual}" "${expected}"
 }
 
-@test 'Mlab debug script call contains several commands' {
+debug_script_call_contains_several_commands() { # @test
   local actual expected
   expected="/bin/matlab -nodisplay -nosplash -r addpath('src'); dbstop if \
 error; dbstop in script; script; exit"
