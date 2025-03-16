@@ -120,7 +120,7 @@ install_jq() {
   #   -s: Show operating system kernel name.
   arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
     sed s/aarch64/arm64/)"
-  os="$(uname -s | sed s/Darwin/macos/ | sed s/Linux/linux/)"
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
   log "Installing Jq to '${dst_file}'."
   download "${super}" \

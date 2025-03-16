@@ -66,7 +66,6 @@ setup: _setup
 _setup:
   #!/usr/bin/env sh
   set -eu
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ | sed s/aarch64/arm64/)"
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if [ ! -x "$(command -v jq)" ]; then
     src/install/jq.sh --dest .vendor/bin
@@ -90,15 +89,29 @@ _setup:
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
+  bats --version
+  if [ ! -x "$(command -v shellcheck)" ]; then
+    shellcheck_arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
+      sed s/arm64/aarch64/)"
+    shellcheck_version="$(curl  --fail --location --show-error \
+      https://formulae.brew.sh/api/formula/shellcheck.json |
+      jq --exit-status --raw-output .versions.stable)"
+    curl --fail --location --show-error --output /tmp/shellcheck.tar.xz \
+      https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.${os}.${shellcheck_arch}.tar.xz
+    install /tmp/shellcheck .vendor/bin/
+  fi
+  shellcheck --version
   if [ ! -x "$(command -v shfmt)" ]; then
+    shfmt_arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
+      sed s/aarch64/arm64/)"
     shfmt_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shfmt.json |
       jq --exit-status --raw-output .versions.stable)"
-    curl --fail --location --show-error --output /tmp/shfmt \
-      "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${arch}"
-    install /tmp/shfmt .vendor/bin/
+    curl --fail --location --show-error --output .vendor/bin/shfmt \
+      "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${shfmt_arch}"
+    chmod 755 .vendor/bin/shfmt
   fi
-  bats --version
+  echo "Shfmt $(shfmt --version)"
 
 [windows]
 _setup:
@@ -117,9 +130,9 @@ _setup:
     & src/install/jq.ps1 --dest .vendor/bin
   }
   jq --version
-  If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
-    & src/install/nushell.ps1 --dest .vendor/bin
-  }
+  # If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
+  #   & src/install/nushell.ps1 --dest .vendor/bin
+  # }
   Write-Output "Nushell $(nu --version)"
   If (-Not (Get-Command -ErrorAction SilentlyContinue deno)) {
     $Env:DENO_INSTALL="$(pwd)/.vendor"

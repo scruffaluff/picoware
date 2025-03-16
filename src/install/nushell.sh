@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install Nushell for FreeBSD, MacOS, or Linux systems.
+# Install Nushell for MacOS and Linux systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -177,13 +177,6 @@ install_nushell() {
   case "${os}" in
     Darwin)
       target="nu-${version}-${arch}-apple-darwin"
-      ;;
-    FreeBSD)
-      log "Installing Nushell to '/usr/local/bin/nu'."
-      ${super:+"${super}"} pkg update > /dev/null 2>&1
-      ${super:+"${super}"} pkg install --yes nushell > /dev/null 2>&1
-      log "Installed Nushell $(nu --version)."
-      exit 0
       ;;
     Linux)
       target="nu-${version}-${arch}-unknown-linux-musl"
