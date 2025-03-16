@@ -156,4 +156,5 @@ test *args:
 # Run test suites.
 [windows]
 test:
-  Invoke-Pester -CI -Output Detailed test
+  Invoke-Pester -CI -Output Detailed -Path \
+    $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName

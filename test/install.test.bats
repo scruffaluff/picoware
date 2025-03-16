@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+# shellcheck disable=SC2317
 #
 # Tests for POSIX installer scripts.
 
@@ -40,16 +41,16 @@ just_install() { # @test
 
 just_install_jq_download() { # @test
   # Ensure that local Jq binary is not found.
-  # shellcheck disable=SC2317
-  # command() {
-  #   if [ "${2}" = 'jq' ]; then
-  #     echo ''
-  #   else
-  #     which "${2}"
-  #   fi
-  # }
-  # export -f command
+  command() {
+    if [ "${2}" = 'jq' ]; then
+      echo ''
+    else
+      which "${2}"
+    fi
+  }
+  export -f command
 
+  skip 'Disabled until Jq installer is published.'
   run src/install/just.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'
