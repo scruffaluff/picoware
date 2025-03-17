@@ -167,6 +167,16 @@ install_nushell() {
   local super="${1}" version="${2}" dst_dir="${3}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v tar)" ]; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
+  fi
+
   arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
   os="$(uname -s)"
   case "${os}" in

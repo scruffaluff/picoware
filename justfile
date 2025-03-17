@@ -158,6 +158,7 @@ _setup:
 # Run test suites.
 [unix]
 test *args:
+  rm -fr /tmp/bin /tmp/*-stub-*
   bats --recursive test {{args}}
 
 # Run test suites.

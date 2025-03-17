@@ -65,3 +65,17 @@ nushell_install_prints_version() { # @test
   assert_success
   assert_output --partial 'Installed Nushell 0.'
 }
+
+nushell_install_shows_error_if_tar_missing() { # @test
+  # Ensure that local Tar binary is not found.
+  stub command '-v tar : echo ""'
+
+  run src/install/nushell.sh --dest "$(mktemp -d)"
+  assert_failure
+  assert_output "$(
+    cat << EOF
+error: Unable to find tar file archiver.
+Install tar, https://www.gnu.org/software/tar, manually before continuing.
+EOF
+  )"
+}
