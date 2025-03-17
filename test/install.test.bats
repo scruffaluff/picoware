@@ -8,7 +8,6 @@ setup() {
   cd "${REPO_PATH}" || exit
   load "${REPO_PATH}/.vendor/lib/bats-assert/load"
   load "${REPO_PATH}/.vendor/lib/bats-file/load"
-  load "${REPO_PATH}/.vendor/lib/bats-mock/stub"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
 }
@@ -53,7 +52,14 @@ just_install_prints_version() { # @test
 
 just_install_downloads_jq_if_missing() { # @test
   # Ensure that local Jq binary is not found.
-  stub command '-v jq : echo ""'
+  command() {
+    if [ "$*" = '-v jq' ]; then
+      echo ""
+    else
+      which "${2}"
+    fi
+  }
+  export -f command
 
   run src/install/just.sh --dest "$(mktemp -d)"
   assert_success
@@ -68,7 +74,14 @@ nushell_install_prints_version() { # @test
 
 nushell_install_shows_error_if_tar_missing() { # @test
   # Ensure that local Tar binary is not found.
-  stub command '-v tar : echo ""'
+  command() {
+    if [ "$*" = '-v tar' ]; then
+      echo ""
+    else
+      which "${2}"
+    fi
+  }
+  export -f command
 
   run src/install/nushell.sh --dest "$(mktemp -d)"
   assert_failure

@@ -80,7 +80,7 @@ _setup:
   echo "Nushell $(nu --version)"
   if [ ! -x "$(command -v deno)" ]; then
     export DENO_INSTALL="$(pwd)/.vendor"
-    curl -fsSL https://deno.land/install.sh | sh -s -- --no-modify-path --yes
+    curl -LSfs https://deno.land/install.sh | sh -s -- --no-modify-path --yes
   fi
   deno --version
   mkdir -p .vendor/bin .vendor/lib
@@ -92,10 +92,6 @@ _setup:
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
-  if [ ! -d '.vendor/lib/bats-mock' ]; then
-    git clone -c advice.detachedHead=false --branch v1.2.5 --depth 1 \
-      https://github.com/jasonkarns/bats-mock.git .vendor/lib/bats-mock
-  fi
   bats --version
   if [ ! -x "$(command -v shellcheck)" ]; then
     shellcheck_arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
@@ -158,7 +154,6 @@ _setup:
 # Run test suites.
 [unix]
 test *args:
-  rm -fr /tmp/bin /tmp/*-stub-*
   bats --recursive test {{args}}
 
 # Run test suites.

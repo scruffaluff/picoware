@@ -14,6 +14,12 @@
       "size": 659
     },
     {
+      "path": "src/script/newscript.nu",
+      "mode": "100644",
+      "type": "blob",
+      "size": 659
+    },
+    {
       "path": "folder",
       "mode": "040000",
       "type": "tree"
