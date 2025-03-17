@@ -44,18 +44,15 @@ env:
 
 jobs:
   build:
-    if:
-      ${{ github.ref_type == 'branch' || (inputs.job == 'build' && inputs.os ==
-      matrix.os) }}
+    if: ${{ github.ref_type == 'branch' || inputs.job == 'build' }}
     name: Run code analyses and test suites
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos
-          - ubuntu
-          - windows
+        os: >-
+          ${{ inputs.os && fromJson(format('["{0}"]',inputs.os)) ||
+          fromJson('["macos","ubuntu","windows"]') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
