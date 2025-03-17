@@ -6,7 +6,6 @@
 ---
 name: main
 
-# Makes workflow run on any push or pull request.
 on:
   pull_request:
     branches:

@@ -9,11 +9,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Caffeinate, InstallNushell, Mlab, and Rgi scripts.
+- Caffeinate, Mlab, and Rgi scripts.
+- Installer scripts for several programs.
+- Several scripts to documentation website.
 
 ### Changed
 
 - Improved error messages for piped commands.
+- Repository organization.
 
 ## 0.1.3 - 2024-06-07
 
@@ -37,7 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Sudo usage check for root user in POSIX scripts.
+- Sudo usage check for root user in Bash scripts.
 
 ## 0.1.0 - 2023-06-21
 
