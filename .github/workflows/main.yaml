@@ -44,7 +44,9 @@ env:
 
 jobs:
   build:
-    if: ${{ github.ref_type == 'branch' || inputs.job == 'build' }}
+    if: >-
+      ${{ github.ref_type == 'branch' && github.event_name !=
+      'workflow_dispatch' || inputs.job == 'build' }}
     name: Run code analyses and test suites
     runs-on: ${{ matrix.os }}-latest
     strategy:
@@ -83,7 +85,9 @@ jobs:
   pages:
     environment:
       name: github-pages
-    if: ${{ github.ref == 'refs/heads/main' || inputs.job == 'pages' }}
+    if: >-
+      ${{ github.ref == 'refs/heads/main' && github.event_name !=
+      'workflow_dispatch' || inputs.job == 'pages' }}
     name: Build and publish documentation
     permissions:
       id-token: write
@@ -118,7 +122,9 @@ jobs:
         uses: mxschmitt/action-tmate@v3
 
   release:
-    if: ${{ github.ref_type == 'tag' || inputs.job == 'release' }}
+    if: >-
+      ${{ github.ref_type == 'tag' && github.event_name != 'workflow_dispatch'
+      || inputs.job == 'release' }}
     name: Make GitHub release
     permissions:
       contents: write

@@ -79,8 +79,7 @@ _setup:
   fi
   echo "Nushell $(nu --version)"
   if [ ! -x "$(command -v deno)" ]; then
-    export DENO_INSTALL="$(pwd)/.vendor"
-    curl -LSfs https://deno.land/install.sh | sh -s -- --no-modify-path --yes
+    src/install/deno.sh --dest .vendor/bin
   fi
   deno --version
   mkdir -p .vendor/bin .vendor/lib
@@ -101,7 +100,8 @@ _setup:
       jq --exit-status --raw-output .versions.stable)"
     curl --fail --location --show-error --output /tmp/shellcheck.tar.xz \
       https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.${os}.${shellcheck_arch}.tar.xz
-    install /tmp/shellcheck .vendor/bin/
+    tar fx /tmp/shellcheck.tar.xz -C /tmp
+    install "/tmp/shellcheck-v${shellcheck_version}/shellcheck" .vendor/bin/
   fi
   shellcheck --version
   if [ ! -x "$(command -v shfmt)" ]; then

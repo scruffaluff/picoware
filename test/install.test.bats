@@ -12,6 +12,33 @@ setup() {
   bats_require_minimum_version 1.5.0
 }
 
+deno_install_prints_version() { # @test
+  run src/install/deno.sh --dest "$(mktemp -d)"
+  assert_success
+  assert_output --partial 'Installed deno 2.'
+}
+
+deno_install_shows_error_if_zip_missing() { # @test
+  # Ensure that local unzip binary is not found.
+  command() {
+    if [ "$*" = '-v unzip' ]; then
+      echo ""
+    else
+      which "${2}"
+    fi
+  }
+  export -f command
+
+  run src/install/deno.sh --dest "$(mktemp -d)"
+  assert_failure
+  assert_output "$(
+    cat << EOF
+error: Unable to find zip file archiver.
+Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
+EOF
+  )"
+}
+
 jq_install_prints_version() { # @test
   run src/install/jq.sh --dest "$(mktemp -d)"
   assert_success
@@ -51,7 +78,7 @@ just_install_prints_version() { # @test
 }
 
 just_install_downloads_jq_if_missing() { # @test
-  # Ensure that local Jq binary is not found.
+  # Ensure that local jq binary is not found.
   command() {
     if [ "$*" = '-v jq' ]; then
       echo ""
@@ -73,7 +100,7 @@ nushell_install_prints_version() { # @test
 }
 
 nushell_install_shows_error_if_tar_missing() { # @test
-  # Ensure that local Tar binary is not found.
+  # Ensure that local tar binary is not found.
   command() {
     if [ "$*" = '-v tar' ]; then
       echo ""

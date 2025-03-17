@@ -169,6 +169,16 @@ install_just() {
   local super="${1}" version="${2}" dst_dir="${3}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v tar)" ]; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
+  fi
+
   # Parse Just build target.
   #
   # Do not use long form flags for uname. They are not supported on some

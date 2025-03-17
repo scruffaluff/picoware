@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 #
-# Install Jq for MacOS and Linux systems.
+# Install Deno for MacOS and Linux systems. This script differs from
+# https://deno.land/install.sh by providing more installation options.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,17 +17,17 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Jq.
+Installer script for Deno.
 
-Usage: install-jq [OPTIONS]
+Usage: install-deno [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install Jq
-  -g, --global              Install Jq for all users
+  -d, --dest <PATH>         Directory to install Deno
+  -g, --global              Install Deno for all users
   -h, --help                Print help information
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Jq to install
+  -v, --version <VERSION>   Version of Deno to install
 EOF
 }
 
@@ -120,31 +121,67 @@ find_super() {
 }
 
 #######################################
-# Download Jq binary to temporary path.
+# Download and install Deno.
 # Arguments:
 #   Super user command for installation.
-# Outputs:
-#   Path to temporary Jq binary.
+#   Deno version.
+#   Destination path.
 #######################################
-install_jq() {
+install_deno() {
   local super="${1}" version="${2}" dst_dir="${3}"
-  local dst_file="${dst_dir}/jq"
+  local arch='' dst_file="${dst_dir}/deno" os='' target='' tmp_dir=''
 
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v unzip)" ]; then
+    log --stderr 'error: Unable to find zip file archiver.'
+    log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
+    exit 1
+  fi
+
+  # Parse Deno build target.
+  #
   # Do not use long form flags for uname. They are not supported on some
   # systems.
   #
   # Flags:
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
-    sed s/aarch64/arm64/)"
-  os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed s/darwin/macos/)"
+  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
+    sed s/arm64/aarch64/)"
+  os="$(uname -s)"
+  case "${os}" in
+    Darwin)
+      target="${arch}-apple-darwin"
+      ;;
+    Linux)
+      target="${arch}-unknown-linux-gnu"
+      ;;
+    *)
+      log --stderr "error: Unsupported operating system '${os}'."
+      exit 1
+      ;;
+  esac
 
-  log "Installing Jq to '${dst_file}'."
-  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
-    "https://github.com/jqlang/jq/releases/latest/download/jq-${os}-${arch}"
+  # Create installation directories.
+  #
+  # Flags:
+  #   -d: Check if path exists and is a directory.
+  tmp_dir="$(mktemp -d)"
+  if [ ! -d "${dst_dir}" ]; then
+    ${super:+"${super}"} mkdir -p "${dst_dir}"
+  fi
+
+  log "Installing Deno to '${dst_file}'."
+  fetch --dest "${tmp_dir}/deno.zip" \
+    "https://dl.deno.land/release/${version}/deno-${target}.zip"
+  unzip -d "${tmp_dir}" "${tmp_dir}/deno.zip"
+  ${super:+"${super}"} mv "${tmp_dir}/deno" "${dst_file}"
+
   export PATH="${dst_dir}:${PATH}"
-  log "Installed $(jq --version)."
+  log "Installed $(deno --version)."
 }
 
 #######################################
@@ -222,7 +259,7 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-jq --help' for usage"
+        log --stderr "Run 'install-deno --help' for usage."
         exit 2
         ;;
     esac
@@ -238,7 +275,10 @@ main() {
     super="$(find_super)"
   fi
 
-  install_jq "${super}" "${version}" "${dst_dir}"
+  if [ -z "${version}" ]; then
+    version="$(fetch 'https://dl.deno.land/release-latest.txt')"
+  fi
+  install_deno "${super}" "${version}" "${dst_dir}"
 }
 
 # Add ability to selectively skip main function during test suite.
