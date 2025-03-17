@@ -30,19 +30,30 @@ on:
           - release
         required: true
         type: choice
+      os:
+        description: Operating system
+        options:
+          - macos
+          - ubuntu
+          - windows
+        required: true
+        type: choice
 
 env:
   DENO_DIR: "${{ github.workspace }}/.vendor/deno"
 
 jobs:
   build:
-    if: ${{ github.ref_type == 'branch' || inputs.job == 'build' }}
+    if:
+      ${{ github.ref_type == 'branch' || (inputs.job == 'build' && inputs.os ==
+      matrix.os) }}
     name: Run code analyses and test suites
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         os:
+          - macos
           - ubuntu
           - windows
     steps:

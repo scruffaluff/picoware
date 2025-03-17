@@ -44,7 +44,6 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
   export _curl _sudo="$(command -v sudo)"
   export -f command curl sudo
 
-  stub sudo 'mkdir -p /fake/path : exit 100'
   run src/install/scripts.sh --debug --dest /fake/path mockscript
   assert_failure 100
 }
