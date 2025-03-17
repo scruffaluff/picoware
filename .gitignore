@@ -8,6 +8,7 @@
 /.vitepress/cache/
 /.vitepress/dist/
 /build/
+/data/public/action/
 /data/public/install/
 node_modules/
 tmp/

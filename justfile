@@ -23,13 +23,14 @@ ci: setup format lint doc test
 # Build documentation.
 [unix]
 doc:
-  cp -r src/install data/public/
+  cp -r src/action src/install data/public/
   deno run --allow-all npm:vitepress build .
 
 # Build documentation.
 [windows]
 doc:
-  Copy-Item -Recurse -Path src/install -Destination doc/public/
+  Copy-Item -Recurse -Path src/action -Destination data/public/
+  Copy-Item -Recurse -Path src/install -Destination data/public/
   deno run --allow-all npm:vitepress build .
 
 # Check code formatting.

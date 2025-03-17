@@ -12,13 +12,13 @@ setup() {
   bats_require_minimum_version 1.5.0
 }
 
-deno_install_prints_version() { # @test
-  run src/install/deno.sh --dest "$(mktemp -d)"
+deno_prints_version() { # @test
+  run bash src/install/deno.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed deno 2.'
 }
 
-deno_install_shows_error_if_zip_missing() { # @test
+deno_shows_error_if_zip_missing() { # @test
   # Ensure that local unzip binary is not found.
   command() {
     if [ "$*" = '-v unzip' ]; then
@@ -29,7 +29,7 @@ deno_install_shows_error_if_zip_missing() { # @test
   }
   export -f command
 
-  run src/install/deno.sh --dest "$(mktemp -d)"
+  run bash src/install/deno.sh --dest "$(mktemp -d)"
   assert_failure
   assert_output "$(
     cat << EOF
@@ -39,29 +39,29 @@ EOF
   )"
 }
 
-jq_install_prints_version() { # @test
-  run src/install/jq.sh --dest "$(mktemp -d)"
+jq_prints_version() { # @test
+  run bash src/install/jq.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed jq-1.'
 }
 
-jq_install_global_owner_is_root() { # @test
+jq_global_owner_is_root() { # @test
   local dst_dir
   dst_dir="$(mktemp -d)"
 
-  run src/install/jq.sh --quiet --global --dest "${dst_dir}"
+  run bash src/install/jq.sh --quiet --global --dest "${dst_dir}"
   assert_success
   assert_file_owner root "${dst_dir}/jq"
 }
 
-jq_install_quiet_is_silent() { # @test
-  run src/install/jq.sh --quiet --dest "$(mktemp -d)"
+jq_quiet_is_silent() { # @test
+  run bash src/install/jq.sh --quiet --dest "$(mktemp -d)"
   assert_success
   assert_output ''
 }
 
-just_install_shows_error_usage_for_bad_argument() { # @test
-  run src/install/just.sh --dst
+just_shows_error_usage_for_bad_argument() { # @test
+  run bash src/install/just.sh --dst
   assert_failure
   assert_output "$(
     cat << EOF
@@ -71,13 +71,13 @@ EOF
   )"
 }
 
-just_install_prints_version() { # @test
-  run src/install/just.sh --dest "$(mktemp -d)"
+just_prints_version() { # @test
+  run bash src/install/just.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'
 }
 
-just_install_downloads_jq_if_missing() { # @test
+just_downloads_jq_if_missing() { # @test
   # Ensure that local jq binary is not found.
   command() {
     if [ "$*" = '-v jq' ]; then
@@ -88,18 +88,18 @@ just_install_downloads_jq_if_missing() { # @test
   }
   export -f command
 
-  run src/install/just.sh --dest "$(mktemp -d)"
+  run bash src/install/just.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'
 }
 
-nushell_install_prints_version() { # @test
-  run src/install/nushell.sh --dest "$(mktemp -d)"
+nushell_prints_version() { # @test
+  run bash src/install/nushell.sh --dest "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed Nushell 0.'
 }
 
-nushell_install_shows_error_if_tar_missing() { # @test
+nushell_shows_error_if_tar_missing() { # @test
   # Ensure that local tar binary is not found.
   command() {
     if [ "$*" = '-v tar' ]; then
@@ -110,7 +110,7 @@ nushell_install_shows_error_if_tar_missing() { # @test
   }
   export -f command
 
-  run src/install/nushell.sh --dest "$(mktemp -d)"
+  run bash src/install/nushell.sh --dest "$(mktemp -d)"
   assert_failure
   assert_output "$(
     cat << EOF
