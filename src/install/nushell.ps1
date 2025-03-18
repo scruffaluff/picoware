@@ -21,10 +21,11 @@ Installer script for Nushell.
 Usage: install-nushell [OPTIONS]
 
 Options:
-      --debug               Show shell debug traces
   -d, --dest <PATH>         Directory to install Nushell
+  -g, --global              Install Nushell for all users
   -h, --help                Print help information
-  -u, --user                Install Nushell for current user
+  -m, --modify-env          Update system environment
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Nushell to install
 '@
 }
@@ -55,8 +56,8 @@ Function FindLatest($Version) {
 
 # Download and install Nushell.
 Function InstallNushell($TargetEnv, $Version, $DestDir, $ModifyEnv) {
-    $Arch = $Env:PROCESSOR_ARCHITECTURE -Replace 'AMD64','x86_64' `
-        -Replace 'ARM64','aarch64'
+    $Arch = $Env:PROCESSOR_ARCHITECTURE -Replace 'AMD64', 'x86_64' `
+        -Replace 'ARM64', 'aarch64'
 
     Log "Installing Nushell to '$DestDir\nu.exe'."
     $TmpDir = [System.IO.Path]::GetTempFileName()

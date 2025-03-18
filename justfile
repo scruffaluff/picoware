@@ -134,10 +134,10 @@ _setup:
     & src/install/jq.ps1 --dest .vendor/bin
   }
   jq --version
-  # If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
-  #   & src/install/nushell.ps1 --dest .vendor/bin
-  # }
-  # Write-Output "Nushell $(nu --version)"
+  If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
+    & src/install/nushell.ps1 --dest .vendor/bin
+  }
+  Write-Output "Nushell $(nu --version)"
   If (-Not (Get-Command -ErrorAction SilentlyContinue deno)) {
     $Env:DENO_INSTALL="$(pwd)/.vendor"
     irm https://deno.land/install.ps1 | iex
