@@ -66,7 +66,7 @@ jobs:
             node_modules
       - if: ${{ runner.os == 'Windows' }}
         name: Install Just for Windows
-        run: "& src/install/just.ps1 --dest 'C:/Windows'"
+        run: src/install/just.ps1 --global --modify-env
       - if: ${{ runner.os != 'Windows' }}
         name: Install Just for Unix
         run: src/install/just.sh --global

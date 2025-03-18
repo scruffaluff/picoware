@@ -269,7 +269,7 @@ log() {
   # Print if error or using quiet configuration.
   #
   # Flags:
-  #   -z: Check if string has nonzero length.
+  #   -z: Check if string has zero length.
   if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
     printf "%s${newline}" "${text}" >&"${file}"
   fi

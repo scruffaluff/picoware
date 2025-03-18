@@ -127,8 +127,16 @@ find_super() {
 #   Path to temporary Jq binary.
 #######################################
 install_jq() {
-  local super="${1}" version="${2}" dst_dir="${3}"
+  local super="${1}" version="${2}" dst_dir="${3}" subpath=''
   local dst_file="${dst_dir}/jq"
+
+  # Flags:
+  #   -n: Check if string has nonzero length.
+  if [ -n "${version}" ]; then
+    subpath="download/jq-${version}"
+  else
+    subpath='latest/download'
+  fi
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -142,7 +150,7 @@ install_jq() {
 
   log "Installing Jq to '${dst_file}'."
   fetch --dest "${dst_file}" --mode 755 --super "${super}" \
-    "https://github.com/jqlang/jq/releases/latest/download/jq-${os}-${arch}"
+    "https://github.com/jqlang/jq/releases/${subpath}/jq-${os}-${arch}"
   export PATH="${dst_dir}:${PATH}"
   log "Installed $(jq --version)."
 }
@@ -180,7 +188,7 @@ log() {
   # Print if error or using quiet configuration.
   #
   # Flags:
-  #   -z: Check if string has nonzero length.
+  #   -z: Check if string has zero length.
   if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
     printf "%s${newline}" "${text}" >&"${file}"
   fi
