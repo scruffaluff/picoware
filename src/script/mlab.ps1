@@ -133,7 +133,7 @@ Function Jupyter() {
                 Exit 0
             }
             Default {
-                Break
+                $ArgIdx += 1
             }
         }
     }
@@ -168,27 +168,33 @@ Function Run() {
             { $_ -In '-a', '--addpath' } {
                 $PathCmd = "addpath('" + $Args[0][$ArgIdx + 1] + "'); "
                 $ArgIdx += 2
+                Break
             }
             { $_ -In '-b', '--batch' } {
                 $Batch = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-c', '--license' } {
                 $BinaryArgs += '-c'
                 $BinaryArgs += $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
+                Break
             }
             { $_ -In '-d', '--debug' } {
                 $Debug = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-e', '--echo' } {
                 $Print = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-g', '--genpath' } {
                 $PathCmd = "addpath(genpath('" + $Args[0][$ArgIdx + 1] + "')); "
                 $ArgIdx += 2
+                Break
             }
             { $_ -In '-h', '--help' } {
                 Usage 'run'
@@ -197,21 +203,23 @@ Function Run() {
             { $_ -In '-i', '--interactive' } {
                 $Interactive = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-l', '-logfile', '--logfile' } {
                 $BinaryArgs += '-logfile'
                 $BinaryArgs += $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
+                Break
             }
             { $_ -In '-s', '-sd', '--sd' } {
                 $BinaryArgs += '-sd'
                 $BinaryArgs += $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
+                Break
             }
             Default {
                 $Script = $Args[0][$ArgIdx]
                 $ArgIdx += 1
-                Break
             }
         }
     }

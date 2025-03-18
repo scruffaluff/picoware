@@ -133,7 +133,7 @@ Function Main() {
             { $_ -In '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Exit 0
+                Break
             }
             { $_ -In '-g', '--global' } {
                 if (-Not $DestDir) {
@@ -149,10 +149,12 @@ Function Main() {
             { $_ -In '-m', '--modify-env' } {
                 $ModifyEnv = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-q', '--quiet' } {
                 $Env:SCRIPTS_NOLOG = 'true'
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-v', '--version' } {
                 $Version = $Args[0][$ArgIdx + 1]

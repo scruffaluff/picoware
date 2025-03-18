@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Install Just for Windows systems.
+    Install Deno for Windows systems.
 #>
 
 # If unable to execute due to policy rules, run
@@ -16,60 +16,36 @@ $PSNativeCommandUseErrorActionPreference = $True
 # Show CLI help information.
 Function Usage() {
     Write-Output @'
-Installer script for Just.
+Installer script for Deno.
 
-Usage: install-just [OPTIONS]
+Usage: install-deno [OPTIONS]
 
 Options:
-  -d, --dest <PATH>         Directory to install Just
-  -g, --global              Install Just for all users
+  -d, --dest <PATH>         Directory to install Deno
+  -g, --global              Install Deno for all users
   -h, --help                Print help information
   -m, --modify-env          Update system environment
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Just to install
+  -v, --version <VERSION>   Version of Deno to install
 '@
 }
 
-# Find or download Jq JSON parser.
-Function FindJq() {
-    $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
-    If ($JqBin) {
-        Write-Output $JqBin
-    }
-    Else {
-        $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
-        $TempFile = [System.IO.Path]::GetTempFileName() -Replace '.tmp', '.exe'
-        Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
-            "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
-        Write-Output $TempFile
-    }
-}
-
-# Find latest Just version.
-Function FindLatest($Version) {
-    $JqBin = FindJq
-    $Response = Invoke-WebRequest -UseBasicParsing -Uri `
-        https://formulae.brew.sh/api/formula/just.json
-    Write-Output "$Response" | & $JqBin --exit-status --raw-output `
-        '.versions.stable'
-}
-
-# Download and install Just.
-Function InstallJust($TargetEnv, $Version, $DestDir, $ModifyEnv) {
+# Download and install Deno.
+Function InstallDeno($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE -Replace 'AMD64', 'x86_64' `
         -Replace 'ARM64', 'aarch64'
 
-    Log "Installing Just to '$DestDir\just.exe'."
+    Log "Installing Deno to '$DestDir\deno.exe'."
     $TmpDir = [System.IO.Path]::GetTempFileName()
     Remove-Item $TmpDir | Out-Null
     New-Item -ItemType Directory -Path $TmpDir | Out-Null
 
-    $Target = "just-$Version-$Arch-pc-windows-msvc"
+    $Target = "deno-$Arch-pc-windows-msvc"
     Invoke-WebRequest -UseBasicParsing -OutFile "$TmpDir\$Target.zip" -Uri `
-        "https://github.com/casey/just/releases/download/$Version/$Target.zip"
+        "https://dl.deno.land/release/$Version/$Target.zip"
 
     Expand-Archive -DestinationPath "$TmpDir\$Target" -Path "$TmpDir\$Target.zip"
-    Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\just.exe"
+    Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\*.exe"
 
     If ($ModifyEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
@@ -81,10 +57,37 @@ Function InstallJust($TargetEnv, $Version, $DestDir, $ModifyEnv) {
             Log "Added '$DestDir' to the system path."
             $Env:Path = $PrependedPath
         }
+
+        If (-Not (Get-ItemProperty -ErrorAction SilentlyContinue -Name '(Default)' -Path "$Registry\.js")) {
+            New-Item -Force -Path "$Registry\.js" | Out-Null
+            Set-ItemProperty -Name '(Default)' -Path "$Registry\.js" -Type String `
+                -Value 'jsfile'
+
+            $Command = '"' + "$DestDir\deno.exe" + '" "%1" %*'
+            New-Item -Force -Path "$Registry\jsfile\shell\open\command" | Out-Null
+            Set-ItemProperty -Name '(Default)' -Path "$Registry\jsfile\shell\open\command" `
+                -Type String -Value $Command
+            Log "Registered Deno to execute '.js' files."
+        }
+
+        $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
+        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must be
+        # changed to machine PATHEXT + ';.NU' if prevously empty.
+        If ((-Not $PathExt) -And ($TargetEnv -Eq 'User')) {
+            $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', 'Machine')
+        }
+        If (-Not ($PathExt -Like "*.NU*")) {
+            $AppendedPath = "$PathExt;.NU".TrimStart(';')
+            [System.Environment]::SetEnvironmentVariable(
+                'PATHEXT', $AppendedPath, $TargetEnv
+            )
+            $Env:PATHEXT = $AppendedPath
+            Log "Registered '.js' files as executables."
+        }
     }
 
     $Env:Path = "$DestDir;$Env:Path"
-    Log "Installed $(just --version)."
+    Log "Installed $(deno --version)."
 }
 
 # Print message if logging is enabled.
@@ -136,7 +139,7 @@ Function Main() {
             }
             Default {
                 Log "error: No such option '$($Args[0][$ArgIdx])'."
-                Log "Run 'install-just --help' for usage."
+                Log "Run 'install-deno --help' for usage."
                 Exit 2
             }
 
@@ -159,11 +162,13 @@ Function Main() {
         $TargetEnv = 'Machine'
     }
 
-    # Find latest Just version if not provided.
+    # Find latest Deno version if not provided.
     If (-Not $Version) {
-        $Version = FindLatest
+        $Version = $(
+            Invoke-WebRequest -UseBasicParsing -Uri https://dl.deno.land/release-latest.txt
+        ).Content.Trim()
     }
-    InstallJust $TargetEnv $Version $DestDir $ModifyEnv
+    InstallDeno $TargetEnv $Version $DestDir $ModifyEnv
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

@@ -32,8 +32,7 @@ Options:
 
 # Download and install Jq.
 Function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
-    $Arch = $Env:PROCESSOR_ARCHITECTURE -Replace 'AMD64', 'x86_64' `
-        -Replace 'ARM64', 'aarch64'
+    $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
 
     If ($version) {
         $Subpath = "download/jq-$Version"
@@ -47,7 +46,7 @@ Function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     Remove-Item $TmpDir | Out-Null
     New-Item -ItemType Directory -Path $TmpDir | Out-Null
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\jq.exe" -Uri `
-        "https://github.com/jqlang/jq/releases/$Subpath/jq-windows-amd64.exe"
+        "https://github.com/jqlang/jq/releases/$Subpath/jq-windows-$Arch.exe"
 
     If ($ModifyEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
@@ -84,7 +83,7 @@ Function Main() {
             { $_ -In '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Exit 0
+                Break
             }
             { $_ -In '-g', '--global' } {
                 if (-Not $DestDir) {
@@ -100,10 +99,12 @@ Function Main() {
             { $_ -In '-m', '--modify-env' } {
                 $ModifyEnv = $True
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-q', '--quiet' } {
                 $Env:SCRIPTS_NOLOG = 'true'
                 $ArgIdx += 1
+                Break
             }
             { $_ -In '-v', '--version' } {
                 $Version = $Args[0][$ArgIdx + 1]

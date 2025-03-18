@@ -131,16 +131,15 @@ _setup:
   Import-Module -MaximumVersion 1.9.9 -MinimumVersion 1.0.0 PowerShellGet
   Get-PackageProvider -Force Nuget | Out-Null
   If (-Not (Get-Command -ErrorAction SilentlyContinue jq)) {
-    & src/install/jq.ps1 --dest .vendor/bin
+    src/install/jq.ps1 --dest .vendor/bin
   }
   jq --version
   If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
-    & src/install/nushell.ps1 --dest .vendor/bin
+    src/install/nushell.ps1 --dest .vendor/bin
   }
   Write-Output "Nushell $(nu --version)"
   If (-Not (Get-Command -ErrorAction SilentlyContinue deno)) {
-    $Env:DENO_INSTALL="$(pwd)/.vendor"
-    irm https://deno.land/install.ps1 | iex
+    src/install/deno.ps1 --dest .vendor/bin
   }
   deno --version
   If (-Not (Get-Module -ListAvailable -FullyQualifiedName @{ModuleName="PSScriptAnalyzer";ModuleVersion="1.0.0"})) {

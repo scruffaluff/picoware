@@ -55,7 +55,6 @@ Function Main() {
                 $Argument = $Args[0][$ArgIdx]
                 $RgCmd = "$RgCmd '$Argument'"
                 $ArgIdx += 1
-                Break
             }
         }
     }

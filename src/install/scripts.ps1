@@ -121,7 +121,7 @@ Function Main() {
             { $_ -In '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Exit 0
+                Break
             }
             { $_ -In '-h', '--help' } {
                 Usage
