@@ -138,7 +138,7 @@ Function Main() {
                 Break
             }
             '--user' {
-                if (-Not $DestDir) {
+                If (-Not $DestDir) {
                     $DestDir = "$Env:LocalAppData\Programs\Bin"
                 }
                 $Target = 'User'
