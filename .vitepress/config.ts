@@ -10,6 +10,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   base: "/scripts/",
   description: "Personal collection of utility apps, installers, and scripts.",
+  head: [["link", { rel: "icon", href: "/scripts/favicon.ico" }]],
   lastUpdated: true,
   outDir: "build/site",
   srcDir: "doc",
