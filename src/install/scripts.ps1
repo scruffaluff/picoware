@@ -14,7 +14,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Installer script for Scripts.
 
@@ -30,20 +30,20 @@ Options:
 }
 
 # Print error message and exit script with usage error code.
-Function ErrorUsage($Message) {
+function ErrorUsage($Message) {
     Write-Output "error: $Message"
     Write-Output "Run 'install --help' for usage"
-    Exit 2
+    exit 2
 }
 
 # Find or download Jq JSON parser.
-Function FindJq() {
+function FindJq() {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
-    If ($JqBin) {
+    if ($JqBin) {
         Write-Output $JqBin
     }
-    Else {
-        $TempFile = [System.IO.Path]::GetTempFileName() -Replace '.tmp', '.exe'
+    else {
+        $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             https://github.com/jqlang/jq/releases/latest/download/jq-windows-amd64.exe
         Write-Output $TempFile
@@ -51,7 +51,7 @@ Function FindJq() {
 }
 
 # Find all scripts inside GitHub repository.
-Function FindScripts($Version) {
+function FindScripts($Version) {
     $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\")) | ltrimstr(\"src/script/\")'
     $Uri = "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
     $Response = Invoke-WebRequest -UseBasicParsing -Uri "$Uri"
@@ -61,20 +61,20 @@ Function FindScripts($Version) {
 }
 
 # Install script and update path.
-Function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
+function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
 
     $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
-    If (
-        $ScriptName.EndsWith('.nu') -And
-        (-Not (Get-Command -ErrorAction SilentlyContinue nu))
+    if (
+        $ScriptName.EndsWith('.nu') -and
+        (-not (Get-Command -ErrorAction SilentlyContinue nu))
     ) {
-        If ($Target -Eq 'Machine') {
+        if ($Target -eq 'Machine') {
             Invoke-WebRequest -UseBasicParsing -Uri `
                 "$URL/src/install/nushell.ps1" | Invoke-Expression
         }
-        Else {
+        else {
             powershell {
                 Invoke-Expression `
                     "& { $(Invoke-WebRequest -UseBasicParsing -Uri $URL/src/install/nushell.ps1) } --user"
@@ -88,7 +88,7 @@ Function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
 
     # Add destination folder to system path.
     $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
-    If (-Not ($Path -Like "*$DestDir*")) {
+    if (-not ($Path -like "*$DestDir*")) {
         $PrependedPath = "$DestDir;$Path"
         [System.Environment]::SetEnvironmentVariable(
             'Path', "$PrependedPath", "$Target"
@@ -101,14 +101,14 @@ Function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
 }
 
 # Print log message to stdout if logging is enabled.
-Function Log($Message) {
-    If (!"$Env:SCRIPTS_NOLOG") {
+function Log($Message) {
+    if (!"$Env:SCRIPTS_NOLOG") {
         Write-Output "$Message"
     }
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $List = $False
@@ -116,36 +116,36 @@ Function Main() {
     $Target = 'Machine'
     $Version = 'main'
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-d', '--dest' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Break
+                break
             }
-            { $_ -In '-h', '--help' } {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-l', '--list' } {
+            { $_ -in '-l', '--list' } {
                 $List = $True
                 $ArgIdx += 1
-                Break
+                break
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 $Version = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Break
+                break
             }
             '--user' {
-                If (-Not $DestDir) {
+                if (-not $DestDir) {
                     $DestDir = "$Env:LocalAppData\Programs\Bin"
                 }
                 $Target = 'User'
                 $ArgIdx += 1
-                Break
+                break
             }
-            Default {
+            default {
                 $Names += $Args[0][$ArgIdx]
                 $ArgIdx += 1
             }
@@ -153,37 +153,37 @@ Function Main() {
     }
 
     $Scripts = FindScripts "$Version"
-    If (-Not $DestDir) {
+    if (-not $DestDir) {
         $DestDir = 'C:\Program Files\Bin'
     }
 
-    If ($List) {
-        ForEach ($Script in $Scripts) {
+    if ($List) {
+        foreach ($Script in $Scripts) {
             Write-Output "$([IO.Path]::GetFileNameWithoutExtension($Script))"
         }
     }
-    ElseIf ($Names) {
-        ForEach ($Name in $Names) {
+    elseif ($Names) {
+        foreach ($Name in $Names) {
             $MatchFound = $False
-            ForEach ($Script in $Scripts) {
+            foreach ($Script in $Scripts) {
                 $ScriptName = [IO.Path]::GetFileNameWithoutExtension($Script)
-                If ($ScriptName -Eq $Name) {
+                if ($ScriptName -eq $Name) {
                     $MatchFound = $True
                     InstallScript $Target $Version $DestDir $Script
                 }
             }
 
-            If (-Not $MatchFound) {
-                Throw "Error: No script name match found for '$Name'"
+            if (-not $MatchFound) {
+                throw "Error: No script name match found for '$Name'"
             }
         }
     }
-    Else {
+    else {
         ErrorUsage "Script argument required"
     }
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

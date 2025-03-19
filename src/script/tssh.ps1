@@ -11,7 +11,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 SSH for one time remote connections.
 
@@ -24,26 +24,26 @@ Options:
 }
 
 # Print Tssh version string.
-Function Version() {
+function Version() {
     Write-Output 'Tssh 0.2.1'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
     $CmdArgs = @()
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $CmdArgs += $Args[0][$ArgIdx]
                 $ArgIdx += 1
             }
@@ -62,6 +62,6 @@ Function Main() {
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

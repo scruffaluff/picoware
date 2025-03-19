@@ -14,7 +14,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Installer script for Jq.
 
@@ -31,13 +31,13 @@ Options:
 }
 
 # Download and install Jq.
-Function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
+function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
 
-    If ($version) {
+    if ($version) {
         $Subpath = "download/jq-$Version"
     }
-    Else {
+    else {
         $Subpath = 'latest/download'
     }
 
@@ -48,9 +48,9 @@ Function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\jq.exe" -Uri `
         "https://github.com/jqlang/jq/releases/$Subpath/jq-windows-$Arch.exe"
 
-    If ($ModifyEnv) {
+    if ($ModifyEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
-        If (-Not ($Path -Like "*$DestDir*")) {
+        if (-not ($Path -like "*$DestDir*")) {
             $PrependedPath = "$DestDir;$Path"
             [System.Environment]::SetEnvironmentVariable(
                 'Path', "$PrependedPath", $TargetEnv
@@ -65,63 +65,63 @@ Function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
 }
 
 # Print message if logging is enabled.
-Function Log($Text) {
-    If (!"$Env:SCRIPTS_NOLOG") {
+function Log($Text) {
+    if (!"$Env:SCRIPTS_NOLOG") {
         Write-Output $Text
     }
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $ModifyEnv = $False
     $Version = ''
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-d', '--dest' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Break
+                break
             }
-            { $_ -In '-g', '--global' } {
-                if (-Not $DestDir) {
+            { $_ -in '-g', '--global' } {
+                if (-not $DestDir) {
                     $DestDir = 'C:\Program Files\Bin'
                 }
                 $ArgIdx += 1
-                Break
+                break
             }
-            { $_ -In '-h', '--help' } {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-m', '--modify-env' } {
+            { $_ -in '-m', '--modify-env' } {
                 $ModifyEnv = $True
                 $ArgIdx += 1
-                Break
+                break
             }
-            { $_ -In '-q', '--quiet' } {
+            { $_ -in '-q', '--quiet' } {
                 $Env:SCRIPTS_NOLOG = 'true'
                 $ArgIdx += 1
-                Break
+                break
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 $Version = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                Break
+                break
             }
-            Default {
+            default {
                 Log "error: No such option '$($Args[0][$ArgIdx])'."
                 Log "Run 'install-jq --help' for usage."
-                Exit 2
+                exit 2
             }
 
         }
     }
 
     # Create destination folder if it does not exist for Resolve-Path.
-    If (-Not $DestDir) {
+    if (-not $DestDir) {
         $DestDir = "$Env:LocalAppData\Programs\Bin"
     }
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
@@ -129,10 +129,10 @@ Function Main() {
     # Set environment target on whether destination is inside user home folder.
     $DestDir = $(Resolve-Path -Path $DestDir).Path
     $HomeDir = $(Resolve-Path -Path $HOME).Path
-    If ($DestDir.StartsWith($HomeDir)) {
+    if ($DestDir.StartsWith($HomeDir)) {
         $TargetEnv = 'User'
     }
-    Else {
+    else {
         $TargetEnv = 'Machine'
     }
 
@@ -140,6 +140,6 @@ Function Main() {
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

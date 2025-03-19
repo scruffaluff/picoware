@@ -12,7 +12,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Installs Tmate and creates a remote session.
 
@@ -26,13 +26,13 @@ Options:
 '@
 }
 
-Function InstallTmate($URL) {
-    If (-Not (Get-Command -ErrorAction SilentlyContinue choco)) {
+function InstallTmate($URL) {
+    if (-not (Get-Command -ErrorAction SilentlyContinue choco)) {
         Invoke-WebRequest -UseBasicParsing -Uri `
             'https://chocolatey.org/install.ps1' | Invoke-Expression
     }
 
-    If (-Not (Get-Command -ErrorAction SilentlyContinue pacman)) {
+    if (-not (Get-Command -ErrorAction SilentlyContinue pacman)) {
         choco install --yes msys2
     }
 
@@ -40,32 +40,32 @@ Function InstallTmate($URL) {
 }
 
 # Print SetupTmate version string.
-Function Version() {
+function Version() {
     Write-Output 'SetupTmate 0.3.2'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $ArgIdx += 1
             }
         }
     }
 
     $Env:Path = 'C:\tools\msys64\usr\bin;' + "$Env:Path"
-    If (-Not (Get-Command -ErrorAction SilentlyContinue tmate)) {
+    if (-not (Get-Command -ErrorAction SilentlyContinue tmate)) {
         InstallTmate
     }
 
@@ -83,17 +83,17 @@ Function Main() {
     $SSHConnect = sh -l -c "tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'"
     $WebConnect = sh -l -c "tmate -S /tmp/tmate.sock display -p '#{tmate_web}'"
 
-    While ($True) {
+    while ($True) {
         Write-Output "SSH: $SSHConnect"
         Write-Output "Web shell: $WebConnect"
 
         # Check if script should exit.
-        If (
-            (-Not (sh -l -c 'ls /tmp/tmate.sock 2> /dev/null')) -Or
-            (Test-Path 'C:/tools/msys64/close-tmate') -Or
+        if (
+            (-not (sh -l -c 'ls /tmp/tmate.sock 2> /dev/null')) -or
+            (Test-Path 'C:/tools/msys64/close-tmate') -or
             (Test-Path './close-tmate')
         ) {
-            Break
+            break
         }
 
         Start-Sleep 5
@@ -101,6 +101,6 @@ Function Main() {
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

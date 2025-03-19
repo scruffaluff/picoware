@@ -11,7 +11,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Invokes upgrade commands to all installed package managers.
 
@@ -24,69 +24,69 @@ Options:
 }
 
 # Print Packup version string.
-Function Version() {
+function Version() {
     Write-Output 'Packup 0.4.4'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $ArgIdx += 1
             }
         }
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue choco) {
+    if (Get-Command -ErrorAction SilentlyContinue choco) {
         choco upgrade --yes all
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue scoop) {
+    if (Get-Command -ErrorAction SilentlyContinue scoop) {
         scoop update
         scoop update --all
         scoop cleanup --all
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue cargo) {
-        ForEach ($Line in $(cargo install --list)) {
-            If ("$Line" -Like '*:') {
+    if (Get-Command -ErrorAction SilentlyContinue cargo) {
+        foreach ($Line in $(cargo install --list)) {
+            if ("$Line" -like '*:') {
                 cargo install $Line.Split()[0]
             }
         }
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue npm) {
+    if (Get-Command -ErrorAction SilentlyContinue npm) {
         # The "npm install" command is run before "npm update" command to avoid
         # messages about newer versions of NPM being available.
         npm install --global npm@latest
         npm update --global --loglevel error
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue pipx) {
+    if (Get-Command -ErrorAction SilentlyContinue pipx) {
         pipx upgrade-all
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue tldr) {
+    if (Get-Command -ErrorAction SilentlyContinue tldr) {
         tldr --update
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue ya) {
+    if (Get-Command -ErrorAction SilentlyContinue ya) {
         ya pack --upgrade
     }
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

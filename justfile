@@ -59,8 +59,8 @@ lint:
 # Run code analyses.
 [windows]
 lint:
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings PSScriptAnalyzerSettings.psd1
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings PSScriptAnalyzerSettings.psd1
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings data/config/analyzer.psd1
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings data/config/analyzer.psd1
 
 # Install development dependencies.
 setup: _setup

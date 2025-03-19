@@ -12,7 +12,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Interactive Ripgrep searcher.
 
@@ -25,33 +25,33 @@ Options:
 
 Ripgrep Options:
 '@
-    If (Get-Command -ErrorAction SilentlyContinue rg) {
+    if (Get-Command -ErrorAction SilentlyContinue rg) {
         rg --help
     }
 }
 
 # Print Rgi version string.
-Function Version() {
+function Version() {
     Write-Output 'Rgi 0.0.2'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
     $Editor = 'vim'
     $RgCmd = 'rg --column --line-number --no-heading --smart-case --color always'
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $Argument = $Args[0][$ArgIdx]
                 $RgCmd = "$RgCmd '$Argument'"
                 $ArgIdx += 1
@@ -59,7 +59,7 @@ Function Main() {
         }
     }
 
-    If ($Env:EDITOR) {
+    if ($Env:EDITOR) {
         $Editor = $Env:Editor
     }
     fzf --ansi `
@@ -71,6 +71,6 @@ Function Main() {
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

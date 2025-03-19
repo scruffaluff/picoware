@@ -11,7 +11,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Prevent the system from sleeping during a command.
 
@@ -24,26 +24,26 @@ Options:
 }
 
 # Print Caffeinate version string.
-Function Version() {
+function Version() {
     Write-Output 'Caffeinate 0.0.2'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
     $CmdArgs = @()
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $CmdArgs += $Args[0][$ArgIdx]
                 $ArgIdx += 1
             }
@@ -51,22 +51,22 @@ Function Main() {
     }
 
     caffeine
-    Try {
-        If ($CmdArgs.Count -Eq 0) {
-            While ($True) {
+    try {
+        if ($CmdArgs.Count -eq 0) {
+            while ($True) {
                 Start-Sleep -Seconds 86400
             }
         }
-        Else {
+        else {
             & $CmdArgs
         }
     }
-    Finally {
+    finally {
         caffeine --appexit
     }
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }

@@ -11,7 +11,7 @@ $ProgressPreference = 'SilentlyContinue'
 $PSNativeCommandUseErrorActionPreference = $True
 
 # Show CLI help information.
-Function Usage() {
+function Usage() {
     Write-Output @'
 Frees up disk space by clearing caches of package managers.
 
@@ -24,69 +24,69 @@ Options:
 }
 
 # Print ClearCache version string.
-Function Version() {
+function Version() {
     Write-Output 'ClearCache 0.2.2'
 }
 
 # Script entrypoint.
-Function Main() {
+function Main() {
     $ArgIdx = 0
 
-    While ($ArgIdx -LT $Args[0].Count) {
-        Switch ($Args[0][$ArgIdx]) {
-            { $_ -In '-h', '--help' } {
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-h', '--help' } {
                 Usage
-                Exit 0
+                exit 0
             }
-            { $_ -In '-v', '--version' } {
+            { $_ -in '-v', '--version' } {
                 Version
-                Exit 0
+                exit 0
             }
-            Default {
+            default {
                 $ArgIdx += 1
             }
         }
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue scoop) {
+    if (Get-Command -ErrorAction SilentlyContinue scoop) {
         scoop cache rm --all
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue cargo-cache) {
+    if (Get-Command -ErrorAction SilentlyContinue cargo-cache) {
         cargo-cache --autoclean
     }
 
     # Check if Docker client is install and Docker daemon is up and running.
-    If (Get-Command -ErrorAction SilentlyContinue docker) {
+    if (Get-Command -ErrorAction SilentlyContinue docker) {
         docker ps 2>&1 | Out-Null
-        If (-Not $LastExitCode) {
+        if (-not $LastExitCode) {
             docker system prune --force --volumes
         }
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue npm) {
+    if (Get-Command -ErrorAction SilentlyContinue npm) {
         npm cache clean --force --loglevel error
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue pip) {
+    if (Get-Command -ErrorAction SilentlyContinue pip) {
         pip cache purge
     }
 
-    If (
-        (Get-Command -ErrorAction SilentlyContinue playwright) -And
+    if (
+        (Get-Command -ErrorAction SilentlyContinue playwright) -and
         (Test-Path -PathType Container "$Env:LocalAppData\ms-playwright\.links")
     ) {
         playwright uninstall --all
     }
 
-    If (Get-Command -ErrorAction SilentlyContinue poetry) {
-        ForEach ($Cache in $(poetry cache list)) {
+    if (Get-Command -ErrorAction SilentlyContinue poetry) {
+        foreach ($Cache in $(poetry cache list)) {
             poetry cache clear --all --no-interaction "$Cache"
         }
     }
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }
