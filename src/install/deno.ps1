@@ -58,6 +58,12 @@ Function InstallDeno($TargetEnv, $Version, $DestDir, $ModifyEnv) {
             $Env:Path = $PrependedPath
         }
 
+        If ($TargetEnv -Eq 'Machine') {
+            $Registry = 'HKLM:\Software\Classes'
+        }
+        Else {
+            $Registry = 'HKCU:\Software\Classes'
+        }
         If (-Not (Get-ItemProperty -ErrorAction SilentlyContinue -Name '(Default)' -Path "$Registry\.js")) {
             New-Item -Force -Path "$Registry\.js" | Out-Null
             Set-ItemProperty -Name '(Default)' -Path "$Registry\.js" -Type String `
