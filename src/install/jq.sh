@@ -25,9 +25,56 @@ Options:
   -d, --dest <PATH>         Directory to install Jq
   -g, --global              Install Jq for all users
   -h, --help                Print help information
+  -m, --modify-env          Update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Jq to install
 EOF
+}
+
+#######################################
+# Add script to system path in shell profile.
+# Arguments:
+#   Parent directory of Scripts script.
+# Globals:
+#   SHELL
+#######################################
+configure_shell() {
+  local dst_dir="${1}"
+  export_cmd="export PATH=\"${dst_dir}:\${PATH}\""
+  shell_name="$(basename "${SHELL:-}")"
+
+  case "${shell_name}" in
+    bash)
+      profile="${HOME}/.bashrc"
+      ;;
+    fish)
+      export_cmd="set --export PATH \"${dst_dir}\" \$PATH"
+      profile="${HOME}/.config/fish/config.fish"
+      ;;
+    nu)
+      export_cmd="\$env.PATH = [\"${dst_dir}\" ...\$env.PATH]"
+      if [ "$(uname -s)" = 'Darwin' ]; then
+        profile="${HOME}/Library/Application Support/nushell/config.nu"
+      else
+        profile="${HOME}/.config/nushell/config.nu"
+      fi
+      ;;
+    zsh)
+      profile="${HOME}/.zshrc"
+      ;;
+    *)
+      profile="${HOME}/.profile"
+      ;;
+  esac
+
+  # Create profile parent directory and add export command to profile
+  #
+  # Flags:
+  #   -p: Make parent directories if necessary.
+  mkdir -p "$(dirname "${profile}")"
+  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
+  log "Added '${export_cmd}' to the '${profile}' shell profile."
+  log 'Source the profile or restart the shell to continue.'
 }
 
 #######################################
@@ -61,12 +108,9 @@ fetch() {
   # Create parent directory if it does not exist.
   #
   # Flags:
-  #   -d: Check if path exists and is a directory.
+  #   -p: Make parent directories if necessary.
   if [ "${dst_file}" != '-' ]; then
-    dst_dir="$(dirname "${dst_file}")"
-    if [ ! -d "${dst_dir}" ]; then
-      ${super:+"${super}"} mkdir -p "${dst_dir}"
-    fi
+    ${super:+"${super}"} mkdir -p "$(dirname "${dst_dir}")"
   fi
 
   # Download with Curl or Wget.
@@ -120,14 +164,15 @@ find_super() {
 }
 
 #######################################
-# Download Jq binary to temporary path.
+# Download and install Jq.
 # Arguments:
 #   Super user command for installation.
-# Outputs:
-#   Path to temporary Jq binary.
+#   Jq version.
+#   Destination path.
+#   Whether to update system path.
 #######################################
 install_jq() {
-  local super="${1}" version="${2}" dst_dir="${3}" subpath=''
+  local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}" subpath=''
   local dst_file="${dst_dir}/jq"
 
   # Flags:
@@ -148,9 +193,26 @@ install_jq() {
     sed s/aarch64/arm64/)"
   os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed s/darwin/macos/)"
 
+  # Create installation directory.
+  #
+  # Flags:
+  #   -p: Make parent directories if necessary.
+  ${super:+"${super}"} mkdir -p "${dst_dir}"
+
   log "Installing Jq to '${dst_file}'."
   fetch --dest "${dst_file}" --mode 755 --super "${super}" \
     "https://github.com/jqlang/jq/releases/${subpath}/jq-${os}-${arch}"
+
+  # Update shell profile if destination is not in system path.
+  #
+  # Flags:
+  #   -e: Check if file exists.
+  #   -n: Check if string has nonzero length.
+  #   -v: Only show file path of command.
+  if [ -n "${modify_env}" ] && [ ! -e "$(command -v jq)" ]; then
+    configure_shell "${dst_dir}"
+  fi
+
   export PATH="${dst_dir}:${PATH}"
   log "Installed $(jq --version)."
 }
@@ -198,7 +260,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' super='' version=''
+  local dst_dir='' global_='' modify_env='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -220,6 +282,10 @@ main() {
         usage
         exit 0
         ;;
+      -m | --modify-env)
+        modify_env='true'
+        shift 1
+        ;;
       -q | --quiet)
         export SCRIPTS_NOLOG='true'
         shift 1
@@ -239,6 +305,8 @@ main() {
   # Find super user command if destination is not writable.
   #
   # Flags:
+  #   -n: Check if string has nonzero length.
+  #   -p: Make parent directories if necessary.
   #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
@@ -246,7 +314,7 @@ main() {
     super="$(find_super)"
   fi
 
-  install_jq "${super}" "${version}" "${dst_dir}"
+  install_jq "${super}" "${version}" "${dst_dir}" "${modify_env}"
 }
 
 # Add ability to selectively skip main function during test suite.

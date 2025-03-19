@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install scripts for FreeBSD, MacOS, or Linux systems.
+# Install scripts for FreeBSD, MacOS, and Linux systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Installer script for Scripts.
 
-Usage: install [OPTIONS] [SCRIPTS]...
+Usage: install-scripts [OPTIONS] [SCRIPTS]...
 
 Options:
       --debug               Show shell debug traces
@@ -26,31 +26,30 @@ Options:
   -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
+  -m, --modify-env          Update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 EOF
 }
 
 #######################################
-# Add Scripts to system path in user's shell profile.
-# Globals:
-#   HOME
-#   PATH
-#   SHELL
+# Add script to system path in shell profile.
 # Arguments:
 #   Parent directory of Scripts script.
+# Globals:
+#   SHELL
 #######################################
 configure_shell() {
-  local dst_dir="${1}" shell_name=''
-  local export_cmd="export PATH=\"${dst_dir}:\$PATH\""
-  shell_name="$(basename "${SHELL}")"
+  local dst_dir="${1}"
+  export_cmd="export PATH=\"${dst_dir}:\${PATH}\""
+  shell_name="$(basename "${SHELL:-}")"
 
   case "${shell_name}" in
     bash)
       profile="${HOME}/.bashrc"
       ;;
     fish)
-      export_cmd="set -x PATH \"${dst_dir}\" \$PATH"
+      export_cmd="set --export PATH \"${dst_dir}\" \$PATH"
       profile="${HOME}/.config/fish/config.fish"
       ;;
     nu)
@@ -69,10 +68,14 @@ configure_shell() {
       ;;
   esac
 
-  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" \
-    >> "${profile}"
+  # Create profile parent directory and add export command to profile
+  #
+  # Flags:
+  #   -p: Make parent directories if necessary.
+  mkdir -p "$(dirname "${profile}")"
+  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
   log "Added '${export_cmd}' to the '${profile}' shell profile."
-  log 'Source the profile or restart the shell after installation.'
+  log 'Source the profile or restart the shell to continue.'
 }
 
 #######################################
@@ -106,12 +109,9 @@ fetch() {
   # Create parent directory if it does not exist.
   #
   # Flags:
-  #   -d: Check if path exists and is a directory.
+  #   -p: Make parent directories if necessary.
   if [ "${dst_file}" != '-' ]; then
-    dst_dir="$(dirname "${dst_file}")"
-    if [ ! -d "${dst_dir}" ]; then
-      ${super:+"${super}"} mkdir -p "${dst_dir}"
-    fi
+    ${super:+"${super}"} mkdir -p "$(dirname "${dst_dir}")"
   fi
 
   # Download with Curl or Wget.
@@ -147,7 +147,7 @@ fetch() {
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin='' tmp_dir=''
+  local jq_bin='' response='' tmp_dir=''
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -209,28 +209,44 @@ find_super() {
 }
 
 #######################################
-# Install script and update path.
+# Download and install script.
 # Arguments:
 #   Super user command for installation.
 #   Script version.
 #   Destination path.
 #   Script file name.
-# Globals:
-#   SCRIPTS_NOLOG
-# Outputs:
-#   Log message to stdout.
+#   Whether to update system path.
 #######################################
 install_script() {
-  local super="${1}" version="${2}" dst_dir="${3}" script="${4}" name="${4%.*}"
+  local super="${1}" version="${2}" dst_dir="${3}" script="${4}"
+  local modify_env="${5}" name="${4%.*}"
   local dst_file="${dst_dir}/${name}"
   local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
 
   if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
-    fetch "${repo}/install/nushell.sh" | sh -s -- --quiet
+    fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
+      ${super:+--global} ${modify_env:+--modify-env} --quiet
   fi
 
+  # Create installation directory.
+  #
+  # Flags:
+  #   -p: Make parent directories if necessary.
+  ${super:+"${super}"} mkdir -p "${dst_dir}"
+
   log "Installing script ${name} to '${dst_file}'."
-  fetch --dest "${dst_file}" --mode 755 --super "${super}" "${repo}/script/${script}"
+  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
+    "${repo}/script/${script}"
+
+  # Update shell profile if destination is not in system path.
+  #
+  # Flags:
+  #   -e: Check if file exists.
+  #   -n: Check if string has nonzero length.
+  #   -v: Only show file path of command.
+  if [ -n "${modify_env}" ] && [ ! -e "$(command -v "${name}")" ]; then
+    configure_shell "${dst_dir}"
+  fi
 
   export PATH="${dst_dir}:${PATH}"
   log "Installed $("${name}" --version)."
@@ -279,7 +295,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' names='' super='' version='main'
+  local dst_dir='' global_='' modify_env='' names='' super='' version='main'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -303,6 +319,10 @@ main() {
         ;;
       -l | --list)
         list_scripts='true'
+        shift 1
+        ;;
+      -m | --modify-env)
+        modify_env='true'
         shift 1
         ;;
       -q | --quiet)
@@ -339,6 +359,7 @@ main() {
   # Find super user command if destination is not writable.
   #
   # Flags:
+  #   -p: Make parent directories if necessary.
   #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
   if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
@@ -351,7 +372,8 @@ main() {
     for script in ${scripts}; do
       if [ "${script%.*}" = "${name}" ]; then
         match_found='true'
-        install_script "${super}" "${version}" "${dst_dir}" "${script}"
+        install_script "${super}" "${version}" "${dst_dir}" "${script}" \
+          "${modify_env}"
       fi
     done
 

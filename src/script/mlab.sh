@@ -181,6 +181,12 @@ jupyter() {
     esac
   done
 
+  # Install Jupyter Python packages into a virtual environment.
+  #
+  # Flags:
+  #   -d: Check if path exists and is a directory.
+  #   -m: Run library module as a script.
+  #   -p: Make parent directories if necessary.
   matlab_dir="$(dirname "$(find_matlab)")"
   if [ ! -d "${share_dir}/venv" ]; then
     mkdir -p "${share_dir}"
