@@ -55,7 +55,7 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $ModifyEnv) {
                 'Path', "$PrependedPath", $TargetEnv
             )
             Log "Added '$DestDir' to the system path."
-            $Env:Path = $PrependedPath
+            Log 'Source shell profile or restart shell after installation.'
         }
 
         if ($TargetEnv -eq 'Machine') {

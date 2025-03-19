@@ -76,7 +76,7 @@ configure_shell() {
   mkdir -p "$(dirname "${profile}")"
   printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
   log "Added '${export_cmd}' to the '${profile}' shell profile."
-  log 'Source the profile or restart the shell to continue.'
+  log 'Source shell profile or restart shell after installation.'
 }
 
 #######################################

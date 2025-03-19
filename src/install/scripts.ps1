@@ -18,22 +18,17 @@ function Usage() {
     Write-Output @'
 Installer script for Scripts.
 
-Usage: install [OPTIONS] [SCRIPTS]...
+Usage: install-scripts [OPTIONS] [SCRIPTS]...
 
 Options:
   -d, --dest <PATH>         Directory to install scripts
+  -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
-  -u, --user                Install scripts for current user
+  -m, --modify-env          Update system environment
+  -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 '@
-}
-
-# Print error message and exit script with usage error code.
-function ErrorUsage($Message) {
-    Write-Output "error: $Message"
-    Write-Output "Run 'install --help' for usage"
-    exit 2
 }
 
 # Find or download Jq JSON parser.
@@ -43,9 +38,10 @@ function FindJq() {
         Write-Output $JqBin
     }
     else {
+        $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
         $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
-            https://github.com/jqlang/jq/releases/latest/download/jq-windows-amd64.exe
+            "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
         Write-Output $TempFile
     }
 }
@@ -53,32 +49,31 @@ function FindJq() {
 # Find all scripts inside GitHub repository.
 function FindScripts($Version) {
     $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\")) | ltrimstr(\"src/script/\")'
-    $Uri = "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
-    $Response = Invoke-WebRequest -UseBasicParsing -Uri "$Uri"
-
     $JqBin = FindJq
+    $Response = Invoke-WebRequest -UseBasicParsing -Uri `
+        "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
     Write-Output "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 }
 
 # Install script and update path.
-function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
+function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
-    New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
-
     $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
+
     if (
         $ScriptName.EndsWith('.nu') -and
         (-not (Get-Command -ErrorAction SilentlyContinue nu))
     ) {
+        $NushellArgs = ''
         if ($Target -eq 'Machine') {
-            Invoke-WebRequest -UseBasicParsing -Uri `
-                "$URL/src/install/nushell.ps1" | Invoke-Expression
+            $NushellArgs = "$NushellArgs --global"
         }
-        else {
-            powershell {
-                Invoke-Expression `
-                    "& { $(Invoke-WebRequest -UseBasicParsing -Uri $URL/src/install/nushell.ps1) } --user"
-            }
+        if ($ModifyEnv) {
+             $NushellArgs = "$NushellArgs --modify-env"
+        }
+        powershell {
+            Invoke-Expression `
+                "& { $(Invoke-WebRequest -UseBasicParsing -Uri $URL/src/install/nushell.ps1) } $NushellArgs"
         }
     }
 
@@ -86,24 +81,26 @@ function InstallScript($Target, $SrcPrefix, $DestDir, $Script) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir/$Script" `
         -Uri "$URL/src/script/$Script"
 
-    # Add destination folder to system path.
-    $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
-    if (-not ($Path -like "*$DestDir*")) {
-        $PrependedPath = "$DestDir;$Path"
-        [System.Environment]::SetEnvironmentVariable(
-            'Path', "$PrependedPath", "$Target"
-        )
-        Log "Added '$DestDir' to the system path."
-        Log 'Restart the shell after installation.'
-        $Env:Path = $PrependedPath
+    if ($ModifyEnv) {
+        $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
+        if (-not ($Path -like "*$DestDir*")) {
+            $PrependedPath = "$DestDir;$Path"
+            [System.Environment]::SetEnvironmentVariable(
+                'Path', "$PrependedPath", "$Target"
+            )
+            Log "Added '$DestDir' to the system path."
+            Log 'Source shell profile or restart shell after installation.'
+        }
     }
+
+    $Env:Path = "$DestDir;$Env:Path"
     Log "Installed $(& $Name --version)."
 }
 
-# Print log message to stdout if logging is enabled.
-function Log($Message) {
+# Print message if logging is enabled.
+function Log($Text) {
     if (!"$Env:SCRIPTS_NOLOG") {
-        Write-Output "$Message"
+        Write-Output $Text
     }
 }
 
@@ -112,8 +109,8 @@ function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $List = $False
+    $ModifyEnv = $False
     $Names = @()
-    $Target = 'Machine'
     $Version = 'main'
 
     while ($ArgIdx -lt $Args[0].Count) {
@@ -121,6 +118,13 @@ function Main() {
             { $_ -in '-d', '--dest' } {
                 $DestDir = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
+                break
+            }
+            { $_ -in '-g', '--global' } {
+                if (-not $DestDir) {
+                    $DestDir = 'C:\Program Files\Bin'
+                }
+                $ArgIdx += 1
                 break
             }
             { $_ -in '-h', '--help' } {
@@ -132,17 +136,19 @@ function Main() {
                 $ArgIdx += 1
                 break
             }
+            { $_ -in '-m', '--modify-env' } {
+                $ModifyEnv = $True
+                $ArgIdx += 1
+                break
+            }
+            { $_ -in '-q', '--quiet' } {
+                $Env:SCRIPTS_NOLOG = 'true'
+                $ArgIdx += 1
+                break
+            }
             { $_ -in '-v', '--version' } {
                 $Version = $Args[0][$ArgIdx + 1]
                 $ArgIdx += 2
-                break
-            }
-            '--user' {
-                if (-not $DestDir) {
-                    $DestDir = "$Env:LocalAppData\Programs\Bin"
-                }
-                $Target = 'User'
-                $ArgIdx += 1
                 break
             }
             default {
@@ -153,23 +159,37 @@ function Main() {
     }
 
     $Scripts = FindScripts "$Version"
-    if (-not $DestDir) {
-        $DestDir = 'C:\Program Files\Bin'
-    }
-
     if ($List) {
         foreach ($Script in $Scripts) {
             Write-Output "$([IO.Path]::GetFileNameWithoutExtension($Script))"
         }
     }
     elseif ($Names) {
+        # Create destination folder if it does not exist for Resolve-Path.
+        if (-not $DestDir) {
+            $DestDir = "$Env:LocalAppData\Programs\Bin"
+        }
+        New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
+
+        # Set environment target on whether destination is inside user home
+        # folder.
+        $DestDir = $(Resolve-Path -Path $DestDir).Path
+        $HomeDir = $(Resolve-Path -Path $HOME).Path
+        if ($DestDir.StartsWith($HomeDir)) {
+            $TargetEnv = 'User'
+        }
+        else {
+            $TargetEnv = 'Machine'
+        }
+
         foreach ($Name in $Names) {
             $MatchFound = $False
             foreach ($Script in $Scripts) {
                 $ScriptName = [IO.Path]::GetFileNameWithoutExtension($Script)
                 if ($ScriptName -eq $Name) {
                     $MatchFound = $True
-                    InstallScript $Target $Version $DestDir $Script
+                    InstallScript $TargetEnv $Version $DestDir $Script `
+                        $ModifyEnv
                 }
             }
 
@@ -179,7 +199,9 @@ function Main() {
         }
     }
     else {
-        ErrorUsage "Script argument required"
+        Log 'error: Script argument required.'
+        Log "Run 'install-scripts --help' for usage."
+        exit 2
     }
 }
 
