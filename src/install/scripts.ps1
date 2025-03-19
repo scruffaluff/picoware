@@ -69,7 +69,7 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
             $NushellArgs = "$NushellArgs --global"
         }
         if ($ModifyEnv) {
-             $NushellArgs = "$NushellArgs --modify-env"
+            $NushellArgs = "$NushellArgs --modify-env"
         }
         powershell {
             Invoke-Expression `
