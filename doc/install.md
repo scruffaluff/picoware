@@ -34,6 +34,7 @@ into Bash and PowerShell for Unix systems and Windows respectively.
 | just    | Installs Just command runner.                       |
 | nushell | Installs Nushell structured data shell.             |
 | scripts | Installs programs from the following scripts table. |
+| uv      | Installs Uv Python package manager.                 |
 
 The following command installs Nushell. To execute the other installers, replace
 `nushell` with the installer name.

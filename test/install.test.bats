@@ -119,3 +119,9 @@ Install tar, https://www.gnu.org/software/tar, manually before continuing.
 EOF
   )"
 }
+
+uv_prints_version() { # @test
+  run bash src/install/uv.sh --dest "$(mktemp -d)"
+  assert_success
+  assert_output --partial 'Installed uv 0.'
+}
