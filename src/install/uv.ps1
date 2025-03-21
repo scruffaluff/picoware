@@ -69,7 +69,7 @@ function InstallUv($TargetEnv, $Version, $DestDir, $ModifyEnv) {
         "https://github.com/astral-sh/uv/releases/download/$Version/$Target.zip"
 
     Expand-Archive -DestinationPath "$TmpDir\$Target" -Path "$TmpDir\$Target.zip"
-    Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\*.exe"
+    Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\uv.exe"
 
     if ($ModifyEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
@@ -93,7 +93,7 @@ function InstallUv($TargetEnv, $Version, $DestDir, $ModifyEnv) {
             Set-ItemProperty -Name '(Default)' -Path "$Registry\.py" -Type String `
                 -Value 'pyfile'
 
-            $Command = '"' + "$DestDir\py.exe" + '" --no-config run --script "%1" %*'
+            $Command = '"' + "$DestDir\uv.exe" + '" --no-config run --script "%1" %*'
             New-Item -Force -Path "$Registry\pyfile\shell\open\command" | Out-Null
             Set-ItemProperty -Name '(Default)' -Path "$Registry\pyfile\shell\open\command" `
                 -Type String -Value $Command
