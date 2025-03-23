@@ -241,11 +241,14 @@ install_script() {
   # Update shell profile if destination is not in system path.
   #
   # Flags:
-  #   -e: Check if file exists.
   #   -n: Check if string has nonzero length.
-  #   -v: Only show file path of command.
-  if [ -n "${modify_env}" ] && [ ! -e "$(command -v "${name}")" ]; then
-    configure_shell "${dst_dir}"
+  if [ -n "${modify_env}" ]; then
+    case ":${PATH:-}:" in
+      *:${dst_dir}:*) ;;
+      *)
+        configure_shell "${dst_dir}"
+        ;;
+    esac
   fi
 
   export PATH="${dst_dir}:${PATH}"
