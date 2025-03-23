@@ -21,6 +21,7 @@ install each program for immediate use.
 | just    | Installs Just command runner.                       |
 | nushell | Installs Nushell structured data shell.             |
 | scripts | Installs programs from the following scripts table. |
+| uv      | Installs Uv Python package manager.                 |
 
 ## Scripts
 

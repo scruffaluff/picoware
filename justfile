@@ -51,7 +51,7 @@ format:
 lint:
   #!/usr/bin/env sh
   set -eu
-  files="$(find src test -type f -name '*.sh' -o -name '*.bats')"
+  files="$(find src test -name '*.sh' -or -name '*.bats')"
   for file in ${files}; do
     shellcheck "${file}"
   done
@@ -59,8 +59,8 @@ lint:
 # Run code analyses.
 [windows]
 lint:
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings data/config/analyzer.psd1
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings data/config/analyzer.psd1
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings data/config/script_analyzer.psd1
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings data/config/script_analyzer.psd1
 
 # Install development dependencies.
 setup: _setup

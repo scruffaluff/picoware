@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 #
-# Install scripts for FreeBSD, MacOS, and Linux systems.
+# Install Uv for MacOS and Linux systems. This script differs from
+# https://astral.sh/uv/install.sh by supporting custom installation locations.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,19 +17,18 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Scripts.
+Installer script for Uv.
 
-Usage: install-scripts [OPTIONS] [SCRIPTS]...
+Usage: install-uv [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install scripts
-  -g, --global              Install scripts for all users
+  -d, --dest <PATH>         Directory to install Uv
+  -g, --global              Install Uv for all users
   -h, --help                Print help information
-  -l, --list                List all available scripts
   -m, --modify-env          Update system environment
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of scripts to install
+  -v, --version <VERSION>   Version of Uv to install
 EOF
 }
 
@@ -51,14 +51,6 @@ configure_shell() {
     fish)
       export_cmd="set --export PATH \"${dst_dir}\" \$PATH"
       profile="${HOME}/.config/fish/config.fish"
-      ;;
-    nu)
-      export_cmd="\$env.PATH = [\"${dst_dir}\" ...\$env.PATH]"
-      if [ "$(uname -s)" = 'Darwin' ]; then
-        profile="${HOME}/Library/Application Support/nushell/config.nu"
-      else
-        profile="${HOME}/.config/nushell/config.nu"
-      fi
       ;;
     zsh)
       profile="${HOME}/.zshrc"
@@ -168,21 +160,14 @@ find_jq() {
 }
 
 #######################################
-# Find all scripts inside GitHub repository.
-# Arguments:
-#   Scripts version.
-# Returns:
-#   Array of script names.
+# Find latest Uv version.
 #######################################
-find_scripts() {
-  local version="${1:-main}"
-  local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".sh")) | ltrimstr("src/script/")'
+find_latest() {
   local jq_bin='' response=''
-
   jq_bin="$(find_jq)"
-  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
-  echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
-
+  response="$(fetch 'https://formulae.brew.sh/api/formula/uv.json')"
+  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
+    '.versions.stable'
 }
 
 #######################################
@@ -209,34 +194,54 @@ find_super() {
 }
 
 #######################################
-# Download and install script.
+# Download and install Uv.
 # Arguments:
 #   Super user command for installation.
-#   Script version.
+#   Uv version.
 #   Destination path.
-#   Script file name.
 #   Whether to update system path.
 #######################################
-install_script() {
-  local super="${1}" version="${2}" dst_dir="${3}" script="${4}"
-  local modify_env="${5}" name="${4%.*}"
-  local dst_file="${dst_dir}/${name}"
-  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
+install_uv() {
+  local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
+  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
-  if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
-    fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
-      ${super:+--global} ${modify_env:+--modify-env} --quiet
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v tar)" ]; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
   fi
 
-  # Create installation directory.
+  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
+  os="$(uname -s)"
+  case "${os}" in
+    Darwin)
+      target="uv-${arch}-apple-darwin"
+      ;;
+    Linux)
+      target="uv-${arch}-unknown-linux-musl"
+      ;;
+    *)
+      log --stderr "error: Unsupported operating system '${os}'."
+      exit 1
+      ;;
+  esac
+
+  # Create installation directories.
   #
   # Flags:
   #   -p: Make parent directories if necessary.
+  tmp_dir="$(mktemp -d)"
   ${super:+"${super}"} mkdir -p "${dst_dir}"
 
-  log "Installing script ${name} to '${dst_file}'."
-  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
-    "${repo}/script/${script}"
+  log "Installing Uv to '${dst_dir}/uv'."
+  fetch --dest "${tmp_dir}/${target}.tar.gz" \
+    "https://github.com/astral-sh/uv/releases/download/${version}/${target}.tar.gz"
+  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
+  ${super:+"${super}"} install "${tmp_dir}/${target}/uv" "${dst_dir}/"
 
   # Update shell profile if destination is not in system path.
   #
@@ -252,7 +257,7 @@ install_script() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
-  log "Installed $("${name}" --version)."
+  log "Installed $(uv --version)."
 }
 
 #######################################
@@ -298,7 +303,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' modify_env='' names='' super='' version='main'
+  local dst_dir='' global_='' modify_env='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -320,10 +325,6 @@ main() {
         usage
         exit 0
         ;;
-      -l | --list)
-        list_scripts='true'
-        shift 1
-        ;;
       -m | --modify-env)
         modify_env='true'
         shift 1
@@ -337,31 +338,17 @@ main() {
         shift 2
         ;;
       *)
-        if [ -n "${names}" ]; then
-          names="${names} ${1}"
-        else
-          names="${1}"
-        fi
-        shift 1
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'install-uv --help' for usage."
+        exit 2
         ;;
     esac
   done
 
-  scripts="$(find_scripts "${version}")"
-
-  # Flags:
-  #   -n: Check if string has nonzero length.
-  #   -z: Check if string has zero length.
-  if [ -n "${list_scripts:-}" ]; then
-    for script in ${scripts}; do
-      echo "${script%.*}"
-    done
-    return
-  fi
-
   # Find super user command if destination is not writable.
   #
   # Flags:
+  #   -n: Check if string has nonzero length.
   #   -p: Make parent directories if necessary.
   #   -w: Check if file exists and is writable.
   dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
@@ -370,20 +357,10 @@ main() {
     super="$(find_super)"
   fi
 
-  for name in ${names}; do
-    match_found=''
-    for script in ${scripts}; do
-      if [ "${script%.*}" = "${name}" ]; then
-        match_found='true'
-        install_script "${super}" "${version}" "${dst_dir}" "${script}" \
-          "${modify_env}"
-      fi
-    done
-
-    if [ -z "${match_found:-}" ]; then
-      log --stderr "error: No script found for '${names}'."
-    fi
-  done
+  if [ -z "${version}" ]; then
+    version="$(find_latest)"
+  fi
+  install_uv "${super}" "${version}" "${dst_dir}" "${modify_env}"
 }
 
 # Add ability to selectively skip main function during test suite.
