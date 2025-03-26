@@ -215,7 +215,7 @@ find_super() {
 #   Script version.
 #   Destination path.
 #   Script file name.
-#   Whether to update system path.
+#   Whether to update system environment.
 #######################################
 install_script() {
   local super="${1}" version="${2}" dst_dir="${3}" script="${4}"
@@ -279,7 +279,7 @@ log() {
         shift 1
         ;;
       *)
-        text="${1}"
+        text="${text}${1}"
         shift 1
         ;;
     esac

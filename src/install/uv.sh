@@ -199,7 +199,7 @@ find_super() {
 #   Super user command for installation.
 #   Uv version.
 #   Destination path.
-#   Whether to update system path.
+#   Whether to update system environment.
 #######################################
 install_uv() {
   local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
@@ -284,7 +284,7 @@ log() {
         shift 1
         ;;
       *)
-        text="${1}"
+        text="${text}${1}"
         shift 1
         ;;
     esac

@@ -159,7 +159,7 @@ find_super() {
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
   else
-    log --stderr 'error: Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
     exit 1
   fi
 }
@@ -170,7 +170,7 @@ find_super() {
 #   Super user command for installation.
 #   Deno version.
 #   Destination path.
-#   Whether to update system path.
+#   Whether to update system environment.
 #######################################
 install_deno() {
   local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
@@ -264,7 +264,7 @@ log() {
         shift 1
         ;;
       *)
-        text="${1}"
+        text="${text}${1}"
         shift 1
         ;;
     esac
