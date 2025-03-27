@@ -55,9 +55,18 @@ format-fix:
 # Fix code formatting.
 [windows]
 format-fix:
+  #!powershell.exe
+  $ErrorActionPreference = 'Stop'
+  $ProgressPreference = 'SilentlyContinue'
+  $PSNativeCommandUseErrorActionPreference = $True
   npx prettier --write .
   Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Setting CodeFormatting
   Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Setting CodeFormatting
+  $Scripts = Get-ChildItem -Recurse -Filter *.ps1 -Path src, test
+  foreach ($Script in $Scripts) {
+    $Text = Get-Content -Raw $Script.FullName
+    [System.IO.File]::WriteAllText($Script.FullName, $Text)
+  }
 
 # Run code analyses.
 [unix]
@@ -143,22 +152,22 @@ _setup:
   Import-Module -MaximumVersion 1.1.0 -MinimumVersion 1.0.0 PackageManagement
   Import-Module -MaximumVersion 1.9.9 -MinimumVersion 1.0.0 PowerShellGet
   Get-PackageProvider -Force Nuget | Out-Null
-  If (-Not (Get-Command -ErrorAction SilentlyContinue jq)) {
+  if (-not (Get-Command -ErrorAction SilentlyContinue jq)) {
     src/install/jq.ps1 --dest .vendor/bin
   }
   jq --version
-  If (-Not (Get-Command -ErrorAction SilentlyContinue nu)) {
+  if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
     src/install/nushell.ps1 --dest .vendor/bin
   }
   Write-Output "Nushell $(nu --version)"
-  If (-Not (Get-Command -ErrorAction SilentlyContinue deno)) {
+  if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
     src/install/deno.ps1 --dest .vendor/bin
   }
   deno --version
-  If (-Not (Get-Module -ListAvailable -FullyQualifiedName @{ModuleName="PSScriptAnalyzer";ModuleVersion="1.0.0"})) {
+  if (-not (Get-Module -ListAvailable -FullyQualifiedName @{ModuleName = "PSScriptAnalyzer"; ModuleVersion = "1.0.0" })) {
     Install-Module -Force -MinimumVersion 1.0.0 -Name PSScriptAnalyzer
   }
-  If (-Not (Get-Module -ListAvailable -FullyQualifiedName @{ModuleName="Pester";ModuleVersion="5.0.0"})) {
+  if (-not (Get-Module -ListAvailable -FullyQualifiedName @{ModuleName = "Pester"; ModuleVersion = "5.0.0" })) {
     Install-Module -Force -SkipPublisherCheck -MinimumVersion 5.0.0 -Name Pester
   }
   Install-Module -Force -Name PSScriptAnalyzer
