@@ -46,6 +46,19 @@ format:
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings CodeFormatting
 
+# Fix code formatting.
+[unix]
+format-fix:
+  npx prettier --write .
+  shfmt --write src test
+
+# Fix code formatting.
+[windows]
+format-fix:
+  npx prettier --write .
+  Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Setting CodeFormatting
+  Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Setting CodeFormatting
+
 # Run code analyses.
 [unix]
 lint:

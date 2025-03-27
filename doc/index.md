@@ -32,16 +32,15 @@ The following table shows the available scripts. These are single file programs
 that peform convenience tasks. They can be installed with the repostiory's
 `scripts` installer.
 
-| Name        | Description                                     |
-| ----------- | ----------------------------------------------- |
-| caffeinate  | Prevent system from sleeping during a program.  |
-| clear-cache | Remove package manager caches.                  |
-| mlab        | Wrapper script for running Matlab as a CLI.     |
-| packup      | Upgrade programs from several package managers. |
-| rgi         | Interactive Ripgrep searcher.                   |
-| trsync      | Rsync for one time remote connections.          |
-| tscp        | SCP for one time remote connections.            |
-| tssh        | SSH for one time remote connections.            |
+| Name        | Description                                    |
+| ----------- | ---------------------------------------------- |
+| caffeinate  | Prevent system from sleeping during a program. |
+| clear-cache | Remove package manager caches.                 |
+| mlab        | Wrapper script for running Matlab as a CLI.    |
+| rgi         | Interactive Ripgrep searcher.                  |
+| trsync      | Rsync for one time remote connections.         |
+| tscp        | SCP for one time remote connections.           |
+| tssh        | SSH for one time remote connections.           |
 
 ## Actions
 

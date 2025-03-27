@@ -18,6 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Improved error messages for piped commands.
 - Repository organization.
 
+## Removed
+
+- Packup script.
+
 ## 0.1.3 - 2024-06-07
 
 ### Added

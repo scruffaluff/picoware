@@ -71,28 +71,27 @@ The programs, from the following table, can be installed with the
 https://scruffaluff.github.io/scripts/install/scripts.sh for Unix systems and
 https://scruffaluff.github.io/scripts/install/scripts.ps1 for Windows.
 
-| Name        | Description                                     |
-| ----------- | ----------------------------------------------- |
-| caffeinate  | Prevent system from sleeping during a program.  |
-| clear-cache | Remove package manager caches.                  |
-| mlab        | Wrapper script for running Matlab as a CLI.     |
-| packup      | Upgrade programs from several package managers. |
-| rgi         | Interactive Ripgrep searcher.                   |
-| trsync      | Rsync for one time remote connections.          |
-| tscp        | SCP for one time remote connections.            |
-| tssh        | SSH for one time remote connections.            |
+| Name        | Description                                    |
+| ----------- | ---------------------------------------------- |
+| caffeinate  | Prevent system from sleeping during a program. |
+| clear-cache | Remove package manager caches.                 |
+| mlab        | Wrapper script for running Matlab as a CLI.    |
+| rgi         | Interactive Ripgrep searcher.                  |
+| trsync      | Rsync for one time remote connections.         |
+| tscp        | SCP for one time remote connections.           |
+| tssh        | SSH for one time remote connections.           |
 
-The following command will install the clear-cache and packup scripts. Other
+The following command will install the clear-cache and rgi scripts. Other
 scripts can be installed by replacing the program names.
 
 ::: code-group
 
 ```sh [Unix]
-curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- clear-cache packup
+curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- clear-cache rgi
 ```
 
 ```powershell [Windows]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache packup" }
+powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache rgi" }
 ```
 
 :::

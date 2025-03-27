@@ -77,8 +77,8 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
         }
     }
 
-    Log "Installing script $Name to '$DestDir/$Name'."
-    Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir/$Script" `
+    Log "Installing script $Name to '$DestDir\$Name'."
+    Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\$Script" `
         -Uri "$URL/src/script/$Script"
 
     if ($ModifyEnv) {
