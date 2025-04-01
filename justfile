@@ -177,6 +177,7 @@ _setup:
 [unix]
 test *args:
   bats --recursive test {{args}}
+  for file in $(find test -name '*.test.nu'); do nu "${file}"; done
 
 # Run test suites.
 [windows]
