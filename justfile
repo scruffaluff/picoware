@@ -15,7 +15,7 @@ list:
   just --list
 
 # Execute CI workflow commands.
-ci: setup format lint doc test
+ci: setup lint doc test
 
 # Build documentation.
 [unix]
@@ -30,28 +30,15 @@ doc:
   Copy-Item -Recurse -Path src/install -Destination data/public/
   deno run --allow-all npm:vitepress build .
 
-# Check code formatting.
-[unix]
-format:
-  deno run --allow-all npm:prettier --check .
-  shfmt --diff src test
-
-# Check code formatting.
-[windows]
-format:
-  deno run --allow-all npm:prettier --check .
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings CodeFormatting
-  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings CodeFormatting
-
 # Fix code formatting.
 [unix]
-format-fix:
+format:
   npx prettier --write .
   shfmt --write src test
 
 # Fix code formatting.
 [windows]
-format-fix:
+format:
   #!powershell.exe
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue'
@@ -70,6 +57,8 @@ format-fix:
 lint:
   #!/usr/bin/env sh
   set -eu
+  deno run --allow-all npm:prettier --check .
+  shfmt --diff src test
   files="$(find src test -name '*.sh' -or -name '*.bats')"
   for file in ${files}; do
     shellcheck "${file}"
@@ -78,6 +67,9 @@ lint:
 # Run code analyses.
 [windows]
 lint:
+  deno run --allow-all npm:prettier --check .
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings CodeFormatting
+  Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings data/config/script_analyzer.psd1
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings data/config/script_analyzer.psd1
 
