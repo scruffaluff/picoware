@@ -18,9 +18,10 @@ def --wrapped main [...args: string] {
     }
 
     let editor = $env.EDITOR | default "vim"
+    # Single quotes are used to prevent expansion of glob and regex arguments.
     let command = (
         "rg --column --line-number --no-heading --smart-case --color always "
-        + ($args | str join " ")
+        + $"'($args | str join "' '")'"
     )
 
     (
