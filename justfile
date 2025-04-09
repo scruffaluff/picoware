@@ -116,7 +116,7 @@ _setup:
   done
   bats --version
   if [ ! -x "$(command -v shellcheck)" ]; then
-    shellcheck_arch=arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
+    shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
     shellcheck_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shellcheck.json |
       jq --exit-status --raw-output .versions.stable)"

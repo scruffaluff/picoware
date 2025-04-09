@@ -95,7 +95,7 @@ def main [
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
     }
     let dest_ = $dest | default $dest_default
-    let super = if (need_super $dest_ $global) { find_super } else { "run" }
+    let super = if (need_super $dest_ $global) { find_super } else { "" }
     let version_ = $version
     | default (http get https://dl.deno.land/release-latest.txt)
     
@@ -106,13 +106,13 @@ def main [
     }
 
     let temp = mktemp --directory --tmpdir
-    run $super mkdir $dest_
+    runsup $super mkdir $dest_
 
     print $"Installing Deno to '($dest_)'."
     http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
     | save $"($temp)/deno.zip"
     unzip -d $temp $"($temp)/deno.zip"
-    run $super mv $"($temp)/deno" $"($dest_)/deno"
+    runsup $super mv $"($temp)/deno" $"($dest_)/deno"
 
     if $modify_env and not $dest_ in $env.PATH {
         if $nu.os-info.name == "windows" {
@@ -127,11 +127,10 @@ def main [
 }
 
 # Wrapper to handle conditional prefix commands.
-def --wrapped run [...args] {
-    let command = $args | skip while {is-empty}
-    try {
-        nu --commands $"'($command | str join "' '")'"
-    } catch {
-        ^$command.0 ($command | skip 1)
+def --wrapped runsup [super: string ...args] {
+    if ($super | is-empty) {
+        nu --stdin --commands $"($args | str join ' ')"
+    } else {
+        ^$super nu --stdin --commands $"($args | str join ' ')"
     }
 }
