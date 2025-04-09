@@ -116,8 +116,7 @@ _setup:
   done
   bats --version
   if [ ! -x "$(command -v shellcheck)" ]; then
-    shellcheck_arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
-      sed s/arm64/aarch64/)"
+    shellcheck_arch=arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
     shellcheck_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shellcheck.json |
       jq --exit-status --raw-output .versions.stable)"
@@ -128,8 +127,7 @@ _setup:
   fi
   shellcheck --version
   if [ ! -x "$(command -v shfmt)" ]; then
-    shfmt_arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
-      sed s/aarch64/arm64/)"
+    shfmt_arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
     shfmt_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shfmt.json |
       jq --exit-status --raw-output .versions.stable)"

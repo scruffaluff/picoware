@@ -1,5 +1,34 @@
 #!/usr/bin/env nu
 
+def configure_shell [dest: string] {
+    let shell = $env.SHELL | default "" | path basename
+
+    let command = match $shell {
+        "fish" => $"set --export PATH \"($dest)\" $PATH"
+        "nu" => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
+        _ => $"export PATH=\"($dest):${PATH}\""
+    }
+    let profile = match $shell {
+        "bash" => $"($env.HOME)/.bashrc"
+        "fish" => "($env.HOME)/.config/fish/config.fish"
+        "nu" => {
+            if $nu.os-info.name == "macos" {
+                $"($env.HOME)/Library/Application Support/nushell/config.nu"
+            } else {
+                $"$(env.HOME)/.config/nushell/config.nu"
+            }
+        }
+        "zsh" => $"($env.HOME)/.zshrc"
+        _ => $"($env.HOME)/.profile"
+    }
+
+    # Create profile parent directory and add export command to profile
+    mkdir ($profile | path dirname)
+    $"\n# Added by Scripts installer.\n($command)\n" | save --append $profile
+    print $"Added '($command)' to the '($profile)' shell profile."
+    print "Source shell profile or restart shell after installation."
+}
+
 # Find command to elevate as super user.
 def find_super [] {
     if (is-admin) {
@@ -13,6 +42,21 @@ def find_super [] {
             msg: "Unable to find a command for super user elevation."
         }
     }
+}
+
+def modify_env [$dest: string, global: bool] {
+    let target = if $global { "Machine" } else { "User" }
+    powershell -command $"
+$Path = [Environment]::GetEnvironmentVariable\('Path', ($target)\)
+if \(-not \($Path -like "*($dest)*"\)\) {
+    $PrependedPath = "($dest);\$Path"
+    [System.Environment]::SetEnvironmentVariable\(
+        'Path', "$PrependedPath", ($target)
+    \)
+    Write-Output "Added '($dest)' to the system path."
+    Write-Output 'Source shell profile or restart shell after installation.'
+}
+"
 }
 
 # Check if super user elevation is required.
@@ -34,9 +78,24 @@ def main [
     --quiet (-q) # Print only error messages
     --version (-v): string # Version of Deno to install
 ] {
-    # "$Env:LocalAppData\Programs\Bin"
-    let dest_ = $dest | default $"($env.HOME)/.local/bin"
-    let super = if (need_super $dest_ $global) { find_super } else { "" }
+    let arch = $nu.os-info.arch
+    let target = match $nu.os-info.name {
+        "linux" => $"($nu.os-info.arch)-unknown-linux-gnu"
+        "macos" => $"($nu.os-info.arch)-apple-darwin"
+        "windows" => $"($nu.os-info.arch)-pc-windows-msvc"
+    }
+
+    let dest_default = if $nu.os-info.name == "windows" {
+        if $global {
+            "C:\\Program Files\\Bin"
+        } else {
+            $"($env.LOCALAPPDATA)\\Programs\\Bin"
+        }
+    } else {
+        if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
+    }
+    let dest_ = $dest | default $dest_default
+    let super = if (need_super $dest_ $global) { find_super } else { "run" }
     let version_ = $version
     | default (http get https://dl.deno.land/release-latest.txt)
     
@@ -46,31 +105,33 @@ def main [
         exit 1
     }
 
-    let arch = $nu.os-info.arch
-    let target = match $nu.os-info.name {
-        "linux" => $"($nu.os-info.arch)-unknown-linux-gnu"
-        "macos" => $"($nu.os-info.arch)-apple-darwin"
-        "windows" => $"($nu.os-info.arch)-pc-windows-msvc"
-    }
-
     let temp = mktemp --directory --tmpdir
-    if ($super | is-empty) { mkdir $dest_ } else { ^$super mkdir $dest_ }
+    run $super mkdir $dest_
 
     print $"Installing Deno to '($dest_)'."
     http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
     | save $"($temp)/deno.zip"
     unzip -d $temp $"($temp)/deno.zip"
-    if ($super | is-empty) {
-        mv $"($temp)/deno" $"($dest_)/deno"
-    } else { 
-        ^$super mv $"($temp)/deno" $"($dest_)/deno"
-    }
+    run $super mv $"($temp)/deno" $"($dest_)/deno"
 
-    # Update shell profile if destination is not in system path.
     if $modify_env and not $dest_ in $env.PATH {
-        print 'Not yet implemented'
+        if $nu.os-info.name == "windows" {
+            modify_env $dest $global
+        } else {
+            configure_shell $dest_
+        }
     }
 
     $env.PATH = $env.PATH | prepend $dest_
     print $"Installed (deno --version)."
+}
+
+# Wrapper to handle conditional prefix commands.
+def --wrapped run [...args] {
+    let command = $args | skip while {is-empty}
+    try {
+        nu --commands $"'($command | str join "' '")'"
+    } catch {
+        ^$command.0 ($command | skip 1)
+    }
 }

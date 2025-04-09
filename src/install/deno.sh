@@ -194,8 +194,7 @@ install_deno() {
   # Flags:
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/x64/x86_64/ |
-    sed s/arm64/aarch64/)"
+  arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
   case "${os}" in
     Darwin)

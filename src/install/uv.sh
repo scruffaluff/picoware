@@ -215,7 +215,7 @@ install_uv() {
     exit 1
   fi
 
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
+  arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
   case "${os}" in
     Darwin)
