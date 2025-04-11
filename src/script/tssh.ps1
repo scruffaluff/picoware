@@ -37,6 +37,11 @@ function Main() {
     $ArgIdx = 0
     $CmdArgs = @()
 
+    if ($Args[0].Count -eq 0) {
+        Usage
+        exit 0
+    }
+
     while ($ArgIdx -lt $Args[0].Count) {
         switch ($Args[0][$ArgIdx]) {
             { $_ -in '-h', '--help' } {

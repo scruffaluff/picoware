@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 #
-# Removes all traces of the Snap package manager. Forked from
-# https://github.com/MasterGeekMX/snap-to-flatpak/blob/004790749abb6fbc82e7bebc6f6420c5b3be0fbc/snap-to-flatpak.sh.
+# Removes all traces of the Snap package manager.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -106,6 +105,7 @@ log() {
 # Remove all traces of Snap from system.
 #######################################
 purge_snaps() {
+  local packages super
   super="$(find_super)"
 
   # Loop repeatedly over Snap packages until all are removed.

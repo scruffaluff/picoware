@@ -70,7 +70,7 @@ log() {
 # Cleanup resources on exit.
 #######################################
 panic() {
-  schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
+  local schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
 
   # Flags:
   #   -d: Check if path exists and is a directory.
@@ -94,6 +94,8 @@ version() {
 # Script entrypoint.
 #######################################
 main() {
+  local schema
+
   # Use system caffeinate if it exists.
   if [ -x /usr/bin/caffeinate ]; then
     /usr/bin/caffeinate "$@"

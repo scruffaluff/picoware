@@ -75,7 +75,7 @@ EOF
 #   Matlab executable path.
 #######################################
 find_matlab() {
-  program=''
+  local program=''
 
   # Search standard locations for first Matlab installation.
   #
@@ -135,7 +135,7 @@ get_module() {
 # Launch Jupyter Lab with the Matlab kernel.
 #######################################
 jupyter() {
-  share_dir="${HOME}/.local/share/mlab"
+  local matlab_dir share_dir="${HOME}/.local/share/mlab"
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -211,8 +211,9 @@ log() {
 # Subcommand to execute Matlab code.
 #######################################
 run() {
-  batch='' command='' debug='' display='-nodisplay' flag='-r' interactive=''
-  license='' logfile='' pathcmd='' print='' script='' startdir=''
+  local batch='' command='' debug='' display='-nodisplay' flag='-r' folder
+  local interactive='' license='' logfile='' module pathcmd='' print=''
+  local script='' startdir=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -238,6 +239,7 @@ run() {
         shift 1
         ;;
       -g | --genpath)
+        # Lint disabled since quotes should be literal.
         # shellcheck disable=SC2089
         pathcmd="addpath(genpath('${2}')); "
         shift 2
@@ -306,6 +308,8 @@ run() {
 
   command="${pathcmd}${command}"
   program="$(find_matlab)"
+
+  # Lint is disabled since quotes in command are intended to be literal.
   # shellcheck disable=SC2090
   ${print:+echo} "${program}" ${license:+-c "${license}"} \
     ${logfile:+-logfile "${logfile}"} ${startdir:+-sd "${startdir}"} \

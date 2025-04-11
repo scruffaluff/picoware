@@ -31,6 +31,7 @@ EOF
 # Clear cache of all package managers.
 #######################################
 clear_cache() {
+  local super
   super="$(find_super)"
 
   # Do not quote the outer super parameter expansion. Shell will error due to be
@@ -103,8 +104,8 @@ clear_cache() {
 # Clear cache for Playwright.
 #######################################
 clear_playwright() {
-  # Do not use long form --kernel-name flag for uname. It is not supported on
-  # MacOS.
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.

@@ -59,8 +59,10 @@ find_super() {
 #   Super user command for installation.
 #######################################
 install_tmate() {
-  # Do not use long form --kernel-name flag for uname. It is not supported on
-  # MacOS.
+  local os
+
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   os="$(uname -s)"
   case "${os}" in
     Darwin)
@@ -90,7 +92,7 @@ install_tmate() {
 #   Super user command for installation.
 #######################################
 install_tmate_linux() {
-  tmate_version='2.4.0'
+  local arch tmate_arch tmate_version='2.4.0'
 
   # Short form machine flag '-m' should be used since processor flag and long
   # form machine flag '--machine' are non-portable. For more information, visit
@@ -142,6 +144,7 @@ install_tmate_linux() {
 # Installs Tmate and creates a remote session.
 #######################################
 setup_tmate() {
+  local ssh_connect super web_connect
   super="$(find_super)"
 
   # Install Tmate if not available.
