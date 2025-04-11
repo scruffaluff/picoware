@@ -28,26 +28,10 @@ EOF
 }
 
 #######################################
-# Assert that command can be found in system path.
-# Will exit script with an error code if command is not in system path.
-# Arguments:
-#   Command to check availabilty.
-# Outputs:
-#   Writes error message to stderr if command is not in system path.
-#######################################
-assert_cmd() {
-  # Flags:
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v "${1}")" ]; then
-    error "Cannot find required ${1} command on computer"
-  fi
-}
-
-#######################################
 # Clear cache of all package managers.
 #######################################
 clear_cache() {
+  local super
   super="$(find_super)"
 
   # Do not quote the outer super parameter expansion. Shell will error due to be
@@ -120,8 +104,8 @@ clear_cache() {
 # Clear cache for Playwright.
 #######################################
 clear_playwright() {
-  # Do not use long form --kernel-name flag for uname. It is not supported on
-  # MacOS.
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   #
   # Flags:
   #   -d: Check if path exists and is a directory.
@@ -136,57 +120,64 @@ clear_playwright() {
 }
 
 #######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'clear-cache --help' for usage.\n" >&2
-  exit 2
-}
-
-#######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
-  # Do not use long form -user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v sudo)" ]; then
-    echo 'sudo'
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
+  elif [ -x "$(command -v sudo)" ]; then
+    echo 'sudo'
   else
-    error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
+    exit 1
+  fi
+}
+
+#######################################
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
+# Globals:
+#   SCRIPTS_NOLOG
+# Outputs:
+#   Message argument.
+#######################################
+log() {
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${text}${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
+  #
+  # Flags:
+  #   -z: Check if string has zero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
 }
 
@@ -196,7 +187,7 @@ find_super() {
 #   ClearCache version string.
 #######################################
 version() {
-  echo 'ClearCache 0.2.2'
+  echo 'ClearCache 0.3.0'
 }
 
 #######################################
@@ -219,7 +210,9 @@ main() {
         exit 0
         ;;
       *)
-        error_usage "No such option '${1}'."
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'clear-cache --help' for usage."
+        exit 2
         ;;
     esac
   done

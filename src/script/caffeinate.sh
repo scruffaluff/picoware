@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Prevent the system from sleeping during a command.
 
-Usage: caffeinate [OPTIONS] [COMMAND] [ARGS]...
+Usage: caffeinate [OPTIONS]
 
 Options:
       --debug     Show shell debug traces
@@ -28,33 +28,56 @@ EOF
 }
 
 #######################################
-# Print error message and exit script with error code.
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
+# Globals:
+#   SCRIPTS_NOLOG
 # Outputs:
-#   Writes error message to stderr.
+#   Message argument.
 #######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
+log() {
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${text}${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
+  #
   # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
+  #   -z: Check if string has zero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
-  exit 1
 }
 
 #######################################
 # Cleanup resources on exit.
 #######################################
 panic() {
-  schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
+  local schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
 
   # Flags:
   #   -d: Check if path exists and is a directory.
   #   -x: Check if file exists and execute permission is granted.
   if [ -x "$(command -v gsettings)" ] && [ -d "${schema}" ]; then
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine toggle-state false
+    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
+      toggle-state false
   fi
 }
 
@@ -64,13 +87,15 @@ panic() {
 #   Caffeinate version string.
 #######################################
 version() {
-  echo 'Caffeinate 0.0.2'
+  echo 'Caffeinate 0.1.0'
 }
 
 #######################################
 # Script entrypoint.
 #######################################
 main() {
+  local schema
+
   # Use system caffeinate if it exists.
   if [ -x /usr/bin/caffeinate ]; then
     /usr/bin/caffeinate "$@"
@@ -102,7 +127,8 @@ main() {
   #   -x: Check if file exists and execute permission is granted.
   schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
   if [ -x "$(command -v gsettings)" ] && [ -d "${schema}" ]; then
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine toggle-state true
+    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
+      toggle-state true
 
     if [ "${#}" -eq 0 ]; then
       # Sleep inifinity is not supported on all platforms.
@@ -115,9 +141,11 @@ main() {
       "$@"
     fi
 
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine toggle-state false
+    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
+      toggle-state false
   else
-    error 'Unable to find a supported caffeine backend'
+    log --stderr 'error: Unable to find a supported caffeine backend.'
+    exit 1
   fi
 }
 

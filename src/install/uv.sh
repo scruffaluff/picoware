@@ -183,12 +183,12 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v sudo)" ]; then
-    echo 'sudo'
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
+  elif [ -x "$(command -v sudo)" ]; then
+    echo 'sudo'
   else
-    log --stderr 'error: Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
     exit 1
   fi
 }
@@ -215,7 +215,7 @@ install_uv() {
     exit 1
   fi
 
-  arch="$(uname -m | sed s/amd64/x86_64/ | sed s/arm64/aarch64/)"
+  arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
   case "${os}" in
     Darwin)

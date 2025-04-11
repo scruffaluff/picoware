@@ -15,23 +15,32 @@ function Usage() {
     Write-Output @'
 SSH for one time remote connections.
 
-Usage: tssh [OPTIONS] [SSH_ARGS]...
+Usage: tssh [OPTIONS] [ARGS]...
 
 Options:
   -h, --help      Print help information
   -v, --version   Print version information
 '@
+    if (Get-Command -ErrorAction SilentlyContinue ssh) {
+        Write-Output "`nSSH Options:"
+        ssh
+    }
 }
 
 # Print Tssh version string.
 function Version() {
-    Write-Output 'Tssh 0.2.1'
+    Write-Output 'Tssh 0.3.0'
 }
 
 # Script entrypoint.
 function Main() {
     $ArgIdx = 0
     $CmdArgs = @()
+
+    if ($Args[0].Count -eq 0) {
+        Usage
+        exit 0
+    }
 
     while ($ArgIdx -lt $Args[0].Count) {
         switch ($Args[0][$ArgIdx]) {

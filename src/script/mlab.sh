@@ -20,7 +20,7 @@ usage() {
       cat 1>&2 << EOF
 Wrapper script for running Matlab programs from the command line.
 
-Usage: mlab [OPTIONS] [SUBCOMMAND]
+Usage: mlab [OPTIONS] <SUBCOMMAND>
 
 Options:
       --debug       Enable shell debug traces
@@ -30,13 +30,15 @@ Options:
 Subcommands:
   jupyter   Launch Jupyter Lab with Matlab kernel
   run       Execute Matlab code
+
+Run 'mlab <subcommand> --help' for usage on a subcommand.
 EOF
       ;;
     jupyter)
       cat 1>&2 << EOF
 Launch Jupyter Lab with the Matlab kernel.
 
-Usage: mlab jupyter [OPTIONS] [ARGS]...
+Usage: mlab jupyter [OPTIONS]
 
 Options:
   -h, --help        Print help information
@@ -46,7 +48,7 @@ EOF
       cat 1>&2 << EOF
 Execute Matlab code.
 
-Usage: mlab run [OPTIONS] [SCRIPT] [ARGS]...
+Usage: mlab run [OPTIONS] <SCRIPT> [ARGS]...
 
 Options:
   -a, --addpath <PATH>        Add folder to Matlab path
@@ -61,44 +63,10 @@ Options:
 EOF
       ;;
     *)
-      error "No such usage option '${1}'"
+      log --stderr "error: No such usage option '${1}'."
+      exit 1
       ;;
   esac
-}
-
-#######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'mlab %s--help' for usage.\n" "${2:+${2} }" >&2
-  exit 2
 }
 
 #######################################
@@ -107,7 +75,7 @@ error_usage() {
 #   Matlab executable path.
 #######################################
 find_matlab() {
-  program=''
+  local program=''
 
   # Search standard locations for first Matlab installation.
   #
@@ -140,7 +108,8 @@ find_matlab() {
   # Flags:
   #   -z: Check if string has zero length.
   if [ -z "${program}" ]; then
-    error 'Unable to find a Matlab installation'
+    log --stderr 'error: Unable to find a Matlab installation.'
+    exit 1
   else
     echo "${program}"
   fi
@@ -166,7 +135,7 @@ get_module() {
 # Launch Jupyter Lab with the Matlab kernel.
 #######################################
 jupyter() {
-  share_dir="${HOME}/.local/share/mlab"
+  local matlab_dir share_dir="${HOME}/.local/share/mlab"
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -200,11 +169,51 @@ jupyter() {
 }
 
 #######################################
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
+# Globals:
+#   SCRIPTS_NOLOG
+# Outputs:
+#   Message argument.
+#######################################
+log() {
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${text}${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
+  #
+  # Flags:
+  #   -z: Check if string has zero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
+  fi
+}
+
+#######################################
 # Subcommand to execute Matlab code.
 #######################################
 run() {
-  batch='' command='' debug='' display='-nodisplay' flag='-r' interactive=''
-  license='' logfile='' pathcmd='' print='' script='' startdir=''
+  local batch='' command='' debug='' display='-nodisplay' flag='-r' folder
+  local interactive='' license='' logfile='' module pathcmd='' print=''
+  local script='' startdir=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -230,6 +239,7 @@ run() {
         shift 1
         ;;
       -g | --genpath)
+        # Lint disabled since quotes should be literal.
         # shellcheck disable=SC2089
         pathcmd="addpath(genpath('${2}')); "
         shift 2
@@ -298,6 +308,8 @@ run() {
 
   command="${pathcmd}${command}"
   program="$(find_matlab)"
+
+  # Lint is disabled since quotes in command are intended to be literal.
   # shellcheck disable=SC2090
   ${print:+echo} "${program}" ${license:+-c "${license}"} \
     ${logfile:+-logfile "${logfile}"} ${startdir:+-sd "${startdir}"} \
@@ -310,7 +322,7 @@ run() {
 #   Mlab version string.
 #######################################
 version() {
-  echo 'Mlab 0.0.4'
+  echo 'Mlab 0.1.0'
 }
 
 #######################################
@@ -343,7 +355,9 @@ main() {
         exit 0
         ;;
       *)
-        error_usage "No such subcommand or option '${1}'"
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'mlab --help' for usage."
+        exit 2
         ;;
     esac
   done

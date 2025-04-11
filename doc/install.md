@@ -26,6 +26,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 The installer programs, from the following table, can be executed by piping them
 into Bash and PowerShell for Unix systems and Windows respectively.
+Additionally, the Nushell installer programs work on any platform.
 
 | Name    | Description                                         |
 | ------- | --------------------------------------------------- |
@@ -36,17 +37,21 @@ into Bash and PowerShell for Unix systems and Windows respectively.
 | scripts | Installs programs from the following scripts table. |
 | uv      | Installs Uv Python package manager.                 |
 
-The following command installs Nushell. To execute the other installers, replace
-`nushell` with the installer name.
+The following command installs Deno. To execute the other installers, replace
+`deno` with the installer name.
 
 ::: code-group
 
-```sh [Unix]
-curl -LSfs https://scruffaluff.github.io/scripts/install/nushell.sh | sh
+```sh [Bash]
+curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh
 ```
 
-```powershell [Windows]
-iwr -useb https://scruffaluff.github.io/scripts/install/nushell.ps1 | iex
+```powershell [PowerShell]
+iwr -useb https://scruffaluff.github.io/scripts/install/deno.ps1 | iex
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in); main"
 ```
 
 :::
@@ -55,12 +60,16 @@ To view usage options, run the following command.
 
 ::: code-group
 
-```sh [Unix]
-curl -LSfs https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- --help
+```sh [Bash]
+curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- --help
 ```
 
-```powershell [Windows]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/nushell.ps1) } --help" }
+```powershell [PowerShell]
+powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/deno.ps1) } --help" }
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in); main --help"
 ```
 
 :::
@@ -86,11 +95,11 @@ scripts can be installed by replacing the program names.
 
 ::: code-group
 
-```sh [Unix]
+```sh [Bash]
 curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- clear-cache rgi
 ```
 
-```powershell [Windows]
+```powershell [PowerShell]
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache rgi" }
 ```
 
@@ -100,11 +109,11 @@ To view usage options, run the following command.
 
 ::: code-group
 
-```sh [Unix]
+```sh [Bash]
 curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- --help
 ```
 
-```powershell [Windows]
+```powershell [PowerShell]
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } --help" }
 ```
 
@@ -125,11 +134,11 @@ actions, replace `tmate-session` with the installer name.
 
 ::: code-group
 
-```sh [Unix]
+```sh [Bash]
 curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh
 ```
 
-```powershell [Windows]
+```powershell [PowerShell]
 iwr -useb https://scruffaluff.github.io/scripts/action/tmate-session.ps1 | iex
 ```
 
@@ -139,11 +148,11 @@ To view usage options, run the following command.
 
 ::: code-group
 
-```sh [Unix]
+```sh [Bash]
 curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh -s -- --help
 ```
 
-```powershell [Windows]
+```powershell [PowerShell]
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/action/tmate-session.ps1) } --help" }
 ```
 

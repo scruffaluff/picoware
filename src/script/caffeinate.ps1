@@ -15,7 +15,7 @@ function Usage() {
     Write-Output @'
 Prevent the system from sleeping during a command.
 
-Usage: caffeinate [OPTIONS] [COMMAND] [ARGS]...
+Usage: caffeinate [OPTIONS]
 
 Options:
   -h, --help      Print help information
@@ -25,7 +25,7 @@ Options:
 
 # Print Caffeinate version string.
 function Version() {
-    Write-Output 'Caffeinate 0.0.2'
+    Write-Output 'Caffeinate 0.1.0'
 }
 
 # Script entrypoint.

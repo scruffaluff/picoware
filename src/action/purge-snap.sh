@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 #
-# Removes all traces of the Snap package manager. Forked from
-# https://github.com/MasterGeekMX/snap-to-flatpak/blob/004790749abb6fbc82e7bebc6f6420c5b3be0fbc/snap-to-flatpak.sh.
+# Removes all traces of the Snap package manager.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -29,58 +28,6 @@ EOF
 }
 
 #######################################
-# Assert that command can be found in system path.
-# Will exit script with an error code if command is not in system path.
-# Arguments:
-#   Command to check availabilty.
-# Outputs:
-#   Writes error message to stderr if command is not in system path.
-#######################################
-assert_cmd() {
-  # Flags:
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v "${1}")" ]; then
-    error "Cannot find required ${1} command on computer"
-  fi
-}
-
-#######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'purge-snap --help' for usage.\n" >&2
-  exit 2
-}
-
-#######################################
 # Find command to elevate as super user.
 #######################################
 find_snaps() {
@@ -94,21 +41,63 @@ find_snaps() {
 
 #######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
-  # Do not use long form -user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v sudo)" ]; then
-    echo 'sudo'
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
+  elif [ -x "$(command -v sudo)" ]; then
+    echo 'sudo'
   else
-    error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
+    exit 1
+  fi
+}
+
+#######################################
+# Print message if error or logging is enabled.
+# Arguments:
+#   Message to print.
+# Globals:
+#   SCRIPTS_NOLOG
+# Outputs:
+#   Message argument.
+#######################################
+log() {
+  local file='1' newline="\n" text=''
+
+  # Parse command line arguments.
+  while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+      -e | --stderr)
+        file='2'
+        shift 1
+        ;;
+      -n | --no-newline)
+        newline=''
+        shift 1
+        ;;
+      *)
+        text="${text}${1}"
+        shift 1
+        ;;
+    esac
+  done
+
+  # Print if error or using quiet configuration.
+  #
+  # Flags:
+  #   -z: Check if string has zero length.
+  if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
+    printf "%s${newline}" "${text}" >&"${file}"
   fi
 }
 
@@ -116,6 +105,7 @@ find_super() {
 # Remove all traces of Snap from system.
 #######################################
 purge_snaps() {
+  local packages super
   super="$(find_super)"
 
   # Loop repeatedly over Snap packages until all are removed.
@@ -150,7 +140,7 @@ purge_snaps() {
 #   Purge Snap version string.
 #######################################
 version() {
-  echo 'PurgeSnap 0.3.1'
+  echo 'PurgeSnap 0.4.0'
 }
 
 #######################################
@@ -173,7 +163,9 @@ main() {
         exit 0
         ;;
       *)
-        error_usage "No such option '${1}'."
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'purge-snap --help' for usage."
+        exit 2
         ;;
     esac
   done

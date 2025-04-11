@@ -153,12 +153,12 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v sudo)" ]; then
-    echo 'sudo'
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
+  elif [ -x "$(command -v sudo)" ]; then
+    echo 'sudo'
   else
-    log --stderr 'error: Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
     exit 1
   fi
 }
@@ -189,8 +189,7 @@ install_jq() {
   # Flags:
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed s/x86_64/amd64/ | sed s/x64/amd64/ |
-    sed s/aarch64/arm64/)"
+  arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
   os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed s/darwin/macos/)"
 
   # Create installation directory.

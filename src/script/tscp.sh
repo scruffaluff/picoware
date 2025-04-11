@@ -18,43 +18,17 @@ usage() {
   cat 1>&2 << EOF
 SCP for one time remote connections.
 
-Usage: tscp [OPTIONS] [SCP_ARGS]...
+Usage: tscp [OPTIONS] [ARGS]...
 
 Options:
       --debug     Show shell debug traces
   -h, --help      Print help information
   -v, --version   Print version information
 EOF
-}
-
-#######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
+  if [ -x "$(command -v scp)" ]; then
+    printf '\nSCP Options:\n'
+    scp
   fi
-  exit 1
-}
-
-#######################################
-# Create SSH connection without saving remote details.
-#######################################
-copy() {
-  scp \
-    -o IdentitiesOnly=yes \
-    -o LogLevel=ERROR \
-    -o PreferredAuthentications=publickey,password \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    "$@"
 }
 
 #######################################
@@ -63,7 +37,7 @@ copy() {
 #   Tscp version string.
 #######################################
 version() {
-  echo 'Tscp 0.2.1'
+  echo 'Tscp 0.3.0'
 }
 
 #######################################
@@ -86,11 +60,19 @@ main() {
         exit 0
         ;;
       *)
-        copy "$@"
+        scp \
+          -o IdentitiesOnly=yes \
+          -o LogLevel=ERROR \
+          -o PreferredAuthentications=publickey,password \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          "$@"
         exit 0
         ;;
     esac
   done
+
+  usage
 }
 
 # Add ability to selectively skip main function during test suite.
