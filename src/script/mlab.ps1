@@ -26,13 +26,15 @@ Options:
 Subcommands:
   jupyter   Launch Jupyter Lab with Matlab kernel
   run       Execute Matlab code
+
+Run 'mlab <subcommand> --help' for usage on a subcommand.
 '@
         }
         'jupyter' {
             Write-Output @'
 Launch Jupyter Lab with the Matlab kernel.
 
-Usage: mlab jupyter [OPTIONS] [ARGS]...
+Usage: mlab jupyter [OPTIONS]
 
 Options:
   -h, --help        Print help information
@@ -283,7 +285,7 @@ function Run() {
 
 # Print Mlab version string.
 function Version() {
-    Write-Output 'Mlab 0.0.5'
+    Write-Output 'Mlab 0.1.0'
 }
 
 # Script entrypoint.

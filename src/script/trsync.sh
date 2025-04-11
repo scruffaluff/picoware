@@ -18,16 +18,15 @@ usage() {
   cat 1>&2 << EOF
 Rsync for one time remote connections.
 
-Usage: trsync [OPTIONS] [RSYNC_ARGS]...
+Usage: trsync [OPTIONS] [ARGS]...
 
 Options:
       --debug     Show shell debug traces
   -h, --help      Print help information
   -v, --version   Print version information
-
-Rsync Options:
 EOF
   if [ -x "$(command -v rsync)" ]; then
+    printf '\nRsync Options:\n'
     rsync --help
   fi
 }

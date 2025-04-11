@@ -15,17 +15,21 @@ function Usage() {
     Write-Output @'
 SCP for one time remote connections.
 
-Usage: tscp [OPTIONS] [SCP_ARGS]...
+Usage: tscp [OPTIONS] [ARGS]...
 
 Options:
   -h, --help      Print help information
   -v, --version   Print version information
 '@
+    if (Get-Command -ErrorAction SilentlyContinue scp) {
+        Write-Output "`nSCP Options:"
+        scp
+    }
 }
 
 # Print Tscp version string.
 function Version() {
-    Write-Output 'Tscp 0.2.1'
+    Write-Output 'Tscp 0.3.0'
 }
 
 # Script entrypoint.

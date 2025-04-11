@@ -18,16 +18,15 @@ usage() {
   cat 1>&2 << EOF
 SCP for one time remote connections.
 
-Usage: tscp [OPTIONS] [SCP_ARGS]...
+Usage: tscp [OPTIONS] [ARGS]...
 
 Options:
       --debug     Show shell debug traces
   -h, --help      Print help information
   -v, --version   Print version information
-
-SCP Options:
 EOF
   if [ -x "$(command -v scp)" ]; then
+    printf '\nSCP Options:\n'
     scp
   fi
 }

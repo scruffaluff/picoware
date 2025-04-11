@@ -18,16 +18,15 @@ usage() {
   cat 1>&2 << EOF
 SSH for one time remote connections.
 
-Usage: tssh [OPTIONS] <SSH_ARGS>...
+Usage: tssh [OPTIONS] [ARGS]...
 
 Options:
       --debug     Show shell debug traces
   -h, --help      Print help information
   -v, --version   Print version information
-
-SSH Options:
 EOF
   if [ -x "$(command -v ssh)" ]; then
+    printf '\nSSH Options:\n'
     ssh
   fi
 }

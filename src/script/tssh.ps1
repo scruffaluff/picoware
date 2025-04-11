@@ -15,17 +15,21 @@ function Usage() {
     Write-Output @'
 SSH for one time remote connections.
 
-Usage: tssh [OPTIONS] [SSH_ARGS]...
+Usage: tssh [OPTIONS] [ARGS]...
 
 Options:
   -h, --help      Print help information
   -v, --version   Print version information
 '@
+    if (Get-Command -ErrorAction SilentlyContinue ssh) {
+        Write-Output "`nSSH Options:"
+        ssh
+    }
 }
 
 # Print Tssh version string.
 function Version() {
-    Write-Output 'Tssh 0.2.1'
+    Write-Output 'Tssh 0.3.0'
 }
 
 # Script entrypoint.

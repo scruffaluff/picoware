@@ -21,7 +21,7 @@ Installs Tmate and creates a remote session.
 
 Users can close the session by creating the file /close-tmate.
 
-Usage: run-tmate [OPTIONS]
+Usage: tmate-session [OPTIONS]
 
 Options:
       --debug     Show shell debug traces

@@ -30,13 +30,15 @@ Options:
 Subcommands:
   jupyter   Launch Jupyter Lab with Matlab kernel
   run       Execute Matlab code
+
+Run 'mlab <subcommand> --help' for usage on a subcommand.
 EOF
       ;;
     jupyter)
       cat 1>&2 << EOF
 Launch Jupyter Lab with the Matlab kernel.
 
-Usage: mlab jupyter [OPTIONS] <ARGS>...
+Usage: mlab jupyter [OPTIONS]
 
 Options:
   -h, --help        Print help information
@@ -46,7 +48,7 @@ EOF
       cat 1>&2 << EOF
 Execute Matlab code.
 
-Usage: mlab run [OPTIONS] <SCRIPT> <ARGS>...
+Usage: mlab run [OPTIONS] <SCRIPT> [ARGS]...
 
 Options:
   -a, --addpath <PATH>        Add folder to Matlab path

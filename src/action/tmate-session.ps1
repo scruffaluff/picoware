@@ -18,7 +18,7 @@ Installs Tmate and creates a remote session.
 
 Users can close the session by creating the file /close-tmate.
 
-Usage: run-tmate [OPTIONS]
+Usage: tmate-session [OPTIONS]
 
 Options:
   -h, --help      Print help information
@@ -41,7 +41,7 @@ function InstallTmate($URL) {
 
 # Print SetupTmate version string.
 function Version() {
-    Write-Output 'SetupTmate 0.3.2'
+    Write-Output 'SetupTmate 0.4.0'
 }
 
 # Script entrypoint.

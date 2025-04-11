@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Prevent the system from sleeping during a command.
 
-Usage: caffeinate [OPTIONS] [COMMAND] [ARGS]...
+Usage: caffeinate [OPTIONS]
 
 Options:
       --debug     Show shell debug traces

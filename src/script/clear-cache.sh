@@ -186,7 +186,7 @@ log() {
 #   ClearCache version string.
 #######################################
 version() {
-  echo 'ClearCache 0.2.2'
+  echo 'ClearCache 0.3.0'
 }
 
 #######################################
