@@ -31,57 +31,25 @@ EOF
 }
 
 #######################################
-# Print error message and exit script with error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  exit 1
-}
-
-#######################################
-# Print error message and exit script with usage error code.
-# Outputs:
-#   Writes error message to stderr.
-#######################################
-error_usage() {
-  bold_red='\033[1;31m' default='\033[0m'
-  # Flags:
-  #   -t <FD>: Check if file descriptor is a terminal.
-  if [ -t 2 ]; then
-    printf "${bold_red}error${default}: %s\n" "${1}" >&2
-  else
-    printf "error: %s\n" "${1}" >&2
-  fi
-  printf "Run 'run-tmate --help' for usage.\n" >&2
-  exit 2
-}
-
-#######################################
 # Find command to elevate as super user.
+# Outputs:
+#   Super user command.
 #######################################
 find_super() {
-  # Do not use long form -user flag for id. It is not supported on MacOS.
+  # Do not use long form flags for id. They are not supported on some systems.
   #
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v sudo)" ]; then
-    echo 'sudo'
   elif [ -x "$(command -v doas)" ]; then
     echo 'doas'
+  elif [ -x "$(command -v sudo)" ]; then
+    echo 'sudo'
   else
-    error 'Unable to find a command for super user elevation'
+    log --stderr 'error: Unable to find a command for super user elevation.'
+    exit 1
   fi
 }
 
@@ -93,8 +61,8 @@ find_super() {
 install_tmate() {
   # Do not use long form --kernel-name flag for uname. It is not supported on
   # MacOS.
-  os_type="$(uname -s)"
-  case "${os_type}" in
+  os="$(uname -s)"
+  case "${os}" in
     Darwin)
       # Setting environment variable 'HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK'
       # prevents upgrading outdated system packages during a Homebrew
@@ -110,7 +78,8 @@ install_tmate() {
       install_tmate_linux "${1}"
       ;;
     *)
-      error "Operating system ${os_type} is not supported"
+      log --stderr "error: Operating system ${os} is not supported."
+      exit 1
       ;;
   esac
 }
@@ -126,8 +95,8 @@ install_tmate_linux() {
   # Short form machine flag '-m' should be used since processor flag and long
   # form machine flag '--machine' are non-portable. For more information, visit
   # https://www.gnu.org/software/coreutils/manual/html_node/uname-invocation.html#index-_002dp-12.
-  arch_type="$(uname -m)"
-  case "${arch_type}" in
+  arch="$(uname -m)"
+  case "${arch}" in
     x86_64 | amd64)
       tmate_arch='amd64'
       ;;
@@ -135,7 +104,8 @@ install_tmate_linux() {
       tmate_arch='arm64v8'
       ;;
     *)
-      error "Unsupported architecture ${arch_type}"
+      log --stderr "error: Unsupported architecture ${arch}."
+      exit 1
       ;;
   esac
 
@@ -215,7 +185,7 @@ setup_tmate() {
 #   Setup Tmate version string.
 #######################################
 version() {
-  echo 'SetupTmate 0.3.2'
+  echo 'SetupTmate 0.4.0'
 }
 
 #######################################
@@ -238,7 +208,9 @@ main() {
         exit 0
         ;;
       *)
-        error_usage "No such option '${1}'."
+        log --stderr "error: No such option '${1}'."
+        log --stderr "Run 'tmate-session --help' for usage."
+        exit 2
         ;;
     esac
   done
