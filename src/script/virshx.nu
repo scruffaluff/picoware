@@ -2,30 +2,40 @@
 #
 # Extra convenience commands for Virsh and Libvirt.
 
-#######################################
 # Create application bundle or desktop entry.
-#######################################
 def create_app [name: string] {
+    let home = get_home
+
     match $nu.os-info.name {
         "linux" => {
             $"
 [Desktop Entry]
 Exec=virshx start desktop ($name)
-Icon=($env.HOME)/.virshx/waveform.svg
+Icon=($home)/.virshx/waveform.svg
 Name=($name | str capitalize)
 Terminal=false
 Type=Application
 Version=1.0
 "
-        | save --force $"($env.HOME)/.local/share/applications/virshx_($name).desktop"
+        | save --force $"($home)/.local/share/applications/virshx_($name).desktop"
         }
+    }
+}
+
+# Parse user home directory from environment variables.
+def get_home [] {
+    if $nu.os-info.name == "windows" {
+        $"($env.HOMEDRIVE)($env.HOMEPATH)"
+    } else {
+        $env.HOME
     }
 }
 
 # Create a virtual machine from an ISO disk.
 def install_cdrom [name: string osinfo: string path: string] {
+    let home = get_home
     let params = if $nu.os-info.name == "linux" { [--virt-type kvm] } else { [] }
-    let cdrom = $"($env.HOME)/.local/share/libvirt/cdroms/($name).iso"
+    let cdrom = $"($home)/.local/share/libvirt/cdroms/($name).iso"
     cp $path $cdrom
 
     (
@@ -45,9 +55,11 @@ def install_cdrom [name: string osinfo: string path: string] {
 
 # Download disk for domain and install with defaults.
 def install_default [domain: string] {
+    let home = get_home
+
     match $domain {
         "alpine" => {
-            let image = $"($env.HOME)/.virshx/alpine_amd64.iso"
+            let image = $"($home)/.virshx/alpine_amd64.iso"
             if not ($image | path exists) {
                 http get "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/alpine-virt-3.21.3-x86_64.iso"
                 | save --progress $image
@@ -112,20 +124,22 @@ def "main setup" [] {}
 
 # Configure host machine.
 def "main setup desktop" [] {
+    let home = get_home
+
     (
         mkdir
-        $"($env.HOME)/.virshx"
-        $"($env.HOME)/.local/share/libvirt/cdroms"
-        $"($env.HOME)/.local/share/libvirt/images"
+        $"($home)/.virshx"
+        $"($home)/.local/share/libvirt/cdroms"
+        $"($home)/.local/share/libvirt/images"
     )
 
-    let icon_path = $"($env.HOME)/.virshx/waveform.svg"
+    let icon_path = $"($home)/.virshx/waveform.svg"
     if not ($icon_path | path exists) {
         http get "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/waveform.svg"
         | save $icon_path
     }
 
-    let key_path = $"($env.HOME)/.virshx/key"
+    let key_path = $"($home)/.virshx/key"
     if not ($key_path | path exists) {
         ssh-keygen -N '' -q -f $key_path -t ed25519 -C virshx
         chmod 600 $key_path $"($key_path).pub"

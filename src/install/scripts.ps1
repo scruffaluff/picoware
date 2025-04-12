@@ -61,20 +61,20 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
     $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
 
     if (
-        $ScriptName.EndsWith('.nu') -and
+        $Script.EndsWith('.nu') -and
         (-not (Get-Command -ErrorAction SilentlyContinue nu))
     ) {
         $NushellArgs = ''
-        if ($Target -eq 'Machine') {
+        if ($TargetEnv -eq 'Machine') {
             $NushellArgs = "$NushellArgs --global"
         }
         if ($ModifyEnv) {
             $NushellArgs = "$NushellArgs --modify-env"
         }
-        powershell {
-            Invoke-Expression `
-                "& { $(Invoke-WebRequest -UseBasicParsing -Uri $URL/src/install/nushell.ps1) } $NushellArgs"
-        }
+
+        $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
+            "$URL/src/install/nushell.ps1"
+        Invoke-Expression "& { $NushellScript } $NushellArgs"
     }
 
     Log "Installing script $Name to '$DestDir\$Name'."
@@ -82,11 +82,11 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
         -Uri "$URL/src/script/$Script"
 
     if ($ModifyEnv) {
-        $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
+        $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
         if (-not ($Path -like "*$DestDir*")) {
             $PrependedPath = "$DestDir;$Path"
             [System.Environment]::SetEnvironmentVariable(
-                'Path', "$PrependedPath", "$Target"
+                'Path', "$PrependedPath", "$TargetEnv"
             )
             Log "Added '$DestDir' to the system path."
             Log 'Source shell profile or restart shell after installation.'

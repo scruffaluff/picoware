@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 def configure_shell [dest: string] {
-    let shell = $env.SHELL | default "" | path basename
+    let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
         "fish" => $"set --export PATH \"($dest)\" $PATH"
