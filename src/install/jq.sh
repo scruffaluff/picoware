@@ -220,6 +220,20 @@ install_jq() {
 }
 
 #######################################
+# Download and install Jq for FreeBSD.
+#######################################
+install_jq_freebsd() {
+  local super=
+  super="$(find_super)"
+
+  log 'FreeBSD Jq installation requires system package manager.'
+  log "Ignoring arguments and installing Jq to '/local/usr/bin/jq'."
+  ${super} pkg update
+  ${super} pkg install --yes jq
+  log "Installed $(jq --version)."
+}
+
+#######################################
 # Print message if error or logging is enabled.
 # Arguments:
 #   Message to print.
@@ -303,6 +317,12 @@ main() {
         ;;
     esac
   done
+
+  # Handle special FreeBSD case.
+  if [ "$(uname -s)" = 'FreeBSD' ]; then
+    install_jq_freebsd
+    exit 0
+  fi
 
   # Find super user command if destination is not writable.
   #

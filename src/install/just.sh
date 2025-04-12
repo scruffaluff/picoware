@@ -214,16 +214,6 @@ install_just() {
   local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
-  # Exit early if tar is not installed.
-  #
-  # Flags:
-  #   -v: Only show file path of command.
-  if [ ! -x "$(command -v tar)" ]; then
-    log --stderr 'error: Unable to find tar file archiver.'
-    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
-    exit 1
-  fi
-
   # Parse Just build target.
   #
   # Do not use long form flags for uname. They are not supported on some
@@ -246,6 +236,16 @@ install_just() {
       exit 1
       ;;
   esac
+
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v tar)" ]; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
+  fi
 
   # Create installation directories.
   #
@@ -274,6 +274,20 @@ install_just() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
+  log "Installed $(just --version)."
+}
+
+#######################################
+# Download and install Just for FreeBSD.
+#######################################
+install_just_freebsd() {
+  local super=
+  super="$(find_super)"
+
+  log 'FreeBSD Just installation requires system package manager.'
+  log "Ignoring arguments and installing Just to '/local/usr/bin/just'."
+  ${super} pkg update
+  ${super} pkg install --yes just
   log "Installed $(just --version)."
 }
 
@@ -361,6 +375,12 @@ main() {
         ;;
     esac
   done
+
+  # Handle special FreeBSD case.
+  if [ "$(uname -s)" = 'FreeBSD' ]; then
+    install_just_freebsd
+    exit 0
+  fi
 
   # Find super user command if destination is not writable.
   #

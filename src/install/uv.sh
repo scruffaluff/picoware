@@ -205,16 +205,6 @@ install_uv() {
   local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
   local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
-  # Exit early if tar is not installed.
-  #
-  # Flags:
-  #   -v: Only show file path of command.
-  if [ ! -x "$(command -v tar)" ]; then
-    log --stderr 'error: Unable to find tar file archiver.'
-    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
-    exit 1
-  fi
-
   arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
   case "${os}" in
@@ -229,6 +219,16 @@ install_uv() {
       exit 1
       ;;
   esac
+
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v tar)" ]; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
+  fi
 
   # Create installation directories.
   #
@@ -257,6 +257,20 @@ install_uv() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
+  log "Installed $(uv --version)."
+}
+
+#######################################
+# Download and install Uv for FreeBSD.
+#######################################
+install_uv_freebsd() {
+  local super=
+  super="$(find_super)"
+
+  log 'FreeBSD Uv installation requires system package manager.'
+  log "Ignoring arguments and installing Uv to '/local/usr/bin/uv'."
+  ${super} pkg update
+  ${super} pkg install --yes uv
   log "Installed $(uv --version)."
 }
 
@@ -344,6 +358,12 @@ main() {
         ;;
     esac
   done
+
+  # Handle special FreeBSD case.
+  if [ "$(uname -s)" = 'FreeBSD' ]; then
+    install_uv_freebsd
+    exit 0
+  fi
 
   # Find super user command if destination is not writable.
   #

@@ -176,16 +176,6 @@ install_deno() {
   local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
   local arch='' dst_file="${dst_dir}/deno" os='' target='' tmp_dir=''
 
-  # Exit early if tar is not installed.
-  #
-  # Flags:
-  #   -v: Only show file path of command.
-  if [ ! -x "$(command -v unzip)" ]; then
-    log --stderr 'error: Unable to find zip file archiver.'
-    log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
-    exit 1
-  fi
-
   # Parse Deno build target.
   #
   # Do not use long form flags for uname. They are not supported on some
@@ -208,6 +198,16 @@ install_deno() {
       exit 1
       ;;
   esac
+
+  # Exit early if tar is not installed.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  if [ ! -x "$(command -v unzip)" ]; then
+    log --stderr 'error: Unable to find zip file archiver.'
+    log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
+    exit 1
+  fi
 
   # Create installation directories.
   #
@@ -236,6 +236,20 @@ install_deno() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
+  log "Installed $(deno --version)."
+}
+
+#######################################
+# Download and install Deno for FreeBSD.
+#######################################
+install_deno_freebsd() {
+  local super=
+  super="$(find_super)"
+
+  log 'FreeBSD Deno installation requires system package manager.'
+  log "Ignoring arguments and installing Deno to '/local/usr/bin/deno'."
+  ${super} pkg update
+  ${super} pkg install --yes deno
   log "Installed $(deno --version)."
 }
 
@@ -323,6 +337,12 @@ main() {
         ;;
     esac
   done
+
+  # Handle special FreeBSD case.
+  if [ "$(uname -s)" = 'FreeBSD' ]; then
+    install_deno_freebsd
+    exit 0
+  fi
 
   # Find super user command if destination is not writable.
   #
