@@ -23,7 +23,10 @@ Options:
 '@
     if (Get-Command -ErrorAction SilentlyContinue scp) {
         Write-Output "`nSCP Options:"
-        scp
+        try {
+            scp
+        }
+        catch [System.Management.Automation.NativeCommandExitException] {}
     }
 }
 

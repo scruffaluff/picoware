@@ -23,7 +23,10 @@ Options:
 '@
     if (Get-Command -ErrorAction SilentlyContinue ssh) {
         Write-Output "`nSSH Options:"
-        ssh
+        try {
+            ssh
+        }
+        catch [System.Management.Automation.NativeCommandExitException] {}
     }
 }
 

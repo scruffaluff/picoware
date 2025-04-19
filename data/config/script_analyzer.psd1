@@ -5,6 +5,7 @@
 
 @{
     ExcludeRules = @(
+        'PSAvoidUsingEmptyCatchBlock'
         'PSAvoidUsingInvokeExpression',
         'PSAvoidUsingPositionalParameters'
     )
