@@ -19,7 +19,7 @@ def main [] {
 }
 
 def test_deno_prints_version [] {
-    let result = nu src/install/deno.nu --dest (mktemp --directory --tmpdir)
+    let result = nu src/install/deno.nu --preserve-env --dest (mktemp --directory --tmpdir)
     | complete
     assert equal $result.exit_code 0
     assert str contains $result.stdout "Installed deno 2."

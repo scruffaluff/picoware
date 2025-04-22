@@ -60,21 +60,20 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
     $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
 
-    if (
-        $Script.EndsWith('.nu') -and
-        (-not (Get-Command -ErrorAction SilentlyContinue nu))
-    ) {
-        $NushellArgs = ''
-        if ($TargetEnv -eq 'Machine') {
-            $NushellArgs = "$NushellArgs --global"
-        }
-        if (!$ModifyEnv) {
-            $NushellArgs = "$NushellArgs --preserve-env"
-        }
+    if ($Script.EndsWith('.nu')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
+            $NushellArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $NushellArgs = "$NushellArgs --global"
+            }
+            if (!$ModifyEnv) {
+                $NushellArgs = "$NushellArgs --preserve-env"
+            }
 
-        $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
-            "$URL/src/install/nushell.ps1"
-        Invoke-Expression "& { $NushellScript } $NushellArgs"
+            $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/nushell.ps1"
+            Invoke-Expression "& { $NushellScript } $NushellArgs"
+        }
 
         Set-Content -Path "$DestDir\$Name.bat" -Value @"
 @echo off

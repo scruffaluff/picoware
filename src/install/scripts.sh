@@ -219,13 +219,13 @@ find_super() {
 #######################################
 install_script() {
   local super="${1}" version="${2}" dst_dir="${3}" script="${4}"
-  local modify_env="${5}" name="${4%.*}"
+  local preserve_env="${5}" name="${4%.*}"
   local dst_file="${dst_dir}/${name}"
   local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
 
   if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
-      ${super:+--global} ${modify_env:---preserve-env} --quiet
+      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
   fi
 
   # Create installation directory.
@@ -241,8 +241,8 @@ install_script() {
   # Update shell profile if destination is not in system path.
   #
   # Flags:
-  #   -n: Check if string has nonzero length.
-  if [ -n "${modify_env}" ]; then
+  #   -n: Check if string has zero length.
+  if [ -z "${preserve_env}" ]; then
     case ":${PATH:-}:" in
       *:${dst_dir}:*) ;;
       *)
@@ -298,7 +298,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' modify_env='true' names='' super='' version='main'
+  local dst_dir='' global_='' preserve_env='' names='' super='' version='main'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -325,7 +325,7 @@ main() {
         shift 1
         ;;
       -p | --preserve-env)
-        modify_env=''
+        preserve_env='true'
         shift 1
         ;;
       -q | --quiet)
@@ -376,7 +376,7 @@ main() {
       if [ "${script%.*}" = "${name}" ]; then
         match_found='true'
         install_script "${super}" "${version}" "${dst_dir}" "${script}" \
-          "${modify_env}"
+          "${preserve_env}"
       fi
     done
 

@@ -44,6 +44,6 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
   export _curl _sudo="$(command -v sudo)"
   export -f command curl sudo
 
-  run bash src/install/scripts.sh --dest /fake/path mockscript
+  run bash src/install/scripts.sh --preserve-env --dest /fake/path mockscript
   assert_failure 100
 }
