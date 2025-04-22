@@ -24,7 +24,7 @@ Options:
   -d, --dest <PATH>         Directory to install Uv
   -g, --global              Install Uv for all users
   -h, --help                Print help information
-  -m, --modify-env          Update system environment
+  -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Uv to install
 '@
@@ -131,7 +131,7 @@ function Log($Text) {
 function Main() {
     $ArgIdx = 0
     $DestDir = ''
-    $ModifyEnv = $False
+    $ModifyEnv = $True
     $Version = ''
 
     while ($ArgIdx -lt $Args[0].Count) {
@@ -152,8 +152,8 @@ function Main() {
                 Usage
                 exit 0
             }
-            { $_ -in '-m', '--modify-env' } {
-                $ModifyEnv = $True
+            { $_ -in '-p', '--preserve-env' } {
+                $ModifyEnv = $False
                 $ArgIdx += 1
                 break
             }

@@ -26,7 +26,7 @@ Options:
   -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
-  -m, --modify-env          Update system environment
+  -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 EOF
@@ -225,7 +225,7 @@ install_script() {
 
   if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
-      ${super:+--global} ${modify_env:+--modify-env} --quiet
+      ${super:+--global} ${modify_env:---preserve-env} --quiet
   fi
 
   # Create installation directory.
@@ -298,7 +298,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' modify_env='' names='' super='' version='main'
+  local dst_dir='' global_='' modify_env='true' names='' super='' version='main'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -324,8 +324,8 @@ main() {
         list_scripts='true'
         shift 1
         ;;
-      -m | --modify-env)
-        modify_env='true'
+      -p | --preserve-env)
+        modify_env=''
         shift 1
         ;;
       -q | --quiet)

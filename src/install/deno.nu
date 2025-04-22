@@ -74,7 +74,7 @@ def need_super [$dest: string, global: bool] {
 def main [
     --dest (-d): string # Directory to install Deno
     --global (-g) # Install Deno for all users
-    --modify-env (-m) # Update system environment
+    --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
     --version (-v): string # Version of Deno to install
 ] {
@@ -114,7 +114,7 @@ def main [
     unzip -d $temp $"($temp)/deno.zip"
     runsup $super mv $"($temp)/deno" $"($dest_)/deno"
 
-    if $modify_env and not $dest_ in $env.PATH {
+    if not $preserve_env and not $dest_ in $env.PATH {
         if $nu.os-info.name == "windows" {
             modify_env $dest $global
         } else {

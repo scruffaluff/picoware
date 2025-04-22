@@ -25,7 +25,7 @@ Options:
   -d, --dest <PATH>         Directory to install Jq
   -g, --global              Install Jq for all users
   -h, --help                Print help information
-  -m, --modify-env          Update system environment
+  -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of Jq to install
 EOF
@@ -276,7 +276,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' modify_env='' super='' version=''
+  local dst_dir='' global_='' modify_env='true' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -298,8 +298,8 @@ main() {
         usage
         exit 0
         ;;
-      -m | --modify-env)
-        modify_env='true'
+      -p | --preserve-env)
+        modify_env=''
         shift 1
         ;;
       -q | --quiet)

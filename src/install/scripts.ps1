@@ -25,7 +25,7 @@ Options:
   -g, --global              Install scripts for all users
   -h, --help                Print help information
   -l, --list                List all available scripts
-  -m, --modify-env          Update system environment
+  -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
   -v, --version <VERSION>   Version of scripts to install
 '@
@@ -68,13 +68,26 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
         if ($TargetEnv -eq 'Machine') {
             $NushellArgs = "$NushellArgs --global"
         }
-        if ($ModifyEnv) {
-            $NushellArgs = "$NushellArgs --modify-env"
+        if (!$ModifyEnv) {
+            $NushellArgs = "$NushellArgs --preserve-env"
         }
 
         $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
             "$URL/src/install/nushell.ps1"
         Invoke-Expression "& { $NushellScript } $NushellArgs"
+
+        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+@echo off
+nu "$DestDir\$Script" %*
+exit /b %errorlevel%
+"@
+    }
+    else {
+        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+@echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "$DestDir\$Script" %*
+exit /b %errorlevel%
+"@
     }
 
     Log "Installing script $Name to '$DestDir\$Name'."
@@ -109,7 +122,7 @@ function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $List = $False
-    $ModifyEnv = $False
+    $ModifyEnv = $True
     $Names = @()
     $Version = 'main'
 
@@ -136,8 +149,8 @@ function Main() {
                 $ArgIdx += 1
                 break
             }
-            { $_ -in '-m', '--modify-env' } {
-                $ModifyEnv = $True
+            { $_ -in '-p', '--preserve-env' } {
+                $ModifyEnv = $False
                 $ArgIdx += 1
                 break
             }
