@@ -226,6 +226,12 @@ install_script() {
   if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
       ${super:+--global} ${preserve_env:+--preserve-env} --quiet
+  elif [ "${script##*.}" = 'py' ] && [ ! -x "$(command -v uv)" ]; then
+    fetch https://scruffaluff.github.io/scripts/install/uv.sh | sh -s -- \
+      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
+  elif [ "${script##*.}" = 'ts' ] && [ ! -x "$(command -v deno)" ]; then
+    fetch https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- \
+      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
   fi
 
   # Create installation directory.

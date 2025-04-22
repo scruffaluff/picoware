@@ -31,7 +31,7 @@ Options:
 }
 
 # Download and install Jq.
-function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
+function InstallJq($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
 
     if ($version) {
@@ -48,7 +48,7 @@ function InstallJq($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\jq.exe" -Uri `
         "https://github.com/jqlang/jq/releases/$Subpath/jq-windows-$Arch.exe"
 
-    if ($ModifyEnv) {
+    if (-not $PreserveEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
         if (-not ($Path -like "*$DestDir*")) {
             $PrependedPath = "$DestDir;$Path"
@@ -75,7 +75,7 @@ function Log($Text) {
 function Main() {
     $ArgIdx = 0
     $DestDir = ''
-    $ModifyEnv = $True
+    $PreserveEnv = $False
     $Version = ''
 
     while ($ArgIdx -lt $Args[0].Count) {
@@ -97,7 +97,7 @@ function Main() {
                 exit 0
             }
             { $_ -in '-p', '--preserve-env' } {
-                $ModifyEnv = $False
+                $PreserveEnv = $True
                 $ArgIdx += 1
                 break
             }
@@ -136,7 +136,7 @@ function Main() {
         $TargetEnv = 'Machine'
     }
 
-    InstallJq $TargetEnv $Version $DestDir $ModifyEnv
+    InstallJq $TargetEnv $Version $DestDir $PreserveEnv
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

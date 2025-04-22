@@ -173,7 +173,7 @@ find_super() {
 #   Whether to update system environment.
 #######################################
 install_deno() {
-  local super="${1}" version="${2}" dst_dir="${3}" modify_env="${4}"
+  local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
   local arch='' dst_file="${dst_dir}/deno" os='' target='' tmp_dir=''
 
   # Parse Deno build target.
@@ -225,8 +225,8 @@ install_deno() {
   # Update shell profile if destination is not in system path.
   #
   # Flags:
-  #   -n: Check if string has nonzero length.
-  if [ -n "${modify_env}" ]; then
+  #   -z: Check if string has zero length.
+  if [ -z "${preserve_env}" ]; then
     case ":${PATH:-}:" in
       *:${dst_dir}:*) ;;
       *)
@@ -296,7 +296,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' modify_env='true' super='' version=''
+  local dst_dir='' global_='' preserve_env='' super='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -319,7 +319,7 @@ main() {
         exit 0
         ;;
       -p | --preserve-env)
-        modify_env=''
+        preserve_env='true'
         shift 1
         ;;
       -q | --quiet)
@@ -359,7 +359,7 @@ main() {
   if [ -z "${version}" ]; then
     version="$(fetch 'https://dl.deno.land/release-latest.txt')"
   fi
-  install_deno "${super}" "${version}" "${dst_dir}" "${modify_env}"
+  install_deno "${super}" "${version}" "${dst_dir}" "${preserve_env}"
 }
 
 # Add ability to selectively skip main function during test suite.

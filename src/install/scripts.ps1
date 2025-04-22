@@ -56,7 +56,7 @@ function FindScripts($Version) {
 }
 
 # Install script and update path.
-function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
+function InstallScript($TargetEnv, $Version, $DestDir, $Script, $PreserveEnv) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
     $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
 
@@ -66,7 +66,7 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
             if ($TargetEnv -eq 'Machine') {
                 $NushellArgs = "$NushellArgs --global"
             }
-            if (!$ModifyEnv) {
+            if ($PreserveEnv) {
                 $NushellArgs = "$NushellArgs --preserve-env"
             }
 
@@ -78,6 +78,48 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $ModifyEnv) {
         Set-Content -Path "$DestDir\$Name.bat" -Value @"
 @echo off
 nu "$DestDir\$Script" %*
+exit /b %errorlevel%
+"@
+    }
+    if ($Script.EndsWith('.py')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
+            $UvArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $UvArgs = "$UvArgs --global"
+            }
+            if ($PreserveEnv) {
+                $UvArgs = "$UvArgs --preserve-env"
+            }
+
+            $UvScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/uv.ps1"
+            Invoke-Expression "& { $UvScript } $UvArgs"
+        }
+
+        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+@echo off
+uv --no-config run --script "$DestDir\$Script" %*
+exit /b %errorlevel%
+"@
+    }
+    if ($Script.EndsWith('.ts')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
+            $DenoArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $DenoArgs = "$DenoArgs --global"
+            }
+            if ($PreserveEnv) {
+                $DenoArgs = "$DenoArgs --preserve-env"
+            }
+
+            $DenoScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/deno.ps1"
+            Invoke-Expression "& { $DenoScript } $DenoArgs"
+        }
+
+        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+@echo off
+deno run --allow-all "$DestDir\$Script" %*
 exit /b %errorlevel%
 "@
     }
@@ -93,7 +135,7 @@ exit /b %errorlevel%
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\$Script" `
         -Uri "$URL/src/script/$Script"
 
-    if ($ModifyEnv) {
+    if (-not $PreserveEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
         if (-not ($Path -like "*$DestDir*")) {
             $PrependedPath = "$DestDir;$Path"
@@ -121,7 +163,7 @@ function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $List = $False
-    $ModifyEnv = $True
+    $PreserveEnv = $False
     $Names = @()
     $Version = 'main'
 
@@ -149,7 +191,7 @@ function Main() {
                 break
             }
             { $_ -in '-p', '--preserve-env' } {
-                $ModifyEnv = $False
+                $PreserveEnv = $True
                 $ArgIdx += 1
                 break
             }
@@ -201,7 +243,7 @@ function Main() {
                 if ($ScriptName -eq $Name) {
                     $MatchFound = $True
                     InstallScript $TargetEnv $Version $DestDir $Script `
-                        $ModifyEnv
+                        $PreserveEnv
                 }
             }
 

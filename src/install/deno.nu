@@ -44,21 +44,6 @@ def find_super [] {
     }
 }
 
-def modify_env [$dest: string, global: bool] {
-    let target = if $global { "Machine" } else { "User" }
-    powershell -command $"
-$Path = [Environment]::GetEnvironmentVariable\('Path', ($target)\)
-if \(-not \($Path -like "*($dest)*"\)\) {
-    $PrependedPath = "($dest);\$Path"
-    [System.Environment]::SetEnvironmentVariable\(
-        'Path', "$PrependedPath", ($target)
-    \)
-    Write-Output "Added '($dest)' to the system path."
-    Write-Output 'Source shell profile or restart shell after installation.'
-}
-"
-}
-
 # Check if super user elevation is required.
 def need_super [$dest: string, global: bool] {
     if $global {
@@ -116,7 +101,7 @@ def main [
 
     if not $preserve_env and not $dest_ in $env.PATH {
         if $nu.os-info.name == "windows" {
-            modify_env $dest $global
+            update_env $dest_ $global
         } else {
             configure_shell $dest_
         }
@@ -133,4 +118,19 @@ def --wrapped runsup [super: string ...args] {
     } else {
         ^$super nu --stdin --commands $"($args | str join ' ')"
     }
+}
+
+def update_env [$dest: string, global: bool] {
+    let target = if $global { "Machine" } else { "User" }
+    powershell -command $"
+$Path = [Environment]::GetEnvironmentVariable\('Path', ($target)\)
+if \(-not \($Path -like "*($dest)*"\)\) {
+    $PrependedPath = "($dest);\$Path"
+    [System.Environment]::SetEnvironmentVariable\(
+        'Path', "$PrependedPath", ($target)
+    \)
+    Write-Output "Added '($dest)' to the system path."
+    Write-Output 'Source shell profile or restart shell after installation.'
+}
+"
 }

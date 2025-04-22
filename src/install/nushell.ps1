@@ -55,7 +55,7 @@ function FindLatest($Version) {
 }
 
 # Download and install Nushell.
-function InstallNushell($TargetEnv, $Version, $DestDir, $ModifyEnv) {
+function InstallNushell($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE -replace 'AMD64', 'x86_64' `
         -replace 'ARM64', 'aarch64'
 
@@ -71,7 +71,7 @@ function InstallNushell($TargetEnv, $Version, $DestDir, $ModifyEnv) {
     Expand-Archive -DestinationPath "$TmpDir\$Target" -Path "$TmpDir\$Target.zip"
     Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\*.exe"
 
-    if ($ModifyEnv) {
+    if (-not $PreserveEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
         if (-not ($Path -like "*$DestDir*")) {
             $PrependedPath = "$DestDir;$Path"
@@ -131,7 +131,7 @@ function Log($Text) {
 function Main() {
     $ArgIdx = 0
     $DestDir = ''
-    $ModifyEnv = $True
+    $PreserveEnv = $False
     $Version = ''
 
     while ($ArgIdx -lt $Args[0].Count) {
@@ -153,7 +153,7 @@ function Main() {
                 exit 0
             }
             { $_ -in '-p', '--preserve-env' } {
-                $ModifyEnv = $False
+                $PreserveEnv = $True
                 $ArgIdx += 1
                 break
             }
@@ -196,7 +196,7 @@ function Main() {
     if (-not $Version) {
         $Version = FindLatest
     }
-    InstallNushell $TargetEnv $Version $DestDir $ModifyEnv
+    InstallNushell $TargetEnv $Version $DestDir $PreserveEnv
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
