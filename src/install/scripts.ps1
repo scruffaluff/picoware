@@ -147,6 +147,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$DestDir\$Script" %*
     Log "Installed $(& $Name --version)."
 }
 
+# Check if script is run from an admin console.
+function IsAdministrator {
+    return ([Security.Principal.WindowsPrincipal]`
+            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 # Print message if logging is enabled.
 function Log($Text) {
     if (!"$Env:SCRIPTS_NOLOG") {
