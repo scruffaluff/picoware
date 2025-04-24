@@ -54,6 +54,13 @@ function FindLatest($Version) {
         '.versions.stable'
 }
 
+# Check if script is run from an admin console.
+function IsAdministrator {
+    return ([Security.Principal.WindowsPrincipal]`
+            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 # Download and install Uv.
 function InstallUv($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE -replace 'AMD64', 'x86_64' `
@@ -183,13 +190,20 @@ function Main() {
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
 
     # Set environment target on whether destination is inside user home folder.
-    $DestDir = $(Resolve-Path -Path $DestDir).Path
-    $HomeDir = $(Resolve-Path -Path $HOME).Path
+    $DestDir = [System.IO.Path]::GetFullPath($DestDir)
+    $HomeDir = [System.IO.Path]::GetFullPath($HOME)
     if ($DestDir.StartsWith($HomeDir)) {
         $TargetEnv = 'User'
     }
     else {
         $TargetEnv = 'Machine'
+    }
+    if (($TargetEnv -eq 'Machine') -and (-not (IsAdministrator))) {
+        Log @'
+System level installation requires an administrator console.
+Restart this script from an administrator console or install to a user directory.
+'@
+        exit 1
     }
 
     # Find latest Uv version if not provided.

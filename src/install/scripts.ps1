@@ -75,10 +75,9 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $PreserveEnv) {
             Invoke-Expression "& { $NushellScript } $NushellArgs"
         }
 
-        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+        Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
 nu "$DestDir\$Script" %*
-exit /b %errorlevel%
 "@
     }
     if ($Script.EndsWith('.py')) {
@@ -96,10 +95,9 @@ exit /b %errorlevel%
             Invoke-Expression "& { $UvScript } $UvArgs"
         }
 
-        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+        Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
 uv --no-config run --script "$DestDir\$Script" %*
-exit /b %errorlevel%
 "@
     }
     if ($Script.EndsWith('.ts')) {
@@ -117,17 +115,15 @@ exit /b %errorlevel%
             Invoke-Expression "& { $DenoScript } $DenoArgs"
         }
 
-        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+        Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
 deno run --allow-all "$DestDir\$Script" %*
-exit /b %errorlevel%
 "@
     }
     else {
-        Set-Content -Path "$DestDir\$Name.bat" -Value @"
+        Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
 powershell -NoProfile -ExecutionPolicy Bypass -File "$DestDir\$Script" %*
-exit /b %errorlevel%
 "@
     }
 
@@ -227,13 +223,20 @@ function Main() {
 
         # Set environment target on whether destination is inside user home
         # folder.
-        $DestDir = $(Resolve-Path -Path $DestDir).Path
-        $HomeDir = $(Resolve-Path -Path $HOME).Path
+        $DestDir = [System.IO.Path]::GetFullPath($DestDir)
+        $HomeDir = [System.IO.Path]::GetFullPath($HOME)
         if ($DestDir.StartsWith($HomeDir)) {
             $TargetEnv = 'User'
         }
         else {
             $TargetEnv = 'Machine'
+        }
+        if (($TargetEnv -eq 'Machine') -and (-not (IsAdministrator))) {
+            Log @'
+System level installation requires an administrator console.
+Restart this script from an administrator console or install to a user directory.
+'@
+            exit 1
         }
 
         foreach ($Name in $Names) {
