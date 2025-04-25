@@ -77,10 +77,10 @@ function InstallScript($TargetEnv, $Version, $DestDir, $Script, $PreserveEnv) {
 
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-nu "$DestDir\$Script" %*
+nu "%~dnp0.nu" %*
 "@
     }
-    if ($Script.EndsWith('.py')) {
+    elseif ($Script.EndsWith('.py')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
             $UvArgs = ''
             if ($TargetEnv -eq 'Machine') {
@@ -97,10 +97,10 @@ nu "$DestDir\$Script" %*
 
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-uv --no-config run --script "$DestDir\$Script" %*
+uv --no-config run --script "%~dnp0.py" %*
 "@
     }
-    if ($Script.EndsWith('.ts')) {
+    elseif ($Script.EndsWith('.ts')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
             $DenoArgs = ''
             if ($TargetEnv -eq 'Machine') {
@@ -117,13 +117,13 @@ uv --no-config run --script "$DestDir\$Script" %*
 
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-deno run --allow-all "$DestDir\$Script" %*
+deno run --allow-all "%~dnp0.ts" %*
 "@
     }
     else {
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-powershell -NoProfile -ExecutionPolicy Bypass -File "$DestDir\$Script" %*
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*
 "@
     }
 
