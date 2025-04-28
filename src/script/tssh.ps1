@@ -63,7 +63,7 @@ function Main() {
     }
 
     # Don't use PowerShell $Null for UserKnownHostsFile. It causes SSH to use
-    # ~/.ssh/known_hosts as a backup.
+    # ~\.ssh\known_hosts as a backup.
     ssh `
         -o IdentitiesOnly=yes `
         -o LogLevel=ERROR `

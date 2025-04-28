@@ -90,8 +90,8 @@ function Main() {
         # Check if script should exit.
         if (
             (-not (sh -l -c 'ls /tmp/tmate.sock 2> /dev/null')) -or
-            (Test-Path 'C:/tools/msys64/close-tmate') -or
-            (Test-Path './close-tmate')
+            (Test-Path 'C:\tools\msys64\close-tmate') -or
+            (Test-Path '.\close-tmate')
         ) {
             break
         }

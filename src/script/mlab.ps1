@@ -78,7 +78,7 @@ function ErrorUsage($Message, $Subcommand) {
 
 # Find Matlab executable on system.
 function FindMatlab() {
-    $InstallPath = 'C:/Program Files/MATLAB'
+    $InstallPath = 'C:\Program Files\MATLAB'
     $Program = ''
 
     if ($Env:MLAB_PROGRAM) {
@@ -87,7 +87,7 @@ function FindMatlab() {
     elseif (Test-Path -Path $InstallPath -PathType Container) {
         $Folders = $(Get-ChildItem -Filter 'R*' -Path $InstallPath)
         foreach ($Folder in $Folders) {
-            $Program = "$InstallPath/$Folder/bin/matlab.exe"
+            $Program = "$InstallPath\$Folder\bin\matlab.exe"
             break
         }
     }
@@ -126,7 +126,7 @@ function GetParameters($Params, $Index) {
 # Launch Jupyter Lab with the Matlab kernel.
 function Jupyter() {
     $ArgIdx = 0
-    $LocalDir = "$Env:LOCALAPPDATA/mlab"
+    $LocalDir = "$Env:LOCALAPPDATA\mlab"
 
     while ($ArgIdx -lt $Args[0].Count) {
         switch ($Args[0][$ArgIdx]) {
@@ -141,13 +141,13 @@ function Jupyter() {
     }
 
     $MatlabDir = "$(FindMatlab)"
-    if (-not (Test-Path -Path "$LocalDir/venv" -PathType Container)) {
+    if (-not (Test-Path -Path "$LocalDir\venv" -PathType Container)) {
         New-Item -Force -ItemType Directory -Path $LocalDir | Out-Null
-        python3 -m venv "$LocalDir/venv"
-        & "$LocalDir/venv/Scripts/pip.exe" install jupyter-matlab-proxy jupyterlab
+        python3 -m venv "$LocalDir\venv"
+        & "$LocalDir\venv\Scripts\pip.exe" install jupyter-matlab-proxy jupyterlab
     }
 
-    & "$LocalDir/venv/Scripts/activate.ps1"
+    & "$LocalDir\venv\Scripts\activate.ps1"
     $Env:Path = $MatlabDir + ";$Env:Path"
     jupyter lab $Args
 }
