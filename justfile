@@ -185,3 +185,4 @@ test *args:
 test:
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
+  Get-ChildItem -Recurse -Filter *.test.nu -Path test | % { nu $_.FullName }
