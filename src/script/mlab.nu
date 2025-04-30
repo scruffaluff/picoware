@@ -39,7 +39,7 @@ def "main dump" [
     } else {
         $"jsonencode\(load\('($file)'\)\)"
     }
-    let command = $"fprintf\('%s', ($encode)\);"
+    let command = $"fprintf\('%s\\n', ($encode)\);"
     let program = find_matlab $"($matlab)"
     ^$program -nojvm -nosplash -batch $command
 }

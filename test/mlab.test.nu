@@ -1,6 +1,17 @@
 use std/assert
 
-# Tests for Nushell installer scripts.
+def mock_matlab [] {
+    let temp = mktemp --tmpdir --suffix ".cmd"
+    if $nu.os-info.name == "windows" {
+        "@echo off\necho %*\n" | save --force $temp
+    } else {
+        "#!/usr/bin/env sh\necho $@" | save --force $temp
+        chmod +x $temp
+    }
+    $temp
+}
+
+# Tests for Nushell Mlab script.
 def main [] {
     let test_commands = (
         scope commands
@@ -18,9 +29,9 @@ def main [] {
     print "Tests completed successfully"
 }
 
-def test_deno_prints_version [] {
-    let result = nu src/install/deno.nu --preserve-env --dest (mktemp --directory --tmpdir)
-    | complete
+def test_mlab_dump_flags [] {
+    $env.MLAB_PROGRAM = mock_matlab
+    let result = nu src/script/mlab.nu dump "fakefile.mat" | complete
     assert equal $result.exit_code 0
-    assert str contains $result.stdout "Installed deno 2."
+    assert str contains $result.stdout "-nojvm -nosplash -batch"
 }
