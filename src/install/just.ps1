@@ -34,14 +34,14 @@ Options:
 function FindJq() {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
     if ($JqBin) {
-        Write-Output $JqBin
+        $JqBin
     }
     else {
         $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
         $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
-        Write-Output $TempFile
+        $TempFile
     }
 }
 
@@ -50,7 +50,7 @@ function FindLatest($Version) {
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         https://formulae.brew.sh/api/formula/just.json
-    Write-Output "$Response" | & $JqBin --exit-status --raw-output `
+    "$Response" | & $JqBin --exit-status --raw-output `
         '.versions.stable'
 }
 

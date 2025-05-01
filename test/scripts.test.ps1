@@ -1,25 +1,22 @@
 # Tests for PowerShell scripts installer.
 
 BeforeAll {
-    # RepoRoot is used in all unit tests.
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseDeclaredVarsMoreThanAssignment", "")]
-    $RepoRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot/..")
+    Set-Location $([System.IO.Path]::GetFullPath("$PSScriptRoot\.."))
+    $Scripts = 'src\install\scripts.ps1'
+    . $Scripts
 
-    Mock Invoke-WebRequest {
-        Get-Content "$RepoRoot\data\test\github_trees.json"
-    }
+    Mock Invoke-WebRequest { Get-Content data\test\github_trees.json }
+    Mock IsAdministrator { $False }
 }
 
 Describe 'Script' {
     It 'JSON parser finds all unix scripts' {
-        $Script = "$RepoRoot\src\install\scripts.ps1"
-        $Actual = & $Script --list
+        $Actual = & $Scripts --list
         $Actual | Should -Be @('mockscript', 'newscript', 'otherscript')
     }
 
     It 'Installer rejects global destination for local user' {
-        $Script = "$RepoRoot\src\install\scripts.ps1"
-        $Actual = & $Script --preserve-env --global tscp
+        $Actual = & $Scripts --preserve-env --global tscp
         $Actual | Should -Be @'
 System level installation requires an administrator console.
 Restart this script from an administrator console or install to a user directory.

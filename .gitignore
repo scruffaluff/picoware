@@ -6,6 +6,7 @@
 *.mat
 *.xml
 /.vendor/
+/.vitepress/.temp/
 /.vitepress/cache/
 /.vitepress/dist/
 /build/
