@@ -6,7 +6,7 @@ BeforeAll {
     $RepoRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot/..")
 
     function MkTempDir() {
-        $TempDir = Join-Path $Env:Temp $(New-Guid)
+        $TempDir = Join-Path $Env:Temp $([Guid]::NewGuid())
         New-Item -Type Directory -Path $TempDir | Out-Null
         $TempDir
     }

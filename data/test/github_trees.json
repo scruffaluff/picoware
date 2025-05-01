@@ -8,6 +8,12 @@
       "size": 540
     },
     {
+      "path": "src/script/mockscript.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "size": 659
+    },
+    {
       "path": "src/script/mockscript.sh",
       "mode": "100644",
       "type": "blob",
@@ -23,6 +29,12 @@
       "path": "folder",
       "mode": "040000",
       "type": "tree"
+    },
+    {
+      "path": "src/script/otherscript.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "size": 621
     },
     {
       "path": "src/script/otherscript.sh",
