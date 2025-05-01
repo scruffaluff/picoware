@@ -45,23 +45,26 @@ def "main dump" [
 }
 
 # Launch Jupyter Lab with the Matlab kernel.
-def --wrapped "main jupyter" [...args: string] {
+def --wrapped "main jupyter" [
+    --matlab (-m): string # Custom Matlab executable path
+    ...$args: string # Arguments to Jupyter Lab
+] {
     let venv = match $nu.os-info.name {
         "windows" => $"($env.AppLocalData)/mlab/venv"
         _ => $"($env.HOME)/.local/share/mlab/venv"
     } | path expand
-    let bin = match $nu.os-info.name {
+    let venv_bin = match $nu.os-info.name {
         "windows" => { $venv | path join "Scripts" }
         _ => { $venv | path join "bin" }
     }
-    $env.PATH = ($env.PATH | prepend $bin)
+    let matlab_bin = find_matlab $"($matlab)" | path dirname
+    $env.PATH = ($env.PATH | prepend [$venv_bin $matlab_bin])
 
     if not ($venv | path exists) {
         mkdir ($venv | path dirname)
         python3 -m venv $venv
         pip install jupyter-matlab-proxy jupyterlab
     }
-    # TODO: Add Matlab executable to path for Jupyter.
     jupyter lab ...$args
 }
 

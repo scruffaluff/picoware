@@ -149,8 +149,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*
 
 # Check if script is run from an admin console.
 function IsAdministrator {
-    return ([Security.Principal.WindowsPrincipal]`
-            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ([Security.Principal.WindowsPrincipal]`
+        [Security.Principal.WindowsIdentity]::GetCurrent()`
     ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
