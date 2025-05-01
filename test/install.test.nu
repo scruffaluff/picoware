@@ -1,3 +1,5 @@
+# Tests for Nushell installer scripts.
+
 use std/assert
 
 # Tests for Nushell installer scripts.

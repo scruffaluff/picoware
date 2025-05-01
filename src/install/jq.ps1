@@ -61,7 +61,7 @@ function InstallJq($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     }
 
     $Env:Path = "$DestDir;$Env:Path"
-    Log "Installed Jq $(jq --version)."
+    Log "Installed $(jq --version)."
 }
 
 # Check if script is run from an admin console.
