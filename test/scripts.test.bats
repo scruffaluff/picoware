@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # shellcheck disable=SC2155,SC2317
 #
-# Tests for scripts installer.
+# Tests for Bash scripts installer.
 
 setup() {
   REPO_PATH="${BATS_TEST_DIRNAME}/.."

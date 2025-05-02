@@ -3,8 +3,11 @@
 # For more information, visit https://git-scm.com/docs/gitignore.
 
 .DS_Store
+*.ipynb
+*.mat
 *.xml
 /.vendor/
+/.vitepress/.temp/
 /.vitepress/cache/
 /.vitepress/dist/
 /build/

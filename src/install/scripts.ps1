@@ -35,14 +35,14 @@ Options:
 function FindJq() {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
     if ($JqBin) {
-        Write-Output $JqBin
+        $JqBin
     }
     else {
         $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
         $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
-        Write-Output $TempFile
+        $TempFile
     }
 }
 
@@ -52,7 +52,7 @@ function FindScripts($Version) {
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
-    Write-Output "$Response" | & $JqBin --exit-status --raw-output "$Filter"
+    "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 }
 
 # Install script and update path.
@@ -149,8 +149,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*
 
 # Check if script is run from an admin console.
 function IsAdministrator {
-    return ([Security.Principal.WindowsPrincipal]`
-            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ([Security.Principal.WindowsPrincipal]`
+        [Security.Principal.WindowsIdentity]::GetCurrent()`
     ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 

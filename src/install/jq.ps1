@@ -61,13 +61,13 @@ function InstallJq($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     }
 
     $Env:Path = "$DestDir;$Env:Path"
-    Log "Installed Jq $(jq --version)."
+    Log "Installed $(jq --version)."
 }
 
 # Check if script is run from an admin console.
 function IsAdministrator {
-    return ([Security.Principal.WindowsPrincipal]`
-            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ([Security.Principal.WindowsPrincipal]`
+        [Security.Principal.WindowsIdentity]::GetCurrent()`
     ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 

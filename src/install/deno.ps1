@@ -44,7 +44,8 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$TmpDir\$Target.zip" -Uri `
         "https://dl.deno.land/release/$Version/$Target.zip"
 
-    Expand-Archive -DestinationPath "$TmpDir\$Target" -Path "$TmpDir\$Target.zip"
+    Expand-Archive -DestinationPath "$TmpDir\$Target" -Path `
+        "$TmpDir\$Target.zip"
     Copy-Item -Destination $DestDir -Path "$TmpDir\$Target\*.exe"
 
     if (-not $PreserveEnv) {
@@ -77,10 +78,12 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $PreserveEnv) {
         }
 
         $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
-        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must be
-        # changed to machine PATHEXT + ';.NU' if prevously empty.
+        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must
+        # be changed to machine PATHEXT + ';.NU' if prevously empty.
         if ((-not $PathExt) -and ($TargetEnv -eq 'User')) {
-            $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', 'Machine')
+            $PathExt = [Environment]::GetEnvironmentVariable(
+                'PATHEXT', 'Machine'
+            )
         }
         if (-not ($PathExt -like "*.NU*")) {
             $AppendedPath = "$PathExt;.NU".TrimStart(';')
@@ -98,8 +101,8 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $PreserveEnv) {
 
 # Check if script is run from an admin console.
 function IsAdministrator {
-    return ([Security.Principal.WindowsPrincipal]`
-            [Security.Principal.WindowsIdentity]::GetCurrent()`
+    ([Security.Principal.WindowsPrincipal]`
+        [Security.Principal.WindowsIdentity]::GetCurrent()`
     ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 

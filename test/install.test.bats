@@ -61,7 +61,7 @@ jq_quiet_is_silent() { # @test
 }
 
 just_shows_error_usage_for_bad_argument() { # @test
-  run bash src/install/just.sh --dst
+  run bash src/install/just.sh --preserve-env --dst
   assert_failure
   assert_output "$(
     cat << EOF

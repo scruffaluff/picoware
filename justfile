@@ -110,6 +110,10 @@ _setup:
     fi
   done
   bats --version
+  if [ ! -d .vendor/lib/nutest ]; then
+    git clone -c advice.detachedHead=false --branch v1.1.0 --depth 1 \
+      https://github.com/vyadh/nutest.git .vendor/lib/nutest
+  fi
   if [ ! -x "$(command -v shellcheck)" ]; then
     shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
     shellcheck_version="$(curl  --fail --location --show-error \
@@ -152,6 +156,10 @@ _setup:
     src/install/deno.ps1 --dest .vendor/bin
   }
   deno --version
+  if (-not (Test-Path -Path .vendor/lib/nutest -PathType Container)) {
+    git clone -c advice.detachedHead=false --branch v1.1.0 --depth 1 `
+      https://github.com/vyadh/nutest.git .vendor/lib/nutest
+  }
   # If executing task from PowerShell Core, error such as "'Install-Module'
   # command was found in the module 'PowerShellGet', but the module could not be
   # loaded" unless earlier versions of PackageManagement and PowerShellGet are
@@ -178,11 +186,13 @@ _setup:
 [unix]
 test *args:
   bats --recursive test {{args}}
-  for file in $(find test -name '*.test.nu'); do nu "${file}"; done
+  nu --commands "use .vendor/lib/nutest/nutest run-tests; run-tests --path test"
 
 # Run test suites.
 [windows]
 test:
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
-  Get-ChildItem -Recurse -Filter *.test.nu -Path test | % { nu $_.FullName }
+  nu --commands "use .vendor/lib/nutest/nutest run-tests; run-tests --path test"
+
+   
