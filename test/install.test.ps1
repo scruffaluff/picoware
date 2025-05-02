@@ -26,6 +26,12 @@ Describe 'Install' {
         $($Actual -join "`n") | Should -Match 'Installed just 1.'
     }
 
+    It 'Just downloads Jq is missing' {
+        Mock Get-Command { $False }
+        $Actual = & src\install\just.ps1 --preserve-env --dest $(MkTempDir)
+        $($Actual -join "`n") | Should -Match 'Installed just 1.'
+    }
+
     It 'Just shows error usage for bad argument' {
         $Actual = & src\install\just.ps1 --preserve-env --dst
         $Actual | Should -Be @(

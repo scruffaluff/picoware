@@ -35,3 +35,10 @@ def test_mlab_dump_flags [] {
     assert equal $result.exit_code 0
     assert str contains $result.stdout "-nojvm -nosplash -batch"
 }
+
+def test_mlab_run_noargs [] {
+    $env.MLAB_PROGRAM = mock_matlab
+    let result = nu src/script/mlab.nu run | complete
+    assert equal $result.exit_code 0
+    assert str contains $result.stdout "-nosplash -nojvm"
+}

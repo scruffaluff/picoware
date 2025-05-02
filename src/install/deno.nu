@@ -77,8 +77,14 @@ def main [
     } else {
         "deno"
     }
-    runsup $super mkdir $dest
-    runsup $super mv $"($temp)/($program)" $"($dest)/($program)"
+
+    if ($super | is-empty) {
+        mkdir $dest
+        mv $"($temp)/($program)" $"($dest)/($program)"
+    } else {
+        ^$super mkdir -p $dest
+        ^$super mv $"($temp)/($program)" $"($dest)/($program)"
+    }
 
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
