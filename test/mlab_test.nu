@@ -1,4 +1,7 @@
+# Tests for Mlab script.
+
 use std/assert
+use std/testing *
 
 def mock_matlab [] {
     let temp = mktemp --tmpdir --suffix ".cmd"
@@ -11,24 +14,7 @@ def mock_matlab [] {
     $temp
 }
 
-# Tests for Nushell Mlab script.
-def main [] {
-    let test_commands = (
-        scope commands
-        | where ($it.type == "custom")
-            and ($it.name | str starts-with "test_")
-            and not ($it.description | str starts-with "ignore")
-        | get name
-        | each { |test| [$"print 'Running test: ($test)'", $test] }
-        | flatten
-        | str join "; "
-    )
-
-    print "Running tests..."
-    nu --commands $"source ($env.CURRENT_FILE); ($test_commands)"
-    print "Tests completed successfully"
-}
-
+@test
 def test_mlab_dump_flags [] {
     $env.MLAB_PROGRAM = mock_matlab
     let result = nu src/script/mlab.nu dump "fakefile.mat" | complete
@@ -36,6 +22,7 @@ def test_mlab_dump_flags [] {
     assert str contains $result.stdout "-nojvm -nosplash -batch"
 }
 
+@test
 def test_mlab_run_noargs [] {
     $env.MLAB_PROGRAM = mock_matlab
     let result = nu src/script/mlab.nu run | complete
