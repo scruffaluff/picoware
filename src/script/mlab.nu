@@ -26,7 +26,15 @@ def find_matlab [path: string] {
 }
 
 # Wrapper script for running Matlab programs from the command line.
-def main [] {}
+def main [
+    --version (-v) # Print version information
+] {
+    if $version {
+        "Mlab 0.1.0"
+    } else {
+        help main
+    }
+}
 
 # Print MAT file contents as JSON.
 def "main dump" [

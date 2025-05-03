@@ -51,7 +51,7 @@ iwr -useb https://scruffaluff.github.io/scripts/install/deno.ps1 | iex
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in); main"
+http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in | decode); main"
 ```
 
 :::
@@ -69,7 +69,7 @@ powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in); main --help"
+http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::
