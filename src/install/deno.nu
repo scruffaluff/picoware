@@ -69,7 +69,7 @@ def main [
     print $"Installing Deno to '($dest)'."
     let temp = mktemp --directory --tmpdir
     http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
-    | save $"($temp)/deno.zip"
+    | save --progress $"($temp)/deno.zip"
     unzip -d $temp $"($temp)/deno.zip"
 
     let program = if $nu.os-info.name == "windows" {
