@@ -89,15 +89,15 @@ _setup:
   set -eu
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if [ ! -x "$(command -v jq)" ]; then
-    src/install/jq.sh --dest .vendor/bin
+    src/install/jq.sh --preserve-env --dest .vendor/bin
   fi
   jq --version
   if [ ! -x "$(command -v nu)" ]; then
-    src/install/nushell.sh --dest .vendor/bin
+    src/install/nushell.sh --preserve-env --dest .vendor/bin
   fi
   echo "Nushell $(nu --version)"
   if [ ! -x "$(command -v deno)" ]; then
-    src/install/deno.sh --dest .vendor/bin
+    src/install/deno.sh --preserve-env --dest .vendor/bin
   fi
   deno --version
   mkdir -p .vendor/bin .vendor/lib
@@ -145,15 +145,15 @@ _setup:
   $ModulePath = '.vendor\lib\powershell\modules'
   New-Item -Force -ItemType Directory -Path $ModulePath | Out-Null
   if (-not (Get-Command -ErrorAction SilentlyContinue jq)) {
-    src/install/jq.ps1 --dest .vendor/bin
+    src/install/jq.ps1 --preserve-env --dest .vendor/bin
   }
   jq --version
   if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
-    src/install/nushell.ps1 --dest .vendor/bin
+    src/install/nushell.ps1 --preserve-env --dest .vendor/bin
   }
   Write-Output "Nushell $(nu --version)"
   if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
-    src/install/deno.ps1 --dest .vendor/bin
+    src/install/deno.ps1 --preserve-env --dest .vendor/bin
   }
   deno --version
   if (-not (Test-Path -Path .vendor/lib/nutest -PathType Container)) {

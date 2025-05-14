@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # Find command to elevate as super user.
-def find_super [] {
+def find-super [] {
     if (is-admin) {
         ""
     } else if $nu.os-info.name == "windows" {
@@ -19,7 +19,7 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Check if super user elevation is required.
-def need_super [$dest: string, global: bool] {
+def need-super [$dest: string, global: bool] {
     if $global {
         return true
     }
@@ -55,8 +55,8 @@ def main [
     }
     let dest = $dest | default $dest_default | path expand
 
-    let system = need_super $dest $global
-    let super = if ($system) { find_super } else { "" }
+    let system = need-super $dest $global
+    let super = if ($system) { find-super } else { "" }
     let version_ = $version
     | default (http get https://dl.deno.land/release-latest.txt)
     
@@ -88,9 +88,9 @@ def main [
 
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
-            update_path $dest $system
+            update-path $dest $system
         } else {
-            update_shell $dest
+            update-shell $dest
         }
     }
 
@@ -98,19 +98,8 @@ def main [
     print $"Installed (deno --version)."
 }
 
-# Wrapper to handle conditional prefix commands.
-def --wrapped runsup [super: string ...args] {
-    # Quote all parameters to Nushell commands to support paths with spaces.
-    let args = [$args.0 ...($args | skip 1 | each {|arg| $"'($arg)'" })]
-    if ($super | is-empty) {
-        nu --stdin --commands $"($args | str join ' ')"
-    } else {
-        ^$super nu --stdin --commands $"($args | str join ' ')"
-    }
-}
-
 # Add destination path to Windows environment path.
-def update_path [$dest: string, global: bool] {
+def update-path [$dest: string, global: bool] {
     let target = if $global { "Machine" } else { "User" }
     powershell -command $"
 $Path = [Environment]::GetEnvironmentVariable\('Path', '($target)'\)
@@ -126,7 +115,7 @@ if \(-not \($Path -like \"*($dest)*\"\)\) {
 }
 
 # Add script to system path in shell profile.
-def update_shell [dest: string] {
+def update-shell [dest: string] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
