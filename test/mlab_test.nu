@@ -18,7 +18,7 @@ def mock_matlab [] {
 def test_mlab_dump_flags [] {
     $env.MLAB_PROGRAM = mock_matlab
     let result = nu src/script/mlab.nu dump "fakefile.mat" | complete
-    assert equal $result.exit_code 0
+    assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "-nojvm -nosplash -batch"
 }
 
@@ -26,6 +26,6 @@ def test_mlab_dump_flags [] {
 def test_mlab_run_noargs [] {
     $env.MLAB_PROGRAM = mock_matlab
     let result = nu src/script/mlab.nu run | complete
-    assert equal $result.exit_code 0
+    assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "-nosplash -nojvm"
 }

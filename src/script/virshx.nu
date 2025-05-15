@@ -116,7 +116,7 @@ def install-disk [name: string osinfo: string path: string extension: string] {
 
     let folder = $"($home)/.local/share/libvirt/images"
     let destpath = $"($folder)/($name).qcow2"
-    mkdir "${folder}"
+    mkdir $folder
 
     qemu-img convert -p -f $extension -O qcow2 $path $destpath
     qemu-img resize $destpath 64G
