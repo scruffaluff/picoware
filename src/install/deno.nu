@@ -18,6 +18,16 @@ Restart this script from an administrator console or install to a user directory
     }
 }
 
+# Print message if error or logging is enabled.
+def --wrapped log [...args: string] {
+    if (
+        not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
+        and not ("-e" in $args) and not ("--stderr" in $args)
+    ) {
+        print ...$args
+    }
+}
+
 # Check if super user elevation is required.
 def need-super [$dest: string, global: bool] {
     if $global {
@@ -37,6 +47,7 @@ def main [
     --quiet (-q) # Print only error messages
     --version (-v): string # Version of Deno to install
 ] {
+    if $quiet { $env.SCRIPTS_NOLOG = "true" }
     let arch = $nu.os-info.arch
     let target = match $nu.os-info.name {
         "linux" => $"($nu.os-info.arch)-unknown-linux-gnu"
@@ -61,16 +72,22 @@ def main [
     | default (http get https://dl.deno.land/release-latest.txt)
     
     if (which unzip | is-empty) {
-        print --stderr 'error: Unable to find zip file archiver.'
-        print --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
+        log --stderr 'error: Unable to find zip file archiver.'
+        log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
         exit 1
     }
 
-    print $"Installing Deno to '($dest)'."
+    log $"Installing Deno to '($dest)'."
     let temp = mktemp --directory --tmpdir
-    http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
-    | save --progress $"($temp)/deno.zip"
-    unzip -d $temp $"($temp)/deno.zip"
+    if ($env.SCRIPTS_NOLOG? | into bool --relaxed) {
+        http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
+        | save $"($temp)/deno.zip"
+        unzip -qq -d $temp $"($temp)/deno.zip"
+    } else {
+        http get $"https://dl.deno.land/release/($version_)/deno-($target).zip"
+        | save --progress $"($temp)/deno.zip"
+        unzip -d $temp $"($temp)/deno.zip"
+    }
 
     let program = if $nu.os-info.name == "windows" {
         "deno.exe"
@@ -95,7 +112,7 @@ def main [
     }
 
     $env.PATH = $env.PATH | prepend $dest
-    print $"Installed (deno --version)."
+    log $"Installed (deno --version)."
 }
 
 # Add destination path to Windows environment path.
@@ -140,6 +157,6 @@ def update-shell [dest: string] {
     # Create profile parent directory and add export command to profile
     mkdir ($profile | path dirname)
     $"\n# Added by Scripts installer.\n($command)\n" | save --append $profile
-    print $"Added '($command)' to the '($profile)' shell profile."
-    print "Source shell profile or restart shell after installation."
+    log $"Added '($command)' to the '($profile)' shell profile."
+    log "Source shell profile or restart shell after installation."
 }

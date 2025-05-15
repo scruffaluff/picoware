@@ -184,15 +184,17 @@ _setup:
 
 # Run test suites.
 [unix]
-test *args:
+test *args: && test-nushell
   bats --recursive test {{args}}
-  nu --commands "use .vendor/lib/nutest/nutest run-tests; run-tests --path test"
 
 # Run test suites.
 [windows]
-test:
+test: && test-nushell
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
-  nu --commands "use .vendor/lib/nutest/nutest run-tests; run-tests --path test"
+
+test-nushell *args:
+  nu --commands \
+    "use .vendor/lib/nutest/nutest run-tests; run-tests --path test {{args}}"
 
    
