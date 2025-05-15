@@ -2,10 +2,16 @@
 
 # Ensure script dependencies are available.
 def check-deps [] {
-    if (which unzip | is-empty) {
+    if $nu.os-info.name == "windows" and (which unzip | is-empty) {
         error make { msg: ("
 error: Unable to find zip file archiver.
 Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
+" | str trim)
+        }
+    } else if $nu.os-info.name != "windows" and (which tar | is-empty) {
+        error make { msg: ("
+error: Unable to find tar file archiver.
+Install tar, https://www.gnu.org/software/tar, manually before continuing.
 " | str trim)
         }
     }
@@ -30,39 +36,34 @@ Restart this script from an administrator console or install to a user directory
     }
 }
 
-# Print message if error or logging is enabled.
-def --wrapped log [...args: string] {
-    if (
-        not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
-        and not ("-e" in $args) and not ("--stderr" in $args)
-    ) {
-        print ...$args
-    }
-}
-
 # Install program to destination folder.
 def install [super: string dest: string version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
     let target = match $nu.os-info.name {
-        "linux" => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
-        "macos" => $"deno-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"deno-($nu.os-info.arch)-pc-windows-msvc"
+        "linux" => $"just-($version)-($nu.os-info.arch)-unknown-linux-musl"
+        "macos" => $"just-($version)-($nu.os-info.arch)-apple-darwin"
+        "windows" => $"just-($version)-($nu.os-info.arch)-pc-windows-msvc"
     }
 
     let temp = mktemp --directory --tmpdir
-    let uri = $"https://dl.deno.land/release/($version)/($target).zip"
+    let uri = $"https://github.com/casey/just/releases/download/($version)/($target)($archive)"
     if $quiet {
-        http get $uri | save $"($temp)/deno.zip"
-        unzip -qq -d $temp $"($temp)/deno.zip"
+        http get $uri | save $"($temp)/just($archive)"
     } else {
-        http get $uri | save --progress $"($temp)/deno.zip"
-        unzip -d $temp $"($temp)/deno.zip"
+        http get $uri | save --progress $"($temp)/just($archive)"
     }
 
     let program = if $nu.os-info.name == "windows" {
-        $"($temp)/deno.exe"
+        if $quiet {
+            unzip -qq -d $temp $"($temp)/just.zip"
+        } else {
+            unzip -d $temp $"($temp)/just.zip"
+        }
+        $"($temp)/just.exe"
     } else {
-        $"($temp)/deno"
+        tar fx $"($temp)/just.tar.gz" -C $temp
+        $"($temp)/just"
     }
 
     if ($super | is-empty) {
@@ -71,6 +72,16 @@ def install [super: string dest: string version: string] {
     } else {
         ^$super mkdir -p $dest
         ^$super mv $program $"($dest)/($program | path basename)"
+    }
+}
+
+# Print message if error or logging is enabled.
+def --wrapped log [...args: string] {
+    if (
+        not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
+        and not ("-e" in $args) and not ("--stderr" in $args)
+    ) {
+        print ...$args
     }
 }
 
@@ -85,13 +96,13 @@ def need-super [$dest: string, global: bool] {
     false
 }
 
-# Install Deno for MacOS, Linux, and Windows systems.
+# Install Just for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): string # Directory to install Deno
-    --global (-g) # Install Deno for all users
+    --dest (-d): string # Directory to install Just
+    --global (-g) # Install Just for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Deno to install
+    --version (-v): string # Version of Just to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     let dest_default = if $nu.os-info.name == "windows" {
@@ -108,10 +119,12 @@ def main [
     check-deps
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
-    let version = $version
-    | default (http get https://dl.deno.land/release-latest.txt)
+    let version = $version | default (
+        http get "https://formulae.brew.sh/api/formula/just.json"
+        | get versions.stable
+    )
 
-    log $"Installing Deno to '($dest)'."
+    log $"Installing Just to '($dest)'."
     install $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
@@ -122,7 +135,7 @@ def main [
     }
 
     $env.PATH = $env.PATH | prepend $dest
-    log $"Installed (deno --version)."
+    log $"Installed (just --version)."
 }
 
 # Add destination path to Windows environment path.

@@ -1,5 +1,22 @@
 #!/usr/bin/env nu
 
+# Ensure script dependencies are available.
+def check-deps [] {
+    if $nu.os-info.name == "windows" and (which unzip | is-empty) {
+        error make { msg: ("
+error: Unable to find zip file archiver.
+Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
+" | str trim)
+        }
+    } else if $nu.os-info.name != "windows" and (which tar | is-empty) {
+        error make { msg: ("
+error: Unable to find tar file archiver.
+Install tar, https://www.gnu.org/software/tar, manually before continuing.
+" | str trim)
+        }
+    }
+}
+
 # Find command to elevate as super user.
 def find-super [] {
     if (is-admin) {
@@ -16,6 +33,45 @@ Restart this script from an administrator console or install to a user directory
         "sudo"
     } else {
         error make { msg: "Unable to find a command for super user elevation." }
+    }
+}
+
+# Install program to destination folder.
+def install [super: string dest: string version: string] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
+    let target = match $nu.os-info.name {
+        "linux" => $"uv-($nu.os-info.arch)-unknown-linux-musl"
+        "macos" => $"uv-($nu.os-info.arch)-apple-darwin"
+        "windows" => $"uv-($nu.os-info.arch)-pc-windows-msvc"
+    }
+
+    let temp = mktemp --directory --tmpdir
+    let uri = $"https://github.com/astral-sh/uv/releases/download/($version)/($target)($archive)"
+    if $quiet {
+        http get $uri | save $"($temp)/uv($archive)"
+    } else {
+        http get $uri | save --progress $"($temp)/uv($archive)"
+    }
+
+    let program = if $nu.os-info.name == "windows" {
+        if $quiet {
+            unzip -qq -d $temp $"($temp)/uv.zip"
+        } else {
+            unzip -d $temp $"($temp)/uv.zip"
+        }
+        $"($temp)/uv.exe"
+    } else {
+        tar fx $"($temp)/uv.tar.gz" -C $temp
+        $"($temp)/($target)/uv"
+    }
+
+    if ($super | is-empty) {
+        mkdir $dest
+        mv $program $"($dest)/($program | path basename)"
+    } else {
+        ^$super mkdir -p $dest
+        ^$super mv $program $"($dest)/($program | path basename)"
     }
 }
 
@@ -49,12 +105,6 @@ def main [
     --version (-v): string # Version of Uv to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
-    let target = match $nu.os-info.name {
-        "linux" => $"uv-($nu.os-info.arch)-unknown-linux-musl"
-        "macos" => $"uv-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"uv-($nu.os-info.arch)-pc-windows-msvc"
-    }
-
     let dest_default = if $nu.os-info.name == "windows" {
         if $global {
             "C:\\Program Files\\Bin"
@@ -66,58 +116,16 @@ def main [
     }
     let dest = $dest | default $dest_default | path expand
 
+    check-deps
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
     let version = $version | default (
         http get "https://formulae.brew.sh/api/formula/uv.json"
         | get versions.stable
     )
-    
-    if $nu.os-info.name == "windows" and (which unzip | is-empty) {
-        error make { msg: ("
-error: Unable to find zip file archiver.
-Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
-" | str trim)
-        }
-    } else if $nu.os-info.name != "windows" and (which tar | is-empty) {
-        error make { msg: ("
-error: Unable to find tar file archiver.
-Install tar, https://www.gnu.org/software/tar, manually before continuing.
-" | str trim)
-        }
-    }
 
     log $"Installing Uv to '($dest)'."
-    let temp = mktemp --directory --tmpdir
-    let uri = $"https://github.com/astral-sh/uv/releases/download/($version)/($target)"
-    let program = if $nu.os-info.name == "windows" {
-        if ($env.SCRIPTS_NOLOG? | into bool --relaxed) {
-            http get $"($uri).zip" | save $"($temp)/uv.zip"
-            unzip -qq -d $temp $"($temp)/uv.zip"
-        } else {
-            http get $"($uri).zip" | save --progress $"($temp)/uv.zip"
-            unzip -d $temp $"($temp)/uv.zip"
-        }
-        $"($temp)/uv.exe"
-    } else {
-        if ($env.SCRIPTS_NOLOG? | into bool --relaxed) {
-            http get $"($uri).tar.gz" | save $"($temp)/uv.tar.gz"
-            tar fx $"($temp)/uv.tar.gz" -C $temp
-        } else {
-            http get $"($uri).tar.gz"  | save --progress $"($temp)/uv.tar.gz"
-            tar fx $"($temp)/uv.tar.gz" -C $temp
-        }
-        $"($temp)/($target)/uv"
-    }
-
-    if ($super | is-empty) {
-        mkdir $dest
-        mv $program $"($dest)/($program | path basename)"
-    } else {
-        ^$super mkdir -p $dest
-        ^$super mv $program $"($dest)/($program | path basename)"
-    }
-
+    install $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system
