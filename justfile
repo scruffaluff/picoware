@@ -193,8 +193,7 @@ test: && test-nushell
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
 
+# Run Nushell test suite.
 test-nushell *args:
   nu --commands \
     "use .vendor/lib/nutest/nutest run-tests; run-tests --path test {{args}}"
-
-   

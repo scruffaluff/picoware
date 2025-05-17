@@ -22,6 +22,24 @@ def deno_quiet_is_silent [] {
 }
 
 @test
+def jq_prints_version [] {
+    let tmp_dir = mktemp --directory --tmpdir
+    let result = nu src/install/jq.nu --preserve-env --dest $tmp_dir
+    | complete
+    assert equal $result.exit_code 0 $result.stderr
+    assert str contains $result.stdout "Installed jq-1."
+}
+
+@test
+def jq_quiet_is_silent [] {
+    let tmp_dir = mktemp --directory --tmpdir
+    let result = nu src/install/jq.nu --quiet --preserve-env --dest $tmp_dir
+    | complete
+    assert equal $result.exit_code 0 $result.stderr
+    assert equal $result.stdout ""
+}
+
+@test
 def just_prints_version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/just.nu --preserve-env --dest $tmp_dir
