@@ -19,8 +19,6 @@ usage() {
   cat 1>&2 << EOF
 Installs Tmate and creates a remote session.
 
-Users can close the session by creating the file /close-tmate.
-
 Usage: tmate-session [OPTIONS]
 
 Options:
@@ -146,6 +144,7 @@ install_tmate_linux() {
 setup_tmate() {
   local ssh_connect super web_connect
   super="$(find_super)"
+  close_file="${TMPDIR:-/tmp}/close_tmate"
 
   # Install Tmate if not available.
   #
@@ -165,6 +164,8 @@ setup_tmate() {
   ssh_connect="$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')"
   web_connect="$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')"
 
+  echo 'Tmate session started.'
+  echo "Terminate the session by creating the file ${close_file}."
   while true; do
     echo "SSH: ${ssh_connect}"
     echo "Web shell: ${web_connect}"
@@ -174,7 +175,7 @@ setup_tmate() {
     # Flags:
     #   -S: Check if file exists and is a socket.
     #   -f: Check if file exists and is a regular file.
-    if [ ! -S /tmp/tmate.sock ] || [ -f /close-tmate ] || [ -f ./close-tmate ]; then
+    if [ ! -S /tmp/tmate.sock ] || [ -f "${close_file}" ]; then
       break
     fi
 
@@ -188,7 +189,7 @@ setup_tmate() {
 #   Setup Tmate version string.
 #######################################
 version() {
-  echo 'SetupTmate 0.4.0'
+  echo 'SetupTmate 0.4.1'
 }
 
 #######################################

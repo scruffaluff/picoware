@@ -16,8 +16,6 @@ function Usage() {
     Write-Output @'
 Installs Tmate and creates a remote session.
 
-Users can close the session by creating the file /close-tmate.
-
 Usage: tmate-session [OPTIONS]
 
 Options:
@@ -41,7 +39,7 @@ function InstallTmate($URL) {
 
 # Print SetupTmate version string.
 function Version() {
-    Write-Output 'SetupTmate 0.4.0'
+    Write-Output 'SetupTmate 0.4.1'
 }
 
 # Script entrypoint.
@@ -73,6 +71,12 @@ function Main() {
     $Env:CHERE_INVOKING = 'true'
     $Env:MSYS2_PATH_TYPE = 'inherit'
     $Env:MSYSTEM = 'MINGW64'
+    if ($Env:SystemRoot) {
+        $CloseFile = "$Env:SystemRoot\Temp\close_tmate"
+    }
+    else {
+        $CloseFile = 'C:\Windows\Temp\close_tmate'
+    }
 
     # Launch new Tmate session with custom socket.
     #
@@ -83,6 +87,8 @@ function Main() {
     $SSHConnect = sh -l -c "tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'"
     $WebConnect = sh -l -c "tmate -S /tmp/tmate.sock display -p '#{tmate_web}'"
 
+    Write-Output 'Tmate session started.'
+    Write-Output "Terminate the session by creating the file $CloseFile."
     while ($True) {
         Write-Output "SSH: $SSHConnect"
         Write-Output "Web shell: $WebConnect"
@@ -90,8 +96,7 @@ function Main() {
         # Check if script should exit.
         if (
             (-not (sh -l -c 'ls /tmp/tmate.sock 2> /dev/null')) -or
-            (Test-Path 'C:\tools\msys64\close-tmate') -or
-            (Test-Path '.\close-tmate')
+            (Test-Path $CloseFile)
         ) {
             break
         }
