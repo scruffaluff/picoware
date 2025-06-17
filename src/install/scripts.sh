@@ -176,7 +176,7 @@ find_jq() {
 #######################################
 find_scripts() {
   local version="${1:-main}"
-  local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".sh")) | ltrimstr("src/script/")'
+  local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".py") or endswith(".sh") or endswith(".ts")) | ltrimstr("src/script/")'
   local jq_bin='' response=''
 
   jq_bin="$(find_jq)"

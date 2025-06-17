@@ -80,13 +80,27 @@ def sync(config: dict) -> None:
     source = Path(config["source"]).expanduser().absolute()
 
     files = []
-    excludes = [re.compile(exclude) for exclude in config.get("excludes", [])]
-    includes = [re.compile(include) for include in config["includes"]]
+    root_excludes = [re.compile(exclude) for exclude in config.get("excludes", [])]
+    root_includes = [re.compile(include) for include in config.get("includes", [])]
     for path in config["paths"]:
-        path = source / path
+        if isinstance(path, dict):
+            excludes = root_excludes + [
+                re.compile(exclude) for exclude in path.get("excludes", [])
+            ]
+            includes = root_excludes + [
+                re.compile(include) for include in path.get("includes", [])
+            ]
+            path = source / path["path"]
+        else:
+            excludes = root_excludes
+            includes = root_includes
+            path = source / path
+
+        includes = includes or [re.compile("^.*$")]
         for file in path.iterdir():
             if match(includes, file) and not match(excludes, file):
                 files.append(file.relative_to(source))
+
     files = sorted(files)
 
     file, manifest_ = tempfile.mkstemp(suffix=".txt")

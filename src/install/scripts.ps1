@@ -48,7 +48,7 @@ function FindJq() {
 
 # Find all scripts inside GitHub repository.
 function FindScripts($Version) {
-    $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\")) | ltrimstr(\"src/script/\")'
+    $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\") or endswith(\".py\") or endswith(\".ts\")) | ltrimstr(\"src/script/\")'
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
