@@ -23,45 +23,14 @@ from loguru import logger
 from typer import Option, Typer
 
 
+__version__ = "0.0.1"
+
+
 cli = Typer(
     add_completion=False,
     help="Backup files with Rclone.",
     pretty_exceptions_enable=False,
 )
-
-
-@cli.command()
-def main(
-    config_path: Annotated[
-        Path | None, Option("-c", "--config", help="Configuration file path")
-    ] = None,
-    dry_run: Annotated[
-        bool, Option("-d", "--dry-run", help="Only print actions to be taken")
-    ] = False,
-    log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
-) -> None:
-    """Backup files with Rclone."""
-    logger.remove()
-    logger.add(sys.stderr, level=log_level.upper())
-
-    if config_path is not None:
-        config_path = config_path
-    elif "RSTASH_CONFIG" in os.environ:
-        config_path = Path(os.environ["RSTASH_CONFIG"])
-    else:
-        match sys.platform:
-            case "darwin":
-                config_path = (
-                    Path.home() / "Library/Application Support/rstash/config.json"
-                )
-            case "win32":
-                config_path = Path.home() / "AppData/Roaming/rstash/config.json"
-            case _:
-                config_path = Path.home() / ".config/rstash/config.json"
-
-    configs = json.loads(config_path.read_text())
-    for config in configs:
-        sync(config)
 
 
 def match(regexes: Iterable[Pattern], file: Path) -> bool:
@@ -147,6 +116,56 @@ def sync(config: dict) -> None:
     if task.returncode != 0:
         print(task.stderr, file=sys.stderr)
         sys.exit(task.returncode)
+
+
+def version(value: bool) -> None:
+    """Print Rstash version string."""
+    if value:
+        print(f"Rstash {__version__}")
+        sys.exit()
+
+
+@cli.command()
+def main(
+    config_path: Annotated[
+        Path | None, Option("-c", "--config", help="Configuration file path")
+    ] = None,
+    dry_run: Annotated[
+        bool, Option("-d", "--dry-run", help="Only print actions to be taken")
+    ] = False,
+    log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
+    version: Annotated[
+        bool,
+        Option(
+            "--version",
+            callback=version,
+            help="Print version information",
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    """Backup files with Rclone."""
+    logger.remove()
+    logger.add(sys.stderr, level=log_level.upper())
+
+    if config_path is not None:
+        config_path = config_path
+    elif "RSTASH_CONFIG" in os.environ:
+        config_path = Path(os.environ["RSTASH_CONFIG"])
+    else:
+        match sys.platform:
+            case "darwin":
+                config_path = (
+                    Path.home() / "Library/Application Support/rstash/config.json"
+                )
+            case "win32":
+                config_path = Path.home() / "AppData/Roaming/rstash/config.json"
+            case _:
+                config_path = Path.home() / ".config/rstash/config.json"
+
+    configs = json.loads(config_path.read_text())
+    for config in configs:
+        sync(config)
 
 
 if __name__ == "__main__":
