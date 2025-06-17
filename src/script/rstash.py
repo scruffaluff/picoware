@@ -9,6 +9,7 @@
 
 """Backup files with Rclone."""
 
+import atexit
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,15 @@ cli = Typer(
 )
 
 
+symlinks: list[Path] = []
+
+
+def clean_paths() -> None:
+    """Remove temporary symlinks."""
+    for symlink in symlinks:
+        symlink.unlink(missing_ok=True)
+
+
 def match(regexes: Iterable[Pattern], file: Path) -> bool:
     """Check if filename matches any regular expressions."""
     for regex in regexes:
@@ -53,6 +63,9 @@ def sync(config: dict) -> None:
     root_includes = [re.compile(include) for include in config.get("includes", [])]
     for path in config["paths"]:
         if isinstance(path, dict):
+            alternates = [
+                source / alternate for alternate in path.get("alternates", [])
+            ]
             excludes = root_excludes + [
                 re.compile(exclude) for exclude in path.get("excludes", [])
             ]
@@ -61,11 +74,21 @@ def sync(config: dict) -> None:
             ]
             path = source / path["path"]
         else:
+            alternates = []
             excludes = root_excludes
             includes = root_includes
             path = source / path
 
         includes = includes or [re.compile("^.*$")]
+        if not path.exists():
+            for alternate in alternates:
+                if alternate.exists():
+                    path.symlink_to(alternate)
+                    symlinks.append(path)
+                    break
+            else:
+                continue
+
         for file in path.iterdir():
             if match(includes, file) and not match(excludes, file):
                 files.append(file.relative_to(source))
@@ -79,6 +102,7 @@ def sync(config: dict) -> None:
 
     command = [
         "rclone",
+        "--copy-links",
         "--human-readable",
         "copy",
     ]
@@ -147,6 +171,7 @@ def main(
     """Backup files with Rclone."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
+    atexit.register(clean_paths)
 
     if config_path is not None:
         config_path = config_path
