@@ -144,7 +144,7 @@ def sync_files(source: Path, destination: Path, manifest: Path) -> None:
         ]
         if not changes:
             return
-        print(f"Changes for {destination}\n\n{'\n'.join(changes)}\n")
+        print("Changes for {}\n\n{}\n".format(destination, "\n".join(changes)))
 
     confirmation = typer.confirm("Sync changes (Y/n)?")
     if not confirmation:
