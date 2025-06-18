@@ -17,10 +17,12 @@ import re
 from re import Pattern
 import subprocess
 import sys
+import platform
 import tempfile
-from typing import Annotated, Iterable
+from typing import Annotated, Any, Iterable
 
 from loguru import logger
+import typer
 from typer import Option, Typer
 
 
@@ -30,37 +32,35 @@ __version__ = "0.0.1"
 cli = Typer(
     add_completion=False,
     help="Backup files with Rclone.",
+    no_args_is_help=True,
     pretty_exceptions_enable=False,
 )
 
 
-symlinks: list[Path] = []
+state: dict[str, Any] = {"config": None, "dry": False, "links": []}
 
 
 def clean_paths() -> None:
     """Remove temporary symlinks."""
-    for symlink in symlinks:
-        symlink.unlink(missing_ok=True)
+    for link in state["links"]:
+        link.unlink(missing_ok=True)
 
 
-def match(regexes: Iterable[Pattern], file: Path) -> bool:
-    """Check if filename matches any regular expressions."""
-    for regex in regexes:
-        match_ = regex.match(file.name)
-        if match_ is not None:
-            return True
-    else:
-        return False
+def create_manifest(files: Iterable[Path]) -> Path:
+    """Create manifest for files sync."""
+    file, manifest_ = tempfile.mkstemp(suffix=".txt")
+    manifest = Path(manifest_).absolute()
+    os.close(file)
+    manifest.write_text("\n".join(map(str, files)) + "\n")
+    return manifest
 
 
-def sync(config: dict) -> None:
-    """Backup files with Rclone."""
-    destination = config["destination"]
-    source = Path(config["source"]).expanduser().absolute()
-
+def find_files(config: dict[str, Any], source: Path) -> list[Path]:
+    """Find all files specified for syncing."""
     files = []
     root_excludes = [re.compile(exclude) for exclude in config.get("excludes", [])]
     root_includes = [re.compile(include) for include in config.get("includes", [])]
+
     for path in config["paths"]:
         if isinstance(path, dict):
             alternates = [
@@ -84,22 +84,37 @@ def sync(config: dict) -> None:
             for alternate in alternates:
                 if alternate.exists():
                     path.symlink_to(alternate)
-                    symlinks.append(path)
+                    state["links"].append(path)
                     break
             else:
                 continue
 
         for file in path.iterdir():
-            if match(includes, file) and not match(excludes, file):
+            if match_filename(includes, file) and not match_filename(excludes, file):
                 files.append(file.relative_to(source))
 
-    files = sorted(files)
+    return sorted(files)
 
-    file, manifest_ = tempfile.mkstemp(suffix=".txt")
-    manifest = Path(manifest_).absolute()
-    os.close(file)
-    manifest.write_text("\n".join(map(str, files)) + "\n")
 
+def match_filename(regexes: Iterable[Pattern], file: Path) -> bool:
+    """Check if filename matches any regular expressions."""
+    for regex in regexes:
+        match_ = regex.match(file.name)
+        if match_ is not None:
+            return True
+    else:
+        return False
+
+
+def print_version(value: bool) -> None:
+    """Print Rstash version string."""
+    if value:
+        print(f"Rstash {__version__}")
+        sys.exit()
+
+
+def sync_files(source: Path, destination: Path, manifest: Path) -> None:
+    """Synchronize files with Rclone."""
     command = [
         "rclone",
         "--copy-links",
@@ -131,8 +146,8 @@ def sync(config: dict) -> None:
             return
         print(f"Changes for {destination}\n\n{'\n'.join(changes)}\n")
 
-    response = input("Sync changes (Y/n)? ")
-    if response.lower().strip() not in ["y", "yes"]:
+    confirmation = typer.confirm("Sync changes (Y/n)?")
+    if not confirmation:
         return
 
     # Multithread streams flag prevents failed to open chunk writer errors.
@@ -142,14 +157,19 @@ def sync(config: dict) -> None:
         sys.exit(task.returncode)
 
 
-def version(value: bool) -> None:
-    """Print Rstash version string."""
-    if value:
-        print(f"Rstash {__version__}")
-        sys.exit()
-
-
 @cli.command()
+def download() -> None:
+    """Download files with Rclone."""
+    configs = json.loads(state["config"].read_text())
+    for config in configs:
+        destination = config["destination"]
+        source = Path(config["source"]).expanduser().absolute()
+        files = find_files(config, source)
+        manifest = create_manifest(files)
+        sync_files(destination, source, manifest)
+
+
+@cli.callback()
 def main(
     config_path: Annotated[
         Path | None, Option("-c", "--config", help="Configuration file path")
@@ -160,37 +180,41 @@ def main(
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
     version: Annotated[
         bool,
-        Option(
-            "--version",
-            callback=version,
-            help="Print version information",
-            is_eager=True,
-        ),
+        Option("--version", callback=print_version, help="Print version information"),
     ] = False,
 ) -> None:
     """Backup files with Rclone."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
+    state["dry"] = dry_run
     atexit.register(clean_paths)
 
     if config_path is not None:
-        config_path = config_path
+        state["config"] = config_path
     elif "RSTASH_CONFIG" in os.environ:
-        config_path = Path(os.environ["RSTASH_CONFIG"])
+        state["config"] = Path(os.environ["RSTASH_CONFIG"])
     else:
-        match sys.platform:
+        match platform.system().lower():
             case "darwin":
-                config_path = (
+                state["config"] = (
                     Path.home() / "Library/Application Support/rstash/config.json"
                 )
-            case "win32":
-                config_path = Path.home() / "AppData/Roaming/rstash/config.json"
+            case "windows":
+                state["config"] = Path.home() / "AppData/Roaming/rstash/config.json"
             case _:
-                config_path = Path.home() / ".config/rstash/config.json"
+                state["config"] = Path.home() / ".config/rstash/config.json"
 
-    configs = json.loads(config_path.read_text())
+
+@cli.command()
+def upload() -> None:
+    """Upload files with Rclone."""
+    configs = json.loads(state["config"].read_text())
     for config in configs:
-        sync(config)
+        destination = config["destination"]
+        source = Path(config["source"]).expanduser().absolute()
+        files = find_files(config, source)
+        manifest = create_manifest(files)
+        sync_files(source, destination, manifest)
 
 
 if __name__ == "__main__":

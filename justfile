@@ -39,6 +39,7 @@ doc:
 format:
   npx prettier --write .
   shfmt --write src test
+  uv tool run ruff format .
 
 # Fix code formatting.
 [windows]
@@ -55,6 +56,7 @@ format:
     $Text = Get-Content -Raw $Script.FullName
     [System.IO.File]::WriteAllText($Script.FullName, $Text)
   }
+  uv tool run ruff format .
 
 # Run code analyses.
 [unix]
@@ -67,6 +69,8 @@ lint:
   for file in ${files}; do
     shellcheck "${file}"
   done
+  uv tool run ruff format --check .
+  uv tool run ruff check .
 
 # Run code analyses.
 [windows]
@@ -78,6 +82,8 @@ lint:
     data/config/script_analyzer.psd1
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings \
     data/config/script_analyzer.psd1
+  uv tool run ruff format --check .
+  uv tool run ruff check .
 
 # Install development dependencies.
 setup: _setup
@@ -100,6 +106,10 @@ _setup:
     src/install/deno.sh --preserve-env --dest .vendor/bin
   fi
   deno --version
+  if [ ! -x "$(command -v uv)" ]; then
+    src/install/uv.sh --preserve-env --dest .vendor/bin
+  fi
+  uv --version
   mkdir -p .vendor/bin .vendor/lib
   for spec in 'assert:v2.1.0' 'core:v1.11.1' 'file:v0.4.0' 'support:v0.3.0'; do
     pkg="${spec%:*}"
@@ -156,6 +166,10 @@ _setup:
     src/install/deno.ps1 --preserve-env --dest .vendor/bin
   }
   deno --version
+  if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
+    src/install/uv.ps1 --preserve-env --dest .vendor/bin
+  }
+  uv --version
   if (-not (Test-Path -Path .vendor/lib/nutest -PathType Container)) {
     git clone -c advice.detachedHead=false --branch v1.1.0 --depth 1 `
       https://github.com/vyadh/nutest.git .vendor/lib/nutest
