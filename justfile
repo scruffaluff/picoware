@@ -198,12 +198,12 @@ _setup:
 
 # Run test suites.
 [unix]
-test *args: && test-nushell
+test *args: && test-nushell test-python
   bats --recursive test {{args}}
 
 # Run test suites.
 [windows]
-test: && test-nushell
+test: && test-nushell test-python
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
 
@@ -211,3 +211,7 @@ test: && test-nushell
 test-nushell *args:
   nu --commands \
     "use .vendor/lib/nutest/nutest run-tests; run-tests --path test {{args}}"
+
+# Run Python test suite.
+test-python *args:
+  uv tool run --with loguru,typer pytest test {{args}}
