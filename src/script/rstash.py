@@ -51,7 +51,7 @@ def create_manifest(files: Iterable[Path]) -> Path:
     file, manifest_ = tempfile.mkstemp(suffix=".txt")
     manifest = Path(manifest_).absolute()
     os.close(file)
-    manifest.write_text("\n".join(map(str, files)) + "\n")
+    manifest.write_text("\n".join(file.as_posix() for file in files) + "\n")
     return manifest
 
 
