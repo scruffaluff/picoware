@@ -8,9 +8,7 @@ sys.path.append(str(repo_path / "src"))
 from script import rstash  # noqa: E402
 
 
-def test_create_manifest() -> None:
-    """Manifest contents match files from format."""
-    expected = "/foo/bar\n/foo/fake/path\n"
-    files = [Path("/foo/bar"), Path("/foo/fake/path")]
-    manifest = rstash.create_manifest(files)
-    assert manifest.read_text() == expected
+def test_parse_filter() -> None:
+    """Strip conditional contents from filters."""
+    expected = "+ /foo/bar"
+    assert rstash.parse_filter(expected) == expected

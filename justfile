@@ -214,4 +214,4 @@ test-nushell *args:
 
 # Run Python test suite.
 test-python *args:
-  uv tool run --python 3.12 --with loguru,typer pytest test {{args}}
+  uv tool run --python 3.12 --with loguru,typer,pyyaml pytest test {{args}}
