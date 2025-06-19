@@ -10,6 +10,7 @@
 
 """Backup files with Rclone."""
 
+import functools
 from itertools import chain
 import json
 import os
@@ -46,18 +47,28 @@ class Entry:
     filters: list[str]
     source: str
 
-    def __init__(self, dest: str, filters: list[str], source: str) -> None:
-        self.dest = Path(dest).expanduser().as_posix()
-        self.filters = filters
-        self.source = Path(source).expanduser().as_posix()
+    def __init__(
+        self,
+        dest: str | dict[str, str],
+        source: str | dict[str, str],
+        filters: list[str] | None = None,
+    ) -> None:
+        self.filters = filters or []
 
+        if isinstance(dest, dict):
+            option = select_option(dest)
+            self.dest = Path(option).expanduser().as_posix()
+        else:
+            self.dest = Path(dest).expanduser().as_posix()
+        if isinstance(source, dict):
+            option = select_option(source)
+            self.source = Path(option).expanduser().as_posix()
+        else:
+            self.source = Path(source).expanduser().as_posix()
+
+    @functools.cache
     def args(self, upload: bool = True) -> list[str]:
-        arguments = []
-        for filter in self.filters:
-            filter_ = parse_filter(filter)
-            if filter_ is not None:
-                arguments.append(["--filter", filter_])
-
+        arguments = (["--filter", filter] for filter in self.filters)
         return list(chain(*arguments)) + [self.source, self.dest]
 
 
@@ -107,23 +118,22 @@ def parse_config(config: Path) -> list[Entry]:
     return [Entry(**config) for config in configs]
 
 
-def parse_filter(filter: str) -> str | None:
-    """Get filter if applicable."""
-    if filter.startswith("+") or filter.startswith("-"):
-        return filter
-
-    system, filter = filter.split(" ", 1)
-    if platform.system().lower() == system:
-        return filter
-    else:
-        return None
-
-
 def print_version(value: bool) -> None:
     """Print Rstash version string."""
     if value:
         print(f"Rstash {__version__}")
         sys.exit()
+
+
+def select_option(options: dict[str, str]) -> str:
+    """Choose most compatible option for current operating system."""
+    system = platform.system().lower().replace("darwin", "macos")
+    if system in options:
+        return options[system]
+    elif "unix" in options and system != "windows":
+        return options["unix"]
+    else:
+        return options["default"]
 
 
 def sync_changes(entries: Iterable[Entry], upload: bool = True) -> None:
