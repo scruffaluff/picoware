@@ -37,13 +37,10 @@ cli = Typer(
 )
 
 
-rclone = [
-    "rclone",
-    "--copy-links",
-    "--human-readable",
-    "--no-update-dir-modtime",
-    "--no-update-modtime",
-]
+os.environ["RCLONE_COPY_LINKS"] = "true"
+os.environ["RCLONE_HUMAN_READABLE"] = "true"
+os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
+os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
 state: dict[str, Any] = {"config": None, "dry": False}
 
 
@@ -97,7 +94,7 @@ def compute_changes(
             source, dest = manifest.dest, manifest.source
 
         process = subprocess.run(
-            rclone + ["--dry-run", "--use-json-log", "copy"] + manifest.args(upload),
+            ["rclone", "--dry-run", "--use-json-log", "copy"] + manifest.args(upload),
             capture_output=True,
             text=True,
         )
@@ -151,7 +148,7 @@ def select_option(options: dict[str, str]) -> str:
 def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
     """Apply synchronization changes."""
     for manifest in manifests:
-        task = subprocess.run(rclone + ["--verbose", "copy"] + manifest.args(upload))
+        task = subprocess.run(["rclone", "--verbose", "copy"] + manifest.args(upload))
         if task.returncode != 0:
             print(task.stderr, file=sys.stderr)
             sys.exit(task.returncode)
