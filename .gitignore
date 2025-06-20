@@ -2,7 +2,10 @@
 #
 # For more information, visit https://git-scm.com/docs/gitignore.
 
+__pycache__/
 .DS_Store
+.pytest_cache/
+.ruff_cache/
 *.ipynb
 *.mat
 *.xml

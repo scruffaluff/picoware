@@ -2,26 +2,28 @@
 # /// script
 # dependencies = [
 #   "loguru~=0.7.0",
+#   "pyyaml~=6.0",
 #   "typer~=0.15.0",
 # ]
 # requires-python = "~=3.12"
 # ///
 
-"""Backup files with Rclone."""
+"""Rclone wrapper for interactive and conditional backups."""
 
-import atexit
+import functools
+from itertools import chain
 import json
 import os
 from pathlib import Path
-import re
-from re import Pattern
 import subprocess
 import sys
-import tempfile
-from typing import Annotated, Iterable
+import platform
+from typing import Annotated, Any, Iterable
 
 from loguru import logger
+import typer
 from typer import Option, Typer
+import yaml
 
 
 __version__ = "0.0.1"
@@ -29,127 +31,151 @@ __version__ = "0.0.1"
 
 cli = Typer(
     add_completion=False,
-    help="Backup files with Rclone.",
+    help="Rclone wrapper for interactive and conditional backups.",
+    no_args_is_help=True,
     pretty_exceptions_enable=False,
 )
 
 
-symlinks: list[Path] = []
+rclone = [
+    "rclone",
+    "--copy-links",
+    "--human-readable",
+    "--no-update-dir-modtime",
+    "--no-update-modtime",
+]
+state: dict[str, Any] = {"config": None, "dry": False}
 
 
-def clean_paths() -> None:
-    """Remove temporary symlinks."""
-    for symlink in symlinks:
-        symlink.unlink(missing_ok=True)
+class Manifest:
+    """Synchronization and location details."""
 
+    dest: str
+    filters: list[str]
+    source: str
 
-def match(regexes: Iterable[Pattern], file: Path) -> bool:
-    """Check if filename matches any regular expressions."""
-    for regex in regexes:
-        match_ = regex.match(file.name)
-        if match_ is not None:
-            return True
-    else:
-        return False
+    def __init__(
+        self,
+        dest: str | dict[str, str],
+        source: str | dict[str, str],
+        filters: list[str] | None = None,
+    ) -> None:
+        self.filters = filters or []
 
-
-def sync(config: dict) -> None:
-    """Backup files with Rclone."""
-    destination = config["destination"]
-    source = Path(config["source"]).expanduser().absolute()
-
-    files = []
-    root_excludes = [re.compile(exclude) for exclude in config.get("excludes", [])]
-    root_includes = [re.compile(include) for include in config.get("includes", [])]
-    for path in config["paths"]:
-        if isinstance(path, dict):
-            alternates = [
-                source / alternate for alternate in path.get("alternates", [])
-            ]
-            excludes = root_excludes + [
-                re.compile(exclude) for exclude in path.get("excludes", [])
-            ]
-            includes = root_excludes + [
-                re.compile(include) for include in path.get("includes", [])
-            ]
-            path = source / path["path"]
+        if isinstance(dest, dict):
+            option = select_option(dest)
+            self.dest = Path(option).expanduser().as_posix()
         else:
-            alternates = []
-            excludes = root_excludes
-            includes = root_includes
-            path = source / path
+            self.dest = Path(dest).expanduser().as_posix()
+        if isinstance(source, dict):
+            option = select_option(source)
+            self.source = Path(option).expanduser().as_posix()
+        else:
+            self.source = Path(source).expanduser().as_posix()
 
-        includes = includes or [re.compile("^.*$")]
-        if not path.exists():
-            for alternate in alternates:
-                if alternate.exists():
-                    path.symlink_to(alternate)
-                    symlinks.append(path)
-                    break
-            else:
-                continue
+    @functools.cache
+    def args(self, upload: bool = True) -> list[str]:
+        """Create Rclone synchronization arguments."""
+        arguments = (["--filter", filter] for filter in self.filters)
+        if upload:
+            return list(chain(*arguments)) + [self.source, self.dest]
+        else:
+            return list(chain(*arguments)) + [self.dest, self.source]
 
-        for file in path.iterdir():
-            if match(includes, file) and not match(excludes, file):
-                files.append(file.relative_to(source))
 
-    files = sorted(files)
+def compute_changes(
+    manifests: Iterable[Manifest], upload: bool = True
+) -> tuple[list[Manifest], str]:
+    """Dry run synchronizations to assemble list of changes."""
+    records = []
+    changes = ""
 
-    file, manifest_ = tempfile.mkstemp(suffix=".txt")
-    manifest = Path(manifest_).absolute()
-    os.close(file)
-    manifest.write_text("\n".join(map(str, files)) + "\n")
+    for manifest in manifests:
+        if upload:
+            source, dest = manifest.source, manifest.dest
+        else:
+            source, dest = manifest.dest, manifest.source
 
-    command = [
-        "rclone",
-        "--copy-links",
-        "--human-readable",
-        "copy",
-    ]
-    args = [
-        "--no-update-dir-modtime",
-        "--no-update-modtime",
-        "--files-from",
-        str(manifest),
-        str(source),
-        str(destination),
-    ]
-    process = subprocess.run(
-        command + ["--dry-run", "--use-json-log"] + args, capture_output=True, text=True
-    )
-    if process.returncode != 0:
-        print(process.stderr, file=sys.stderr)
-        sys.exit(process.returncode)
-    else:
+        process = subprocess.run(
+            rclone + ["--dry-run", "--use-json-log", "copy"] + manifest.args(upload),
+            capture_output=True,
+            text=True,
+        )
+        if process.returncode != 0:
+            print(process.stderr, file=sys.stderr)
+            sys.exit(process.returncode)
+
         logs = map(json.loads, process.stderr.strip().split("\n"))
-        changes = [
-            f"{log['object']} -> {destination}/{log['object']}"
-            for log in logs
-            if "object" in log
-        ]
-        if not changes:
-            return
-        print(f"Changes for {destination}\n\n{'\n'.join(changes)}\n")
+        change = parse_logs(source, dest, logs)
+        if change:
+            records.append(manifest)
+            changes = "{}\n{}".format(changes, "\n".join(change))
 
-    response = input("Sync changes (Y/n)? ")
-    if response.lower().strip() not in ["y", "yes"]:
-        return
-
-    # Multithread streams flag prevents failed to open chunk writer errors.
-    task = subprocess.run(command + ["--verbose", "--multi-thread-streams", "0"] + args)
-    if task.returncode != 0:
-        print(task.stderr, file=sys.stderr)
-        sys.exit(task.returncode)
+    return records, changes
 
 
-def version(value: bool) -> None:
+def load_config(config: Path) -> list[Manifest]:
+    """Load Rstash configuration."""
+    with open(config, "r") as file:
+        configs = yaml.safe_load(file)
+    return [Manifest(**config) for config in configs]
+
+
+def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
+    """Parse Rclone logs for synchronization changes."""
+    return [
+        f"{source}/{log['object']} -> {dest}/{log['object']}"
+        for log in logs
+        if "object" in log
+    ]
+
+
+def print_version(value: bool) -> None:
     """Print Rstash version string."""
     if value:
         print(f"Rstash {__version__}")
         sys.exit()
 
 
+def select_option(options: dict[str, str]) -> str:
+    """Choose most compatible option for current operating system."""
+    system = platform.system().lower().replace("darwin", "macos")
+    if system in options:
+        return options[system]
+    elif "unix" in options and system != "windows":
+        return options["unix"]
+    else:
+        return options["default"]
+
+
+def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
+    """Apply synchronization changes."""
+    for manifest in manifests:
+        task = subprocess.run(rclone + ["--verbose", "copy"] + manifest.args(upload))
+        if task.returncode != 0:
+            print(task.stderr, file=sys.stderr)
+            sys.exit(task.returncode)
+
+
 @cli.command()
+def download() -> None:
+    """Download files with Rclone."""
+    manifests = load_config(state["config"])
+    for manifest in manifests:
+        Path(manifest.source).mkdir(exist_ok=True, parents=True)
+
+    manifests, changes = compute_changes(manifests, upload=False)
+    if not manifests:
+        return
+
+    print("Changes to be synced.\n\n{}\n".format(changes))
+    confirmation = typer.confirm("Sync changes (Y/n)?")
+    if not confirmation:
+        return
+    sync_changes(manifests, upload=False)
+
+
+@cli.callback()
 def main(
     config_path: Annotated[
         Path | None, Option("-c", "--config", help="Configuration file path")
@@ -160,37 +186,43 @@ def main(
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
     version: Annotated[
         bool,
-        Option(
-            "--version",
-            callback=version,
-            help="Print version information",
-            is_eager=True,
-        ),
+        Option("--version", callback=print_version, help="Print version information"),
     ] = False,
 ) -> None:
-    """Backup files with Rclone."""
+    """Rclone wrapper for interactive and conditional backups."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
-    atexit.register(clean_paths)
+    state["dry"] = dry_run
 
     if config_path is not None:
-        config_path = config_path
+        state["config"] = config_path
     elif "RSTASH_CONFIG" in os.environ:
-        config_path = Path(os.environ["RSTASH_CONFIG"])
+        state["config"] = Path(os.environ["RSTASH_CONFIG"])
     else:
-        match sys.platform:
+        match platform.system().lower():
             case "darwin":
-                config_path = (
-                    Path.home() / "Library/Application Support/rstash/config.json"
+                state["config"] = (
+                    Path.home() / "Library/Application Support/rstash/config.yaml"
                 )
-            case "win32":
-                config_path = Path.home() / "AppData/Roaming/rstash/config.json"
+            case "windows":
+                state["config"] = Path.home() / "AppData/Roaming/rstash/config.yaml"
             case _:
-                config_path = Path.home() / ".config/rstash/config.json"
+                state["config"] = Path.home() / ".config/rstash/config.yaml"
 
-    configs = json.loads(config_path.read_text())
-    for config in configs:
-        sync(config)
+
+@cli.command()
+def upload() -> None:
+    """Upload files with Rclone."""
+    manifests = load_config(state["config"])
+    manifests, changes = compute_changes(manifests, upload=True)
+    if not manifests:
+        return
+
+    print("Changes to be synced.\n\n{}\n".format(changes))
+    confirmation = typer.confirm("Sync changes (Y/n)?")
+    if not confirmation:
+        return
+    sync_changes(manifests, upload=True)
 
 
 if __name__ == "__main__":

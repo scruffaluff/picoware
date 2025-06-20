@@ -25,7 +25,7 @@ def find_matlab [path: string] {
     }
 }
 
-# Wrapper script for running Matlab programs from the command line.
+# Matlab wrapper for running programs from the command line.
 def main [
     --version (-v) # Print version information
 ] {
