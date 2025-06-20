@@ -48,6 +48,7 @@ state: dict[str, Any] = {"config": None, "dry_run": False}
 class Manifest:
     """Synchronization and location details."""
 
+    arguments: list[str]
     dest: str
     filters: list[str]
     source: str
@@ -56,8 +57,10 @@ class Manifest:
         self,
         dest: str | dict[str, str],
         source: str | dict[str, str],
+        args: list[str] | None = None,
         filters: list[str] | None = None,
     ) -> None:
+        self.arguments = args or []
         self.filters = filters or []
 
         if isinstance(dest, dict):
@@ -76,9 +79,9 @@ class Manifest:
         """Create Rclone synchronization arguments."""
         arguments = (["--filter", filter] for filter in self.filters)
         if upload:
-            return list(chain(*arguments)) + [self.source, self.dest]
+            return list(chain(*arguments)) + self.arguments + [self.source, self.dest]
         else:
-            return list(chain(*arguments)) + [self.dest, self.source]
+            return list(chain(*arguments)) + self.arguments + [self.dest, self.source]
 
 
 def compute_changes(
@@ -201,12 +204,12 @@ def main(
         match platform.system().lower():
             case "darwin":
                 state["config"] = (
-                    Path.home() / "Library/Application Support/rstash/config.yaml"
+                    Path.home() / "Library/Application Support/rstash/rstash.yaml"
                 )
             case "windows":
-                state["config"] = Path.home() / "AppData/Roaming/rstash/config.yaml"
+                state["config"] = Path.home() / "AppData/Roaming/rstash/rstash.yaml"
             case _:
-                state["config"] = Path.home() / ".config/rstash/config.yaml"
+                state["config"] = Path.home() / ".config/rstash/rstash.yaml"
 
 
 @cli.command()
