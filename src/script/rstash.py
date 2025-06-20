@@ -28,7 +28,6 @@ import yaml
 
 __version__ = "0.0.1"
 
-
 cli = Typer(
     add_completion=False,
     help="Rclone wrapper for interactive and conditional backups.",
@@ -36,12 +35,14 @@ cli = Typer(
     pretty_exceptions_enable=False,
 )
 
-
+# Use Rclone environment variables to avoid unsupported flags on specific versions.
 os.environ["RCLONE_COPY_LINKS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
 os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
-state: dict[str, Any] = {"config": None, "dry": False}
+
+# Shared state to hold global application flags.
+state: dict[str, Any] = {"config": None, "dry_run": False}
 
 
 class Manifest:
@@ -167,9 +168,8 @@ def download() -> None:
 
     print("Changes to be synced.\n\n{}\n".format(changes))
     confirmation = typer.confirm("Sync changes (Y/n)?")
-    if not confirmation:
-        return
-    sync_changes(manifests, upload=False)
+    if confirmation and not state["dry_run"]:
+        sync_changes(manifests, upload=False)
 
 
 @cli.callback()
@@ -189,7 +189,7 @@ def main(
     """Rclone wrapper for interactive and conditional backups."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
-    state["dry"] = dry_run
+    state["dry_run"] = dry_run
 
     if config_path is not None:
         state["config"] = config_path
@@ -217,9 +217,8 @@ def upload() -> None:
 
     print("Changes to be synced.\n\n{}\n".format(changes))
     confirmation = typer.confirm("Sync changes (Y/n)?")
-    if not confirmation:
-        return
-    sync_changes(manifests, upload=True)
+    if confirmation and not state["dry_run"]:
+        sync_changes(manifests, upload=True)
 
 
 if __name__ == "__main__":
