@@ -26,7 +26,7 @@ from typer import Option, Typer
 import yaml
 
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 cli = Typer(
     add_completion=False,
@@ -167,8 +167,10 @@ def download() -> None:
         return
 
     print("Changes to be synced.\n\n{}\n".format(changes))
-    confirmation = typer.confirm("Sync changes (Y/n)?")
-    if confirmation and not state["dry_run"]:
+    if state["dry_run"]:
+        return
+    confirm = typer.confirm("Sync changes (Y/n)?")
+    if confirm:
         sync_changes(manifests, upload=False)
 
 
@@ -216,8 +218,10 @@ def upload() -> None:
         return
 
     print("Changes to be synced.\n\n{}\n".format(changes))
-    confirmation = typer.confirm("Sync changes (Y/n)?")
-    if confirmation and not state["dry_run"]:
+    if state["dry_run"]:
+        return
+    confirm = typer.confirm("Sync changes (Y/n)?")
+    if confirm:
         sync_changes(manifests, upload=True)
 
 
