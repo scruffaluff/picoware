@@ -77,7 +77,10 @@ class Manifest:
     def args(self, upload: bool = True) -> list[str]:
         """Create Rclone synchronization arguments."""
         arguments = (["--filter", filter] for filter in self.filters)
-        return list(chain(*arguments)) + [self.source, self.dest]
+        if upload:
+            return list(chain(*arguments)) + [self.source, self.dest]
+        else:
+            return list(chain(*arguments)) + [self.dest, self.source]
 
 
 def compute_changes(
