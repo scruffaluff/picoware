@@ -8,7 +8,7 @@
 # requires-python = "~=3.12"
 # ///
 
-"""Backup files with Rclone."""
+"""Rclone wrapper for interactive and conditional backups."""
 
 import functools
 from itertools import chain
@@ -31,17 +31,24 @@ __version__ = "0.0.1"
 
 cli = Typer(
     add_completion=False,
-    help="Backup files with Rclone.",
+    help="Rclone wrapper for interactive and conditional backups.",
     no_args_is_help=True,
     pretty_exceptions_enable=False,
 )
 
 
+rclone = [
+    "rclone",
+    "--copy-links",
+    "--human-readable",
+    "--no-update-dir-modtime",
+    "--no-update-modtime",
+]
 state: dict[str, Any] = {"config": None, "dry": False}
 
 
-class Entry:
-    """Synchronization entry."""
+class Manifest:
+    """Synchronization and location details."""
 
     dest: str
     filters: list[str]
@@ -68,54 +75,56 @@ class Entry:
 
     @functools.cache
     def args(self, upload: bool = True) -> list[str]:
+        """Create Rclone synchronization arguments."""
         arguments = (["--filter", filter] for filter in self.filters)
         return list(chain(*arguments)) + [self.source, self.dest]
 
 
-def fetch_changes(entries: Iterable[Entry], upload: bool = True) -> list[str]:
-    command = [
-        "rclone",
-        "--copy-links",
-        "copy",
-        "--dry-run",
-        "--use-json-log",
-        "--no-update-dir-modtime",
-        "--no-update-modtime",
-    ]
+def compute_changes(
+    manifests: Iterable[Manifest], upload: bool = True
+) -> tuple[list[Manifest], str]:
+    """Dry run synchronizations to assemble list of changes."""
+    records = []
+    changes = ""
 
-    changes = []
-    for entry in entries:
+    for manifest in manifests:
+        if upload:
+            source, dest = manifest.source, manifest.dest
+        else:
+            source, dest = manifest.dest, manifest.source
+
         process = subprocess.run(
-            command + entry.args(upload),
+            rclone + ["--dry-run", "--use-json-log", "copy"] + manifest.args(upload),
             capture_output=True,
             text=True,
         )
         if process.returncode != 0:
             print(process.stderr, file=sys.stderr)
             sys.exit(process.returncode)
-        else:
-            logs = map(json.loads, process.stderr.strip().split("\n"))
-            if upload:
-                changes += [
-                    f"{entry.source}/{log['object']} -> {entry.dest}:/{log['object']}"
-                    for log in logs
-                    if "object" in log
-                ]
-            else:
-                changes += [
-                    f"{entry.dest}:/{log['object']} -> {entry.source}/{log['object']}"
-                    for log in logs
-                    if "object" in log
-                ]
 
-    return changes
+        logs = map(json.loads, process.stderr.strip().split("\n"))
+        change = parse_logs(source, dest, logs)
+        if change:
+            records.append(manifest)
+            changes = "{}\n{}".format(changes, "\n".join(change))
+
+    return records, changes
 
 
-def parse_config(config: Path) -> list[Entry]:
+def load_config(config: Path) -> list[Manifest]:
     """Load Rstash configuration."""
     with open(config, "r") as file:
         configs = yaml.safe_load(file)
-    return [Entry(**config) for config in configs]
+    return [Manifest(**config) for config in configs]
+
+
+def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
+    """Parse Rclone logs for synchronization changes."""
+    return [
+        f"{source}/{log['object']} -> {dest}/{log['object']}"
+        for log in logs
+        if "object" in log
+    ]
 
 
 def print_version(value: bool) -> None:
@@ -136,23 +145,10 @@ def select_option(options: dict[str, str]) -> str:
         return options["default"]
 
 
-def sync_changes(entries: Iterable[Entry], upload: bool = True) -> None:
-    """Apply file changes."""
-    # Multithread streams flag prevents failed to open chunk writer errors.
-    command = [
-        "rclone",
-        "--copy-links",
-        "--human-readable",
-        "--verbose",
-        "--multi-thread-streams",
-        "0",
-        "copy",
-        "--no-update-dir-modtime",
-        "--no-update-modtime",
-    ]
-
-    for entry in entries:
-        task = subprocess.run(command + entry.args(upload))
+def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
+    """Apply synchronization changes."""
+    for manifest in manifests:
+        task = subprocess.run(rclone + ["--verbose", "copy"] + manifest.args(upload))
         if task.returncode != 0:
             print(task.stderr, file=sys.stderr)
             sys.exit(task.returncode)
@@ -161,16 +157,19 @@ def sync_changes(entries: Iterable[Entry], upload: bool = True) -> None:
 @cli.command()
 def download() -> None:
     """Download files with Rclone."""
-    entries = parse_config(state["config"])
-    changes = fetch_changes(entries, upload=False)
-    if not changes:
+    manifests = load_config(state["config"])
+    for manifest in manifests:
+        Path(manifest.source).mkdir(exist_ok=True, parents=True)
+
+    manifests, changes = compute_changes(manifests, upload=False)
+    if not manifests:
         return
 
-    print("Changes to be synced.\n\n{}\n".format("\n".join(changes)))
+    print("Changes to be synced.\n\n{}\n".format(changes))
     confirmation = typer.confirm("Sync changes (Y/n)?")
     if not confirmation:
         return
-    sync_changes(entries, upload=False)
+    sync_changes(manifests, upload=False)
 
 
 @cli.callback()
@@ -187,7 +186,7 @@ def main(
         Option("--version", callback=print_version, help="Print version information"),
     ] = False,
 ) -> None:
-    """Backup files with Rclone."""
+    """Rclone wrapper for interactive and conditional backups."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
     state["dry"] = dry_run
@@ -211,16 +210,16 @@ def main(
 @cli.command()
 def upload() -> None:
     """Upload files with Rclone."""
-    entries = parse_config(state["config"])
-    changes = fetch_changes(entries, upload=True)
-    if not changes:
+    manifests = load_config(state["config"])
+    manifests, changes = compute_changes(manifests, upload=True)
+    if not manifests:
         return
 
-    print("Changes to be synced.\n\n{}\n".format("\n".join(changes)))
+    print("Changes to be synced.\n\n{}\n".format(changes))
     confirmation = typer.confirm("Sync changes (Y/n)?")
     if not confirmation:
         return
-    sync_changes(entries, upload=True)
+    sync_changes(manifests, upload=True)
 
 
 if __name__ == "__main__":
