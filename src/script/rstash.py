@@ -169,10 +169,10 @@ def download() -> None:
     if not manifests:
         return
 
-    print("Changes to be synced.\n\n{}\n".format(changes))
+    print("Changes to be synced.\n{}\n".format(changes))
     if state["dry_run"]:
         return
-    confirm = typer.confirm("Sync changes (Y/n)?")
+    confirm = typer.confirm("Sync changes?")
     if confirm:
         sync_changes(manifests, upload=False)
 
@@ -220,10 +220,10 @@ def upload() -> None:
     if not manifests:
         return
 
-    print("Changes to be synced.\n\n{}\n".format(changes))
+    print("Changes to be synced.\n{}\n".format(changes))
     if state["dry_run"]:
         return
-    confirm = typer.confirm("Sync changes (Y/n)?")
+    confirm = typer.confirm("Sync changes?")
     if confirm:
         sync_changes(manifests, upload=True)
 
