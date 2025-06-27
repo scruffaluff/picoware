@@ -67,35 +67,18 @@ log() {
 }
 
 #######################################
-# Cleanup resources on exit.
-#######################################
-panic() {
-  local schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
-
-  # Flags:
-  #   -d: Check if path exists and is a directory.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v gsettings)" ] && [ -d "${schema}" ]; then
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
-      toggle-state false
-  fi
-}
-
-#######################################
 # Print Caffeinate version string.
 # Outputs:
 #   Caffeinate version string.
 #######################################
 version() {
-  echo 'Caffeinate 0.1.0'
+  echo 'Caffeinate 0.2.0'
 }
 
 #######################################
 # Script entrypoint.
 #######################################
 main() {
-  local schema
-
   # Use system caffeinate if it exists.
   if [ -x /usr/bin/caffeinate ]; then
     /usr/bin/caffeinate "$@"
@@ -118,31 +101,21 @@ main() {
     *) ;;
   esac
 
-  # Schema is required since MacOS can have a gsettings program that does
-  # nothing if the glib formula, https://formulae.brew.sh/formula/glib, is
-  # installed.
-  #
   # Flags:
-  #   -d: Check if path exists and is a directory.
   #   -x: Check if file exists and execute permission is granted.
-  schema="${HOME}/.local/share/gnome-shell/extensions/caffeine@patapon.info/schemas"
-  if [ -x "$(command -v gsettings)" ] && [ -d "${schema}" ]; then
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
-      toggle-state true
-
+  if [ -x "$(command -v systemd-inhibit)" ]; then
     if [ "${#}" -eq 0 ]; then
       # Sleep inifinity is not supported on all platforms.
       #
       #  For more information, visit https://stackoverflow.com/a/41655546.
       while true; do
-        sleep 86400
+        systemd-inhibit --no-ask-password --no-legend --no-pager --mode block \
+          --what idle:sleep sleep 86400
       done
     else
-      "$@"
+      systemd-inhibit --no-ask-password --no-legend --no-pager --mode block \
+        --what idle:sleep "$@"
     fi
-
-    gsettings --schemadir "${schema}" set org.gnome.shell.extensions.caffeine \
-      toggle-state false
   else
     log --stderr 'error: Unable to find a supported caffeine backend.'
     exit 1
@@ -151,6 +124,5 @@ main() {
 
 # Add ability to selectively skip main function during test suite.
 if [ -z "${BATS_SOURCE_ONLY:-}" ]; then
-  trap panic EXIT
   main "$@"
 fi
