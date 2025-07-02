@@ -15,7 +15,7 @@ def find_matlab [path: string] {
     }
 
     try {
-        $"(glob $search.pattern | get 0)/bin/matlab($search.extension)"
+        $"(glob $search.pattern | last)/bin/matlab($search.extension)"
         | path expand
     } catch {
         error make --unspanned {
@@ -30,7 +30,7 @@ def main [
     --version (-v) # Print version information
 ] {
     if $version {
-        "Mlab 0.1.0"
+        "Mlab 0.1.1"
     } else {
         help main
     }
@@ -49,7 +49,7 @@ def "main dump" [
     }
     let command = $"fprintf\('%s\\n', ($encode)\);"
     let program = find_matlab $"($matlab)"
-    ^$program -nojvm -nosplash -batch $command
+    ^$program -nodesktop -nojvm -nosplash -batch $command
 }
 
 # Launch Jupyter Lab with the Matlab kernel.
@@ -91,7 +91,7 @@ def "main run" [
     command: string = "" # Matlab command or script path
     ...$args: string # Arguments to Matlab script
 ] {
-    mut flags = ["-nosplash"]
+    mut flags = ["-nodesktop" "-nosplash"]
     if not $jvm {
         $flags = [...$flags "-nojvm"]
     }
@@ -112,7 +112,7 @@ def "main run" [
     if ($genpath | is-not-empty) {
         $setup = $"addpath\(genpath\('($genpath)'\)\); ($setup)"
     }
-    
+
     let program = find_matlab $"($matlab)"
     if $script {
         script $program $shebang $debug $flags $setup $command $args

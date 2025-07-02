@@ -105,7 +105,7 @@ main() {
   #   -x: Check if file exists and execute permission is granted.
   if [ -x "$(command -v systemd-inhibit)" ]; then
     if [ "${#}" -eq 0 ]; then
-      # Sleep inifinity is not supported on all platforms.
+      # Sleep infinity is not supported on all platforms.
       #
       #  For more information, visit https://stackoverflow.com/a/41655546.
       while true; do
