@@ -39,7 +39,6 @@ cli = Typer(
 os.environ["RCLONE_COPY_LINKS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
-os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
 
 # Shared state to hold global application flags.
 state: dict[str, Any] = {"config": None, "dry_run": False}
@@ -97,18 +96,13 @@ def compute_changes(
         else:
             source, dest = manifest.dest, manifest.source
 
-        # Log level ERROR must be capitalized for Rclone version 1.60.0.
         process = subprocess.run(
-            ["rclone", "--use-json-log", "--log-level", "ERROR", "check"]
+            ["rclone", "--dry-run", "--use-json-log", "copy", "--update"]
             + manifest.args(upload),
             capture_output=True,
             text=True,
         )
-        # Rclone check returns 0 for no differences, 1 for differences, and other codes
-        # for errors.
-        if process.returncode == 0:
-            continue
-        elif process.returncode != 1:
+        if process.returncode != 0:
             print(process.stderr, file=sys.stderr)
             sys.exit(process.returncode)
 
@@ -132,13 +126,8 @@ def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
     """Parse Rclone logs for synchronization changes."""
     messages = []
     for log in logs:
-        # Only use logs on a file (object) that are not missing from source.
-        if "object" in log and source not in log["msg"]:
-            message = f"{source}/{log['object']} -> {dest}/{log['object']}"
-            if "file not in" in log["msg"]:
-                messages.append(message + " (new)")
-            else:
-                messages.append(message + " (modified)")
+        if "object" in log:
+            messages.append(f"{source}/{log['object']} -> {dest}/{log['object']}")
     return messages
 
 
@@ -163,7 +152,9 @@ def select_option(options: dict[str, str]) -> str:
 def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
     """Apply synchronization changes."""
     for manifest in manifests:
-        task = subprocess.run(["rclone", "--verbose", "copy"] + manifest.args(upload))
+        task = subprocess.run(
+            ["rclone", "--verbose", "copy", "--update"] + manifest.args(upload)
+        )
         if task.returncode != 0:
             print(task.stderr, file=sys.stderr)
             sys.exit(task.returncode)
@@ -221,6 +212,29 @@ def main(
                 state["config"] = Path.home() / "AppData/Roaming/rstash/rstash.yaml"
             case _:
                 state["config"] = Path.home() / ".config/rstash/rstash.yaml"
+
+
+@cli.command()
+def sync() -> None:
+    """Sync files with Rclone."""
+    manifests = load_config(state["config"])
+    for manifest in manifests:
+        Path(manifest.source).mkdir(exist_ok=True, parents=True)
+
+    downloads = compute_changes(manifests, upload=False)
+    uploads = compute_changes(manifests, upload=True)
+    manifests = downloads[0] + uploads[0]
+    changes = downloads[1] + uploads[1]
+    if not manifests:
+        return
+
+    print("Changes to be synced.\n{}\n".format(changes))
+    if state["dry_run"]:
+        return
+    confirm = typer.confirm("Sync changes?")
+    if confirm:
+        sync_changes(manifests, upload=False)
+        sync_changes(manifests, upload=True)
 
 
 @cli.command()
