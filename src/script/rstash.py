@@ -233,8 +233,8 @@ def sync() -> None:
         return
     confirm = typer.confirm("Sync changes?")
     if confirm:
-        sync_changes(manifests, upload=False)
-        sync_changes(manifests, upload=True)
+        sync_changes(downloads[0], upload=False)
+        sync_changes(uploads[0], upload=True)
 
 
 @cli.command()
