@@ -97,8 +97,9 @@ def compute_changes(
         else:
             source, dest = manifest.dest, manifest.source
 
+        # Log level ERROR must be capitalized for Rclone version 1.60.0.
         process = subprocess.run(
-            ["rclone", "--use-json-log", "--log-level", "error", "check"]
+            ["rclone", "--use-json-log", "--log-level", "ERROR", "check"]
             + manifest.args(upload),
             capture_output=True,
             text=True,
