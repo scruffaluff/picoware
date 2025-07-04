@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --script
+#!/usr/bin/env -S uv --quiet run --script
 # /// script
 # dependencies = [
 #   "loguru~=0.7.0",
@@ -26,7 +26,7 @@ from typer import Option, Typer
 import yaml
 
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 cli = Typer(
     add_completion=False,
@@ -98,11 +98,16 @@ def compute_changes(
             source, dest = manifest.dest, manifest.source
 
         process = subprocess.run(
-            ["rclone", "--dry-run", "--use-json-log", "copy"] + manifest.args(upload),
+            ["rclone", "--use-json-log", "--log-level", "error", "check"]
+            + manifest.args(upload),
             capture_output=True,
             text=True,
         )
-        if process.returncode != 0:
+        # Rclone check returns 0 for no differences, 1 for differences, and other codes
+        # for errors.
+        if process.returncode == 0:
+            continue
+        elif process.returncode != 1:
             print(process.stderr, file=sys.stderr)
             sys.exit(process.returncode)
 
@@ -124,11 +129,16 @@ def load_config(config: Path) -> list[Manifest]:
 
 def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
     """Parse Rclone logs for synchronization changes."""
-    return [
-        f"{source}/{log['object']} -> {dest}/{log['object']}"
-        for log in logs
-        if "object" in log
-    ]
+    messages = []
+    for log in logs:
+        # Only use logs on a file (object) that are not missing from source.
+        if "object" in log and source not in log["msg"]:
+            message = f"{source}/{log['object']} -> {dest}/{log['object']}"
+            if "file not in" in log["msg"]:
+                messages.append(message + " (new)")
+            else:
+                messages.append(message + " (modified)")
+    return messages
 
 
 def print_version(value: bool) -> None:
