@@ -30,7 +30,7 @@ def main [
     --version (-v) # Print version information
 ] {
     if $version {
-        "Mlab 0.1.1"
+        "Mlab 0.1.2"
     } else {
         help main
     }
@@ -85,7 +85,7 @@ def "main run" [
     --license (-c): string # Location of Matlab license file
     --logfile (-l): string # Copy command window output to logfile
     --matlab (-m): string # Custom Matlab executable path
-    --script (-s) # Run Matlab script
+    --script (-s) # Always run command as Matlab script
     --sd: string # Set the Matlab startup folder
     --shebang # Strip shebang from start of script
     command: string = "" # Matlab command or script path
@@ -113,9 +113,12 @@ def "main run" [
         $setup = $"addpath\(genpath\('($genpath)'\)\); ($setup)"
     }
 
+    let script = $script or ($command | path parse | get extension) == "m"
     let program = find_matlab $"($matlab)"
     if $script {
         script $program $shebang $debug $flags $setup $command $args
+    } else if ($args | is-not-empty) {
+        ^$program ...$flags -batch $"($command) ($args | str join ' ')"
     } else if ($command | is-not-empty) {
         ^$program ...$flags -batch $command
     } else {
@@ -135,7 +138,12 @@ def script [
     # Script must end in the ".m" extension to be discoverable by Matlab.
     let parts = $module | path parse
     let function = $parts.stem
-    let call = $"($function) ($args | str join ' ');"
+    let call = if ($args | is-empty) {
+        $function
+    } else {
+        $"($function) ($args | str join ' ')"
+    }
+
     let folder = if $shebang {
         let temp_dir = mktemp --directory --tmpdir
         let temp_file = $"($temp_dir)/($parts.stem).m"
@@ -150,6 +158,6 @@ def script [
         let command = $"dbstop if error; dbstop in ($function); ($call); exit;"
         ^$program ...$flags -r $"($setup)($command)"
     } else {
-        ^$program ...$flags -batch $"($setup)($call)"
+        ^$program ...$flags -batch $"($setup)($call);"
     }
 }
