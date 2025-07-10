@@ -1,7 +1,15 @@
 #!/usr/bin/env nu
 
+def build-code [setup: string command: string args: list<string>] {
+    if ($args | is-empty) {
+        $"($setup) ($command); exit;"
+    } else {
+        $"($setup) ($command) ($args | str join ' '); exit;"
+    }
+}
+
 # Find Matlab executable path.
-def find_matlab [path: string] {
+def find-matlab [path: string] {
     if ($path | is-not-empty) {
         return $path
     } else if ($env.MLAB_PROGRAM? | is-not-empty) {
@@ -30,7 +38,7 @@ def main [
     --version (-v) # Print version information
 ] {
     if $version {
-        "Mlab 0.1.2"
+        "Mlab 0.1.3"
     } else {
         help main
     }
@@ -48,7 +56,7 @@ def "main dump" [
         $"jsonencode\(load\('($file)'\)\)"
     }
     let command = $"fprintf\('%s\\n', ($encode)\);"
-    let program = find_matlab $"($matlab)"
+    let program = find-matlab $"($matlab)"
     ^$program -nodesktop -nojvm -nosplash -batch $command
 }
 
@@ -79,6 +87,7 @@ def --wrapped "main jupyter" [
 # Execute Matlab command or script.
 def "main run" [
     --addpath (-a): string # Add folder to Matlab path
+    --batch (-b) # Execute in non-interactive batch mode
     --debug (-d) # Launch in Matlab debugger
     --genpath (-g): string # Add folder and recursive children to Matlab path
     --jvm (-j) # Enable Java virtual machine
@@ -105,30 +114,36 @@ def "main run" [
         $flags = [...$flags "-sd" $sd]
     }
 
-    mut setup = ""
+    mut setup = "if exist('mlabrc'); mlabrc; end;"
     if ($addpath | is-not-empty) {
         $setup = $"addpath\('($addpath)'\); ($setup)"
     }
     if ($genpath | is-not-empty) {
         $setup = $"addpath\(genpath\('($genpath)'\)\); ($setup)"
     }
+    let program = find-matlab $"($matlab)"
 
-    let script = $script or ($command | path parse | get extension) == "m"
-    let program = find_matlab $"($matlab)"
-    if $script {
-        script $program $shebang $debug $flags $setup $command $args
-    } else if ($args | is-not-empty) {
-        ^$program ...$flags -batch $"($command) ($args | str join ' ')"
-    } else if ($command | is-not-empty) {
-        ^$program ...$flags -batch $command
+    if $script or ($command | path parse | get extension) == "m" {
+        script $program $shebang $batch $debug $flags $setup $command $args
     } else {
-        ^$program ...$flags
+        let code = build-code $setup $command $args
+
+        if ($command | is-empty) {
+            ^$program ...$flags
+        } else if $debug {
+            ^$program ...$flags -r $"dbstop if error; ($code)"
+        } else if $batch {
+            ^$program ...$flags -batch $code
+        } else {
+            ^$program ...$flags -r $code
+        }
     }
 }
 
 def script [
     program: string
     shebang: bool
+    batch: bool
     debug: bool
     flags: list<string>
     setup: string
@@ -138,11 +153,6 @@ def script [
     # Script must end in the ".m" extension to be discoverable by Matlab.
     let parts = $module | path parse
     let function = $parts.stem
-    let call = if ($args | is-empty) {
-        $function
-    } else {
-        $"($function) ($args | str join ' ')"
-    }
 
     let folder = if $shebang {
         let temp_dir = mktemp --directory --tmpdir
@@ -153,11 +163,15 @@ def script [
         $parts.parent
     }
 
-    let setup = $"($setup)addpath\('($folder)'\); "
+    let code = build-code $"addpath\('($folder)'\); ($setup)" $function $args
     if $debug {
-        let command = $"dbstop if error; dbstop in ($function); ($call); exit;"
-        ^$program ...$flags -r $"($setup)($command)"
+        (
+            ^$program ...$flags -r
+            $"dbstop if error; dbstop in ($function); ($code)"
+        )
+    } else if $batch {
+        ^$program ...$flags -batch $code
     } else {
-        ^$program ...$flags -batch $"($setup)($call);"
+        ^$program ...$flags -r $code
     }
 }
