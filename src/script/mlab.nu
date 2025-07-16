@@ -38,7 +38,7 @@ def main [
     --version (-v) # Print version information
 ] {
     if $version {
-        "Mlab 0.1.3"
+        "Mlab 0.1.4"
     } else {
         help main
     }
@@ -123,7 +123,7 @@ def "main run" [
     }
     let program = find-matlab $"($matlab)"
 
-    if $script or ($command | path parse | get extension) == "m" {
+    if $shebang or $script or ($command | path parse | get extension) == "m" {
         script $program $shebang $batch $debug $flags $setup $command $args
     } else {
         let code = build-code $setup $command $args
@@ -163,15 +163,22 @@ def script [
         $parts.parent
     }
 
-    let code = build-code $"addpath\('($folder)'\); ($setup)" $function $args
     if $debug {
-        (
-            ^$program ...$flags -r
-            $"dbstop if error; dbstop in ($function); ($code)"
+        let code = (
+            build-code
+            $"dbstop if error; addpath\('($folder)'\); ($setup) dbstop in ($function);"
+            $function $args
         )
-    } else if $batch {
-        ^$program ...$flags -batch $code
-    } else {
         ^$program ...$flags -r $code
+    } else {
+        let code = (
+            build-code $"addpath\('($folder)'\); ($setup)" $function $args
+        )
+
+        if $batch {
+            ^$program ...$flags -batch $code
+        } else {
+            ^$program ...$flags -r $code
+        }
     }
 }
