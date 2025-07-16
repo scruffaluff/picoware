@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv --quiet run --script
+#!/usr/bin/env -S uv --no-config --quiet run --script
 # /// script
 # dependencies = [
 #   "loguru~=0.7.0",
@@ -26,7 +26,7 @@ from typer import Option, Typer
 import yaml
 
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 cli = Typer(
     add_completion=False,
