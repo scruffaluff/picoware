@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Rstash script.
+- Fdi and Rstash scripts.
 
 ## 0.2.0 - 2025-05-17
 
