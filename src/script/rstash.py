@@ -5,7 +5,7 @@
 #   "pyyaml~=6.0",
 #   "typer~=0.15.0",
 # ]
-# requires-python = "~=3.12"
+# requires-python = "~=3.11"
 # ///
 
 """Rclone wrapper for interactive and conditional backups."""

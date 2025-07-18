@@ -33,6 +33,7 @@ that peform convenience tasks. They can be installed with the repostiory's
 | ----------- | ---------------------------------------------- |
 | caffeinate  | Prevent system from sleeping during a program. |
 | clear-cache | Remove package manager caches.                 |
+| fdi         | Interactive Fd searcher.                       |
 | mlab        | Wrapper script for running Matlab as a CLI.    |
 | rgi         | Interactive Ripgrep searcher.                  |
 | trsync      | Rsync for one time remote connections.         |

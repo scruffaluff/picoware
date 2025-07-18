@@ -84,6 +84,7 @@ https://scruffaluff.github.io/scripts/install/scripts.ps1 for Windows.
 | ----------- | ---------------------------------------------- |
 | caffeinate  | Prevent system from sleeping during a program. |
 | clear-cache | Remove package manager caches.                 |
+| fdi         | Interactive Fd searcher.                       |
 | mlab        | Wrapper script for running Matlab as a CLI.    |
 | rgi         | Interactive Ripgrep searcher.                  |
 | trsync      | Rsync for one time remote connections.         |
