@@ -190,7 +190,13 @@ def main(
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
     version: Annotated[
         bool,
-        Option("--version", callback=print_version, help="Print version information"),
+        Option(
+            "-v",
+            "--version",
+            callback=print_version,
+            help="Print version information",
+            is_eager=True,
+        ),
     ] = False,
 ) -> None:
     """Rclone wrapper for interactive and conditional backups."""

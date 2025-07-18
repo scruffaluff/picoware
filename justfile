@@ -58,6 +58,10 @@ format:
   }
   uv tool run ruff format .
 
+# Initialize project.
+init: _setup && format
+  deno install
+
 # Run code analyses.
 [unix]
 lint:
