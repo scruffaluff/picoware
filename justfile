@@ -2,7 +2,7 @@
 #
 # For more information, visit https://just.systems.
 
-set windows-shell := ['powershell.exe', '-NoLogo', '-Command']
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 export PATH := if os() == "windows" {
   join(justfile_dir(), ".vendor\\bin;") + env("Path")
 } else {
@@ -58,10 +58,6 @@ format:
   }
   uv tool run ruff format .
 
-# Initialize project.
-init: _setup && format
-  deno install
-
 # Run code analyses.
 [unix]
 lint:
@@ -90,11 +86,8 @@ lint:
   uv tool run ruff check .
 
 # Install development dependencies.
-setup: _setup
-  deno install --frozen
-
 [unix]
-_setup:
+setup cfg="default":
   #!/usr/bin/env sh
   set -eu
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -149,9 +142,15 @@ _setup:
     chmod 755 .vendor/bin/shfmt
   fi
   echo "Shfmt $(shfmt --version)"
+  if [ '{{cfg}}' = 'init' ]; then
+    deno install
+  else
+    deno install --frozen
+  fi
 
+# Install development dependencies.
 [windows]
-_setup:
+setup cfg="default":
   #!powershell.exe
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue'
@@ -187,17 +186,23 @@ _setup:
   Get-PackageProvider -Force Nuget | Out-Null
   if (
     -not (Get-Module -ListAvailable -FullyQualifiedName `
-    @{ModuleName = "PSScriptAnalyzer"; ModuleVersion = "1.0.0" })
+    @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.0.0' })
   ) {
     Find-Module -MinimumVersion 1.0.0 -Name PSScriptAnalyzer | Save-Module `
       -Force -Path $ModulePath
   }
   if (
     -not (Get-Module -ListAvailable -FullyQualifiedName `
-    @{ModuleName = "Pester"; ModuleVersion = "5.0.0" })
+    @{ModuleName = 'Pester'; ModuleVersion = '5.0.0' })
   ) {
     Find-Module -MinimumVersion 5.0.0 -Name Pester | Save-Module -Force -Path `
       $ModulePath
+  }
+  if ('{{cfg}}' -eq 'init') {
+    deno install
+  }
+  else {
+    deno install --frozen
   }
 
 # Run test suites.

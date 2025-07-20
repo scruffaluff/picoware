@@ -1,11 +1,11 @@
 #!/usr/bin/env nu
 #
-# Extra convenience commands for Virsh and Libvirt.
+# Convenience commands for Virsh and QEMU.
 
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
     let home = get-home
-    let pub_key = open $"($home)/.virshx/key.pub"
+    let pub_key = open $"($home)/.vimu/key.pub"
     let content = $"
 #cloud-config
 
@@ -33,14 +33,14 @@ def create-app [domain: string] {
         "linux" => {
             $"
 [Desktop Entry]
-Exec=virshx start desktop ($domain)
-Icon=($home)/.virshx/waveform.svg
+Exec=vimu start desktop ($domain)
+Icon=($home)/.vimu/waveform.svg
 Name=($domain | str capitalize)
 Terminal=false
 Type=Application
 Version=1.0
 "
-        | save --force $"($home)/.local/share/applications/virshx_($domain).desktop"
+        | save --force $"($home)/.local/share/applications/vimu_($domain).desktop"
         }
     }
 }
@@ -136,12 +136,12 @@ def install-disk [name: string osinfo: string path: string extension: string] {
 }
 
 
-# Extra convenience commands for Virsh and Libvirt.
+# Convenience commands for Virsh and QEMU.
 def main [
-    --version (-v) # Print Virshx version string
+    --version (-v) # Print Vimu version string
 ] {
     if $version {
-        print "Virshx 0.0.2"
+        print "Vimu 0.0.2"
         exit 0
     }
 }
@@ -156,7 +156,7 @@ def "main create" [
 
     match $domain {
         "alpine" => {
-            let image = $"($home)/.virshx/alpine_amd64.qcow2"
+            let image = $"($home)/.vimu/alpine_amd64.qcow2"
             if not ($image | path exists) {
                 http get "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2"
                 | save --progress $image
@@ -164,7 +164,7 @@ def "main create" [
             main install --domain alpine --osinfo alpinelinux3.21 $image
         }
         "debian" => {
-            let image = $"($home)/.virshx/debian_amd64.qcow2"
+            let image = $"($home)/.vimu/debian_amd64.qcow2"
             if not ($image | path exists) {
                 http get "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
                 | save --progress $image
@@ -191,7 +191,7 @@ def "main install" [
     }
 
     let path = if ($uri | str starts-with "https://") {
-        let image = $"($home)/.virshx/($uri | path basename)"
+        let image = $"($home)/.vimu/($uri | path basename)"
         http get $uri | save --progress $image
         $image
     } else {
@@ -235,7 +235,7 @@ def "main remove" [
 
     (
         rm --force 
-        $"($home)/.local/share/applications/virshx_($domain).desktop"
+        $"($home)/.local/share/applications/vimu_($domain).desktop"
         $"($home)/.local/share/libvirt/cdroms/($domain).iso"
     )
 }
@@ -368,18 +368,18 @@ def "main setup host" [] {
     let home = get-home
     (
         mkdir
-        $"($home)/.virshx"
+        $"($home)/.vimu"
         $"($home)/.local/share/libvirt/cdroms"
         $"($home)/.local/share/libvirt/images"
     )
 
     http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/waveform.svg
-    | save --force $"($home)/.virshx/waveform.svg"
+    | save --force $"($home)/.vimu/waveform.svg"
 
-    if not ($"($home)/.virshx/key" | path exists) {
-        ssh-keygen -N '' -q -f $"($home)/.virshx/key" -t ed25519 -C virshx
+    if not ($"($home)/.vimu/key" | path exists) {
+        ssh-keygen -N '' -q -f $"($home)/.vimu/key" -t ed25519 -C vimu
         if $nu.os-info.name != "windows" {
-            chmod 600 $"($home)/.virshx/key" $"($home)/.virshx/key.pub"
+            chmod 600 $"($home)/.vimu/key" $"($home)/.vimu/key.pub"
         }
     }
 }
@@ -393,10 +393,10 @@ def "main setup port" [
     # Setup Android debug port.
     virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::4444-:5555"
 
-    print $"You can now SSH login to ($domain) with command 'ssh -i ~/.virshx/key -p 2022 localhost'."
+    print $"You can now SSH login to ($domain) with command 'ssh -i ~/.vimu/key -p 2022 localhost'."
 }
 
-# Upload Virshx to guest machine.
+# Upload Vimu to guest machine.
 def "main setup upload" [
     domain: string # Virtual machine name
 ] {
@@ -410,13 +410,13 @@ def "main setup upload" [
     (
         curl --fail --location 
         --show-error https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"($home)/.virshx/key" -p 2022 localhost sh -s -- --global
+        | tssh -i $"($home)/.vimu/key" -p 2022 localhost sh -s -- --global
     )
-    # Copy Virshx to remote machine and install with super command.
-    tscp -i $"($home)/.virshx/key" -P 2022 $script localhost:/tmp/virshx
+    # Copy Vimu to remote machine and install with super command.
+    tscp -i $"($home)/.vimu/key" -P 2022 $script localhost:/tmp/vimu
     (
-        tssh -i $"($home)/.virshx/key" -p 2022 localhost sudo install
-        /tmp/virshx /usr/local/bin/virshx
+        tssh -i $"($home)/.vimu/key" -p 2022 localhost sudo install
+        /tmp/vimu /usr/local/bin/vimu
     )
 }
 
