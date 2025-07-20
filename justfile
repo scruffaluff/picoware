@@ -87,7 +87,7 @@ lint:
 
 # Install development dependencies.
 [unix]
-setup cfg="default":
+setup:
   #!/usr/bin/env sh
   set -eu
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -142,7 +142,7 @@ setup cfg="default":
     chmod 755 .vendor/bin/shfmt
   fi
   echo "Shfmt $(shfmt --version)"
-  if [ '{{cfg}}' = 'init' ]; then
+  if [ "${JUST_INIT:-}" = 'init' ]; then
     deno install
   else
     deno install --frozen
@@ -150,7 +150,7 @@ setup cfg="default":
 
 # Install development dependencies.
 [windows]
-setup cfg="default":
+setup:
   #!powershell.exe
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue'
@@ -198,7 +198,7 @@ setup cfg="default":
     Find-Module -MinimumVersion 5.0.0 -Name Pester | Save-Module -Force -Path `
       $ModulePath
   }
-  if ('{{cfg}}' -eq 'init') {
+  if ("$Env:JUST_INIT" -eq 'init') {
     deno install
   }
   else {
