@@ -142,7 +142,7 @@ setup:
     chmod 755 .vendor/bin/shfmt
   fi
   echo "Shfmt $(shfmt --version)"
-  if [ "${JUST_INIT:-}" = 'init' ]; then
+  if [ -n "${JUST_INIT:-}" ]; then
     deno install
   else
     deno install --frozen
@@ -198,7 +198,7 @@ setup:
     Find-Module -MinimumVersion 5.0.0 -Name Pester | Save-Module -Force -Path `
       $ModulePath
   }
-  if ("$Env:JUST_INIT" -eq 'init') {
+  if ("$Env:JUST_INIT") {
     deno install
   }
   else {
