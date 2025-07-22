@@ -58,6 +58,16 @@ format:
   }
   uv tool run ruff format .
 
+# Install project programs.
+[unix]
+install *args:
+  src/install/scripts.sh {{args}}
+
+# Install project programs.
+[windows]
+install *args:
+  src/install/scripts.ps1 {{args}}
+
 # Run code analyses.
 [unix]
 lint:
