@@ -171,7 +171,7 @@ find_jq() {
 # Find all scripts inside GitHub repository.
 # Arguments:
 #   Scripts version.
-# Returns:
+# Outputs:
 #   Array of script names.
 #######################################
 find_scripts() {
@@ -182,7 +182,6 @@ find_scripts() {
   jq_bin="$(find_jq)"
   response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
-
 }
 
 #######################################

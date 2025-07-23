@@ -52,6 +52,28 @@ capitalize() {
 }
 
 #######################################
+# Create application entry point script.
+# Arguments:
+#   Super user command for installation.
+#   Application script name.
+#   Runner folder path.
+#   Entry point file path.
+#######################################
+create_entry() {
+  local folder="${3}" script="${2}" super="${1}" path="${4}"
+
+  cat << EOF | ${super:+"${super}"} tee "${path}" > /dev/null
+#!/usr/bin/env sh
+set -eu
+
+export PATH="${folder}:\${PATH}"
+exec "\$(dirname "\${0}")/$(basename "${script}")"
+EOF
+  ${super:+"${super}"} chmod +x "${path}"
+}
+
+
+#######################################
 # Perform network request.
 #######################################
 fetch() {
@@ -155,7 +177,7 @@ fetch_app() {
 # Find all apps inside GitHub repository.
 # Arguments:
 #   Scripts version.
-# Returns:
+# Outputs:
 #   Array of app names.
 #######################################
 find_apps() {
@@ -195,6 +217,47 @@ find_jq() {
 }
 
 #######################################
+# Find application runner.
+# Arguments:
+#   Super user command.
+#   Scripts filename.
+# Outputs:
+#   Application runner path.
+#######################################
+find_runner() {
+  local script="${2}" super="${1}"
+  local runner=''
+
+  if [ "${script##*.}" = 'nu' ]; then
+    runner="$(command -v nu)"
+    if [ ! -x "${runner}" ]; then
+      fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s \
+        -- ${super:+--global} --preserve-env --quiet
+      runner="$(command -v nu)"
+    fi
+  elif [ "${script##*.}" = 'py' ]; then
+    runner="$(command -v uv)"
+    if [ ! -x "${runner}" ]; then
+      fetch https://scruffaluff.github.io/scripts/install/uv.sh | sh -s -- \
+        ${super:+--global} --preserve-env --quiet
+      runner="$(command -v uv)"
+    fi
+  elif [ "${script##*.}" = 'ts' ]; then
+    runner="$(command -v deno)"
+    if [ ! -x "${runner}" ]; then
+      fetch https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- \
+        ${super:+--global} --preserve-env --quiet
+      runner="$(command -v deno)"
+    fi
+  else
+    log --stderr "error: Unable to find an application runner for ${script}."
+    exit 1
+  fi
+
+  echo "${runner}"
+}
+
+#######################################
 # Find command to elevate as super user.
 # Outputs:
 #   Super user command.
@@ -226,27 +289,32 @@ find_super() {
 #######################################
 install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
-  local title=''
+  local runner='' script='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
   local icon_url="${url}/data/public/favicon.svg"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
     dest="/usr/local/app/${name}"
+    entry_point="${dest}/index.sh"
     manifest="/usr/local/share/applications/${3}.desktop"
     icon="/usr/local/apps/${name}/icon.svg"
   else
     dest="${HOME}/.local/app/${name}"
+    entry_point="${dest}/index.sh"
     manifest="${HOME}/.local/share/applications/${3}.desktop"
     icon="${HOME}/.local/apps/${name}/icon.svg"
   fi
 
   log "Installing app ${title}."
-  entrypoint="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
+  runner="$(find_runner "${super}" "${script}")"
+  create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
+
   cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 [Desktop Entry]
-Exec=${entrypoint}
+Exec=${entry_point}
 Icon=${icon}
 Name=${title}
 Terminal=false
@@ -266,23 +334,27 @@ install_app_macos() {
   local name="${3}" super="${1}" version="${2}"
   local identifier='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/public/favicon.svg"
+  local icon_url="${url}/data/public/favicon.png"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
     dest="/Applications/${title}.app/Contents/MacOS"
-    icon="/Applications/${title}.app/Contents/Resources/icon.svg"
+    entry_point="${dest}/index.sh"
+    icon="/Applications/${title}.app/Contents/Resources/icon.png"
     manifest="/Applications/${title}.app/Contents/Info.plist"
   else
     dest="${HOME}/Applications/${title}.app/Contents/MacOS"
+    entry_point="${dest}/index.sh"
     icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.png"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
 
   log "Installing app ${title}."
-  entrypoint="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
+  runner="$(find_runner "${super}" "${script}")"
+  create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
 
   cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 <?xml version="1.0" encoding="UTF-8"?>
@@ -294,7 +366,7 @@ install_app_macos() {
 	<key>CFBundleDisplayName</key>
 	<string>${title}</string>
 	<key>CFBundleExecutable</key>
-	<string>$(basename "${entrypoint}")</string>
+	<string>index.sh</string>
   <key>CFBundleIconFile</key>
   <string>icon</string>
 	<key>CFBundleIdentifier</key>
@@ -320,6 +392,7 @@ install_app_macos() {
 </dict>
 </plist>
 EOF
+  log "Installed ${title}."
 }
 
 #######################################
