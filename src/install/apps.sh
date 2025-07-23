@@ -291,24 +291,22 @@ install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
   local runner='' script='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/public/favicon.svg"
+  local icon_url="${url}/data/public/pwa-maskable-512x512.png"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
     dest="/usr/local/app/${name}"
-    entry_point="${dest}/index.sh"
     manifest="/usr/local/share/applications/${3}.desktop"
-    icon="/usr/local/apps/${name}/icon.svg"
   else
     dest="${HOME}/.local/app/${name}"
-    entry_point="${dest}/index.sh"
     manifest="${HOME}/.local/share/applications/${3}.desktop"
-    icon="${HOME}/.local/apps/${name}/icon.svg"
   fi
+  entry_point="${dest}/index.sh"
+  icon="${dest}/icon.png"
 
   log "Installing app ${title}."
-  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
+  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
 
@@ -334,25 +332,24 @@ install_app_macos() {
   local name="${3}" super="${1}" version="${2}"
   local identifier='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/public/favicon.png"
+  local icon_url="${url}/data/public/pwa-maskable-512x512.png"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
     dest="/Applications/${title}.app/Contents/MacOS"
-    entry_point="${dest}/index.sh"
     icon="/Applications/${title}.app/Contents/Resources/icon.png"
     manifest="/Applications/${title}.app/Contents/Info.plist"
   else
     dest="${HOME}/Applications/${title}.app/Contents/MacOS"
-    entry_point="${dest}/index.sh"
     icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.png"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
+  entry_point="${dest}/index.sh"
 
   log "Installing app ${title}."
-  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
+  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
 
