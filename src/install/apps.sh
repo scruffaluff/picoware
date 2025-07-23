@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install apps for MacOS and Linux systems.
+# Install Scripts apps for MacOS and Linux systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Installer script for Scripts apps.
 
-Usage: install-apps [OPTIONS] [SCRIPTS]...
+Usage: install-apps [OPTIONS] [APPS]...
 
 Options:
       --debug               Show shell debug traces
@@ -71,7 +71,6 @@ exec "\$(dirname "\${0}")/$(basename "${script}")"
 EOF
   ${super:+"${super}"} chmod +x "${path}"
 }
-
 
 #######################################
 # Perform network request.
@@ -147,7 +146,7 @@ fetch() {
 fetch_app() {
   local dest="${4}" name="${3}" super="${1}" version="${2}"
   local filter=".tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/app/${name}\")) | ltrimstr(\"src/app/${name}/\")"
-  local entrypoint='' jq_bin='' response=''
+  local jq_bin='' response='' script=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}/src/app/${name}"
 
   jq_bin="$(find_jq)"
@@ -159,7 +158,7 @@ fetch_app() {
     case "${file##*.}" in
       py | rs | ts)
         if [ "${file%.*}" = 'index' ]; then
-          entrypoint="${dest}/${file}"
+          script="${dest}/${file}"
         fi
         fetch --dest "${dest}/${file}" --mode 755 --super "${super}" \
           "${url}/${file}"
@@ -170,11 +169,11 @@ fetch_app() {
     esac
   done
 
-  echo "${entrypoint}"
+  echo "${script}"
 }
 
 #######################################
-# Find all apps inside GitHub repository.
+# Find all apps inside repository.
 # Arguments:
 #   Scripts version.
 # Outputs:
@@ -306,7 +305,7 @@ install_app_linux() {
 
   log "Installing app ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
-  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
 
@@ -501,7 +500,8 @@ main() {
       installer='install_app_linux'
       ;;
     *)
-      error "Operating system ${os} is not supported"
+      log --stderr "error: Operating system ${os} is not supported"
+      exit 1
       ;;
   esac
 
