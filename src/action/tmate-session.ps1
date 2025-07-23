@@ -42,7 +42,7 @@ function Version() {
     Write-Output 'SetupTmate 0.4.1'
 }
 
-# Script entrypoint.
+# Script entry point.
 function Main() {
     $ArgIdx = 0
 

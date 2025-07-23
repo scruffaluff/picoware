@@ -12,7 +12,7 @@ set -eu
 #######################################
 # Show CLI help information.
 # Outputs:
-#   Writes help information to stdout.
+#   Writes help information to standard output.
 #######################################
 usage() {
   cat 1>&2 << EOF
@@ -132,17 +132,18 @@ fetch_app() {
   response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
   files="$(echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}")"
 
-  mkdir -p "${dest}"
+  ${super:+"${super}"} mkdir -p "${dest}"
   for file in ${files}; do
     case "${file##*.}" in
       py | rs | ts)
         if [ "${file%.*}" = 'index' ]; then
           entrypoint="${dest}/${file}"
         fi
-        fetch --dest "${dest}/${file}" --mode 755 "${url}/${file}"
+        fetch --dest "${dest}/${file}" --mode 755 --super "${super}" \
+          "${url}/${file}"
         ;;
       *)
-        fetch --dest "${dest}/${file}" "${url}/${file}"
+        fetch --dest "${dest}/${file}" --super "${super}" "${url}/${file}"
         ;;
     esac
   done
@@ -219,82 +220,71 @@ find_super() {
 #######################################
 # Install application for Linux.
 # Arguments:
-#   Super user command for installation
-#   App URL prefix
-#   App name
-# Globals:
-#   DENO_APPS_NOLOG
-# Outputs:
-#   Log message to stdout.
+#   Super user command for installation.
+#   Repository version branch.
+#   App name.
 #######################################
 install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
   local title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
   local icon_url="${url}/data/public/favicon.svg"
-  title=$(capitalize "${name}")
+  title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
-    manifest_path="/usr/local/share/applications/${3}.desktop"
-    icon_path="/usr/local/apps/${name}/icon.png"
+    dest="/usr/local/app/${name}"
+    manifest="/usr/local/share/applications/${3}.desktop"
+    icon="/usr/local/apps/${name}/icon.svg"
   else
-    manifest_path="${HOME}/.local/share/applications/${3}.desktop"
-    icon_path="${HOME}/.local/apps/${name}/icon.png"
+    dest="${HOME}/.local/app/${name}"
+    manifest="${HOME}/.local/share/applications/${3}.desktop"
+    icon="${HOME}/.local/apps/${name}/icon.svg"
   fi
 
-  log "Installing app ${name}."
-  entrypoint="$(fetch_app "${super}" "${2}" "${name}" "${HOME}/.local/app/${name}")"
-  fetch --dest "${icon_path}" --super "${super}" "${icon_url}"
-  cat << EOF | ${super:+"${super}"} tee "${manifest_path}" > /dev/null
+  log "Installing app ${title}."
+  entrypoint="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  fetch --dest "${icon}" --super "${super}" "${icon_url}"
+  cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 [Desktop Entry]
 Exec=${entrypoint}
-Icon=${icon_path}
+Icon=${icon}
 Name=${title}
 Terminal=false
 Type=Application
 EOF
-  log "Installed $(capitalize "${name}")."
+  log "Installed ${title}."
 }
 
 #######################################
 # Install application for MacOS.
 # Arguments:
-#   Super user command for installation
-#   App URL prefix
-#   App name
-# Globals:
-#   DENO_APPS_NOLOG
-# Outputs:
-#   Log message to stdout.
+#   Super user command for installation.
+#   Repository version branch.
+#   App name.
 #######################################
 install_app_macos() {
-  backend_url="${2}/src/${3}/index.ts"
-  frontend_url="${2}/src/${3}/index.html"
-  icon_url="${2}/assets/icon.png"
-  name="${3}"
-  super="${1}"
+  local name="${3}" super="${1}" version="${2}"
+  local identifier='' title=''
+  local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
+  local icon_url="${url}/data/public/favicon.svg"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
-  title=$(capitalize "${name}")
+  title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
-    backend_path="/Applications/${title}.app/Contents/MacOS/index.ts"
-    entrypoint_path="/Applications/${title}.app/Contents/MacOS/index.sh"
-    icon_path="/Applications/${title}.app/Contents/Resources/icon.png"
-    manifest_path="/Applications/${title}.app/Contents/Info.plist"
+    dest="/Applications/${title}.app/Contents/MacOS"
+    icon="/Applications/${title}.app/Contents/Resources/icon.svg"
+    manifest="/Applications/${title}.app/Contents/Info.plist"
   else
-    backend_path="${HOME}/Applications/${title}.app/Contents/MacOS/index.ts"
-    entrypoint_path="${HOME}/Applications/${title}.app/Contents/MacOS/index.sh"
-    icon_path="${HOME}/Applications/${title}.app/Contents/Resources/icon.png"
-    manifest_path="${HOME}/Applications/${title}.app/Contents/Info.plist"
+    dest="${HOME}/Applications/${title}.app/Contents/MacOS"
+    icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.png"
+    manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
 
-  deno_folder="$(find_deno "${super}")"
-  fetch "${super}" "${backend_url}" "${backend_path}" 755
-  fetch "${super}" "${frontend_url}" "${frontend_path}"
-  fetch "${super}" "${icon_url}" "${icon_path}"
-  create_entrypoint "${super}" "${deno_folder}" "${entrypoint_path}"
+  log "Installing app ${title}."
+  entrypoint="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  fetch --dest "${icon}" --super "${super}" "${icon_url}"
 
-  cat << EOF | ${super:+"${super}"} tee "${manifest_path}" > /dev/null
+  cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -304,7 +294,7 @@ install_app_macos() {
 	<key>CFBundleDisplayName</key>
 	<string>${title}</string>
 	<key>CFBundleExecutable</key>
-	<string>index.sh</string>
+	<string>$(basename "${entrypoint}")</string>
   <key>CFBundleIconFile</key>
   <string>icon</string>
 	<key>CFBundleIdentifier</key>
@@ -372,7 +362,7 @@ log() {
 }
 
 #######################################
-# Script entrypoint.
+# Script entry point.
 #######################################
 main() {
   local global_='' names='' super='' version='main'

@@ -28,7 +28,7 @@ function Version() {
     Write-Output 'ClearCache 0.3.0'
 }
 
-# Script entrypoint.
+# Script entry point.
 function Main() {
     $ArgIdx = 0
 
