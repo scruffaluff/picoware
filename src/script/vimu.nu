@@ -70,22 +70,75 @@ def connect [
     }
 }
 
-# Create application bundle or desktop entry.
+# Create application desktop entry.
 def create-app [domain: string] {
     let home = get-home
+    let icon = $"($home)/.vimu/icon.svg"
+    let title = $domain | str capitalize
 
     match $nu.os-info.name {
         "linux" => {
-            $"
+            let dest = $"($home)/.local/share/applications"
+            mkdir $dest
+            (
+                $"
 [Desktop Entry]
-Exec=vimu start desktop ($domain)
-Icon=($home)/.vimu/waveform.svg
-Name=($domain | str capitalize)
+Exec=vimu view ($domain)
+Icon=($icon)
+Name=($title)
 Terminal=false
 Type=Application
 Version=1.0
 "
-        | save --force $"($home)/.local/share/applications/vimu_($domain).desktop"
+                | str trim --left
+                | save --force $"($dest)/vimu_($domain).desktop"
+            )
+        }
+        "macos" => {
+            let dest = $"($home)/Applications/vimu_($domain).app/Contents"
+            mkdir $"($dest)/MacOS" $"($dest)/Resources"
+            cp $"($home)/.vimu/icon.svg" $"($dest)/Resources/icon.svg"
+
+            (
+                $"
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>English</string>
+  <key>CFBundleDisplayName</key>
+  <string>($title)</string>
+  <key>CFBundleExecutable</key>
+  <string>vimu view ($domain)</string>
+  <key>CFBundleIconFile</key>
+  <string>icon</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.scruffaluff.vimu-$(domain)</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>($domain)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>0.1.0</string>
+  <key>CSResourcesFileMapped</key>
+  <true/>
+  <key>LSMinimumSystemVersion</key>
+  <string>10.13</string>
+  <key>LSRequiresCarbon</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>
+"
+                | str trim
+                | save $"($dest)/Info.plist"
+            )
         }
     }
 }
@@ -179,6 +232,32 @@ def install-disk [name: string osinfo: string path: string extension: string] {
     )
 }
 
+# Create a Windows virtual machine from an ISO disk.
+def install-windows [domain: string path: string] {
+    let home = get-home
+    let params = match $nu.os-info.name {
+        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "macos" => [--graphics vnc]
+        _ => [--cpu host-model --graphics vnc]
+    }
+    let cdrom = $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+    cp $path $cdrom
+
+    (
+        virt-install
+        --arch $nu.os-info.arch
+        --cdrom $cdrom
+        --disk bus=virtio,format=qcow2,size=64
+        --disk $"bus=sata,device=cdrom,path=($home)/.vimu/winvirt_drivers.iso"
+        --memory 8192
+        --name $domain
+        --osinfo win11
+        --tpm model=tpm-tis,backend.type=emulator,backend.version=2.0
+        --vcpus 4
+        ...$params
+    )
+}
+
 # Convenience commands for Virsh and QEMU.
 def --wrapped main [
     --version (-v) # Print version information
@@ -227,6 +306,7 @@ def "main create" [
     let home = get-home
     main setup host
 
+    # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
             let image = $"($home)/.vimu/alpine_($arch).qcow2"
@@ -238,6 +318,18 @@ def "main create" [
             (
                 main install --domain alpine --log-level $log_level
                 --osinfo alpinelinux3.21 $image
+            )
+        }
+        "arch" => {
+            let image = $"($home)/.vimu/arch_amd64.qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Arch image."
+                http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
+                | save --progress $image
+            }
+            (
+                main install --domain arch --log-level $log_level
+                --osinfo archlinux $image
             )
         }
         "debian" => {
@@ -275,24 +367,32 @@ def "main install" [
 
     let path = if ($uri | str starts-with "https://") {
         let image = $"($home)/.vimu/($uri | path basename)"
+        log info $"Downloading image from ($uri)."
         http get $uri | save --progress $image
         $image
     } else {
         $uri
     }
 
-    let extension = $path | path parse | get extension
+    let parts = $path | path parse
+    let extension = $parts | get extension
     match $extension {
-        "iso" => { install-cdrom $domain $osinfo $path }
+        "iso" => {
+            create-app $domain
+            if ($parts | get stem | str downcase | str contains "windows") {
+                install-windows $domain $path
+            } else 
+                install-cdrom $domain $osinfo $path
+            }
+        }
         "img" | "qcow2" | "raw" | "vmdk" => {
+            create-app $domain
             install-disk $domain $osinfo $path $extension
         }
         _ => {
             error make { msg: $"Unsupported extension '$extension'." }
         }
     }
-
-    create-app $domain
 }
 
 # Delete virtual machine and its disk images.
@@ -308,7 +408,7 @@ def "main remove" [
         virsh destroy $domain
     }
 
-    # Detele domain snapshots and then domain itself.
+    # Delete domain snapshots and then domain itself.
     if (virsh list --all --name | str contains $domain) {
         for snapshot in (
             virsh snapshot-list --name --domain $domain | split words
@@ -318,11 +418,22 @@ def "main remove" [
         virsh undefine --nvram --remove-all-storage $domain
     }
 
-    (
-        rm --force 
-        $"($home)/.local/share/applications/vimu_($domain).desktop"
-        $"($home)/.local/share/libvirt/cdroms/($domain).iso"
-    )
+    match $nu.os-info.name {
+        "linux" => {
+            (
+                rm --force --recursive
+                $"($home)/.local/share/applications/vimu_($domain).desktop"
+                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+            )
+        }
+        "macos" => {
+            (
+                rm --force --recursive
+                $"($home)/Applications/vimu_($domain).app"
+                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+            )
+        }
+    }
 }
 
 # Configure machine for emulation.
@@ -463,7 +574,7 @@ def "main setup host" [] {
     )
 
     http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/waveform.svg
-    | save --force $"($home)/.vimu/waveform.svg"
+    | save --force $"($home)/.vimu/icon.svg"
 
     if not ($"($home)/.vimu/key" | path exists) {
         ssh-keygen -N '' -q -f $"($home)/.vimu/key" -t ed25519 -C vimu
