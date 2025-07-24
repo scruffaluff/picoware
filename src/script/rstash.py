@@ -26,7 +26,7 @@ from typer import Option, Typer
 import yaml
 
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 cli = Typer(
     add_completion=False,
@@ -39,6 +39,7 @@ cli = Typer(
 os.environ["RCLONE_COPY_LINKS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
+os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
 
 # Shared state to hold global application flags.
 state: dict[str, Any] = {"config": None, "dry_run": False}

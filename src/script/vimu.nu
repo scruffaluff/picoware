@@ -185,7 +185,7 @@ def --wrapped main [
     ...$args: string # Virsh arguments
 ] {
     if $version {
-        print "Vimu 0.0.2"
+        print "Vimu 0.0.3"
     } else if ("-h" in $args) or ("--help" in $args) {
         (
             print
