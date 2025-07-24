@@ -154,17 +154,49 @@ Options:
   -v, --version     Print version information
 
 Subcommands:
+  connect     Connect to virtual machine.
   create      Create virutal machine from default options
   install     Create a virtual machine from a cdrom or disk file
   remove      Delete virtual machine and its disk images
   setup       Configure machine for emulation
-  start   Run and connect to virtual machine
 
 Virsh Options:"
         )
         virsh --help
     } else {
         virsh ...$args
+    }
+}
+
+# Connect to virtual machine.
+def "main connect" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    type: string # Connection type (console, desktop, ssh)
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+
+    match $type {
+        "console" => { virsh console $domain }
+        "desktop" => { virt-viewer $domain }
+        "ssh" => {
+            let home = get-home
+            let port = port
+            (
+                virsh qemu-monitor-command --domain $domain
+                --hmp $"hostfwd_add tcp::($port)-:22"
+            )
+            tssh -i $"($home)/.vimu/key" -p $port localhost
+            
+        }
+        _ => { 
+            print --stderr $"Invalid connection type '($type)'."
+            exit 2
+        }
     }
 }
 
@@ -183,10 +215,13 @@ def "main create" [
             let image = $"($home)/.vimu/alpine_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2"
+                http get "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.1-x86_64-uefi-cloudinit-r0.qcow2"
                 | save --progress $image
             }
-            main install --domain alpine --osinfo alpinelinux3.21 $image
+            (
+                main install --domain alpine --log-level $log_level
+                --osinfo alpinelinux3.21 $image
+            )
         }
         "debian" => {
             let image = $"($home)/.vimu/debian_amd64.qcow2"
@@ -195,7 +230,10 @@ def "main create" [
                 http get "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
                 | save --progress $image
             }
-            main install --domain debian --osinfo debian12 $image
+            (
+                main install --domain debian --log-level $log_level
+                --osinfo debian12 $image
+            )
         }
         _ => { error make { msg: $"Domain '($domain)' is not supported." } }
     }
@@ -204,9 +242,11 @@ def "main create" [
 # Create a virtual machine from a cdrom or disk file.
 def "main install" [
     --domain (-d): string # Virtual machine name
+    --log-level (-l): string = "debug" # Log level
     --osinfo (-o): string = "generic" # Virt-install osinfo
     uri: string # Machine image URL or file path
 ] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     main setup host
     let home = get-home
 
@@ -240,8 +280,10 @@ def "main install" [
 
 # Delete virtual machine and its disk images.
 def "main remove" [
+    --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     let home = get-home
 
     # Stop domain if running.
@@ -267,7 +309,11 @@ def "main remove" [
 }
 
 # Configure machine for emulation.
-def "main setup" [] {}
+def "main setup" [
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+}
 
 # Configure desktop environment on guest filesystem.
 def "main setup desktop" [] {
@@ -418,8 +464,6 @@ def "main setup port" [
     virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::2022-:22"
     # Setup Android debug port.
     virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::4444-:5555"
-
-    print $"You can now SSH login to ($domain) with command 'ssh -i ~/.vimu/key -p 2022 localhost'."
 }
 
 # Upload Vimu to guest machine.
@@ -444,28 +488,4 @@ def "main setup upload" [
         tssh -i $"($home)/.vimu/key" -p 2022 localhost sudo install
         /tmp/vimu /usr/local/bin/vimu
     )
-}
-
-# Run virtual machine and connect to its console.
-def "main start console" [
-    domain: string # Virtual machine name
-] {
-  virsh start $domain
-  main setup port $domain
-  virsh console $domain
-}
-
-# Run virtual machine as a desktop application.
-def "main start desktop" [
-    domain: string # Virtual machine name
-] {
-  virsh start $domain
-  main setup port $domain
-  virt-viewer $domain
-}
-
-# Run virtual machine ine with QEMU commands.
-def "main start qemu" [
-    domain: string # Virtual machine name
-] {
 }
