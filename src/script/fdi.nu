@@ -6,8 +6,9 @@ def --wrapped main [
     ...args: string # Fd arguments.
 ] {
     if ("-h" in $args) or ("--help" in $args) {
-        print "
-Interactive Fd searcher.
+        (
+            print
+"Interactive Fd searcher.
 
 Usage: fdi [OPTIONS]
 
@@ -18,6 +19,7 @@ Options:
 
 Fd Options:
 "
+        )
         fd --help
         exit 0
     } else if ("-v" in $args) or ("--version" in $args) {

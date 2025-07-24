@@ -135,22 +135,46 @@ def install-disk [name: string osinfo: string path: string extension: string] {
     )
 }
 
-
 # Convenience commands for Virsh and QEMU.
-def main [
-    --version (-v) # Print Vimu version string
+def --wrapped main [
+    --version (-v) # Print version information
+    ...$args: string # Virsh arguments
 ] {
     if $version {
         print "Vimu 0.0.2"
-        exit 0
+    } else if ("-h" in $args) or ("--help" in $args) {
+        (
+            print
+"Convenience commands for Virsh and QEMU.
+
+Usage: vimu [OPTIONS] <SUBCOMMAND>
+
+Options:
+  -h, --help        Print help information
+  -v, --version     Print version information
+
+Subcommands:
+  create      Create virutal machine from default options
+  install     Create a virtual machine from a cdrom or disk file
+  remove      Delete virtual machine and its disk images
+  setup       Configure machine for emulation
+  start   Run and connect to virtual machine
+
+Virsh Options:"
+        )
+        virsh --help
+    } else {
+        virsh ...$args
     }
 }
 
 # Create virutal machine from default options.
 def "main create" [
     --gui (-g) # Use GUI version of domain
+    --log-level (-l): string = "debug" # Log level
     domain: string@domain-choices # Virtual machine name
 ] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     let home = get-home
     main setup host
 
@@ -158,6 +182,7 @@ def "main create" [
         "alpine" => {
             let image = $"($home)/.vimu/alpine_amd64.qcow2"
             if not ($image | path exists) {
+                log info "Downloading Alpine image."
                 http get "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/cloud/nocloud_alpine-3.21.2-x86_64-uefi-cloudinit-r0.qcow2"
                 | save --progress $image
             }
@@ -166,6 +191,7 @@ def "main create" [
         "debian" => {
             let image = $"($home)/.vimu/debian_amd64.qcow2"
             if not ($image | path exists) {
+                log info "Downloading Debian image."
                 http get "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
                 | save --progress $image
             }
@@ -442,9 +468,4 @@ def "main start desktop" [
 def "main start qemu" [
     domain: string # Virtual machine name
 ] {
-}
-
-# Run Virsh command.
-def --wrapped "main v" [...$args: string] {
-    virsh ...$args
 }
