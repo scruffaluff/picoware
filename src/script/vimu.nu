@@ -126,8 +126,9 @@ def get-home [] {
 def install-cdrom [domain: string osinfo: string path: string] {
     let home = get-home
     let params = match $nu.os-info.name {
-        "linux" => [--virt-type kvm]
-        _ => []
+        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "macos" => [--graphics vnc]
+        _ => [--cpu host-model --graphics vnc]
     }
     let cdrom = $"($home)/.local/share/libvirt/cdroms/($domain).iso"
     cp $path $cdrom
@@ -136,9 +137,7 @@ def install-cdrom [domain: string osinfo: string path: string] {
         virt-install
         --arch $nu.os-info.arch
         --cdrom $cdrom
-        --cpu host
         --disk bus=virtio,format=qcow2,size=64
-        --graphics spice
         --memory 8192
         --name $domain
         --osinfo $osinfo
@@ -151,8 +150,9 @@ def install-cdrom [domain: string osinfo: string path: string] {
 def install-disk [name: string osinfo: string path: string extension: string] {
     let home = get-home
     let params = match $nu.os-info.name {
-        "linux" => [--virt-type kvm]
-        _ => []
+        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "macos" => [--graphics vnc]
+        _ => [--cpu host-model --graphics vnc]
     }
 
     print "Create user account for virtual machine."
@@ -170,9 +170,7 @@ def install-disk [name: string osinfo: string path: string extension: string] {
         virt-install
         --arch $nu.os-info.arch
         --cloud-init $"user-data=($user_data)"
-        --cpu host
         --disk $"($destpath),bus=virtio"
-        --graphics spice
         --memory 8192
         --name $name
         --osinfo $osinfo
@@ -222,15 +220,19 @@ def "main create" [
     domain: string@domain-choices # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
+    let arch = match $nu.os-info.arch {
+        "aarch64" => "arm64"
+        "x86_64" => "amd64"
+    }
     let home = get-home
     main setup host
 
     match $domain {
         "alpine" => {
-            let image = $"($home)/.vimu/alpine_amd64.qcow2"
+            let image = $"($home)/.vimu/alpine_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.1-x86_64-uefi-cloudinit-r0.qcow2"
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.1-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
                 | save --progress $image
             }
             (
@@ -239,10 +241,10 @@ def "main create" [
             )
         }
         "debian" => {
-            let image = $"($home)/.vimu/debian_amd64.qcow2"
+            let image = $"($home)/.vimu/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
-                http get "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+                http get $"https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-($arch).qcow2"
                 | save --progress $image
             }
             (
