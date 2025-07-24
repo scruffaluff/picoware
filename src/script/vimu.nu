@@ -2,6 +2,22 @@
 #
 # Convenience commands for Virsh and QEMU.
 
+use std/log
+
+def ask-password [] {
+    let password = input --suppress-output "Password: "
+    print ""
+    let confirm = input --suppress-output "Confirm password: "
+    print ""
+
+    if $password == $confirm {
+        $password
+    } else {
+        print --stderr "error: Passwords do not match."
+        ask-password
+    }
+}
+
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
     let home = get-home
@@ -23,6 +39,35 @@ users:
     let path = mktemp --tmpdir --suffix .yaml
     $content | save --force $path
     $path
+}
+
+# Connect to virtual machine.
+def connect [
+    start: bool # Start virtual machine if not running
+    type: string # Connection type (ssh, view)
+    domain: string # Virtual machine name
+] {
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+
+    match $type {
+        "ssh" => {
+            let home = get-home
+            let port = port
+            (
+                virsh qemu-monitor-command --domain $domain
+                --hmp $"hostfwd_add tcp::($port)-:22"
+            )
+            tssh -i $"($home)/.vimu/key" -p $port localhost
+            
+        }
+        "view" => { virt-viewer $domain }
+        _ => { 
+            print --stderr $"Invalid connection type '($type)'."
+            exit 2
+        }
+    }
 }
 
 # Create application bundle or desktop entry.
@@ -110,8 +155,9 @@ def install-disk [name: string osinfo: string path: string extension: string] {
         _ => []
     }
 
-    let username = input "username: "
-    let password = input --suppress-output "password: "
+    print "Create user account for virtual machine."
+    let username = input "Username: "
+    let password = ask-password
     let user_data = cloud-init $name $username $password
 
     let folder = $"($home)/.local/share/libvirt/images"
@@ -154,49 +200,18 @@ Options:
   -v, --version     Print version information
 
 Subcommands:
-  connect     Connect to virtual machine.
   create      Create virutal machine from default options
   install     Create a virtual machine from a cdrom or disk file
   remove      Delete virtual machine and its disk images
   setup       Configure machine for emulation
+  ssh         Connect to virtual machine with SSH
+  view        Connect to virtual machine as desktop
 
 Virsh Options:"
         )
         virsh --help
     } else {
         virsh ...$args
-    }
-}
-
-# Connect to virtual machine.
-def "main connect" [
-    --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
-    type: string # Connection type (console, desktop, ssh)
-    domain: string # Virtual machine name
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    if $start and not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-
-    match $type {
-        "console" => { virsh console $domain }
-        "desktop" => { virt-viewer $domain }
-        "ssh" => {
-            let home = get-home
-            let port = port
-            (
-                virsh qemu-monitor-command --domain $domain
-                --hmp $"hostfwd_add tcp::($port)-:22"
-            )
-            tssh -i $"($home)/.vimu/key" -p $port localhost
-            
-        }
-        _ => { 
-            print --stderr $"Invalid connection type '($type)'."
-            exit 2
-        }
     }
 }
 
@@ -488,4 +503,24 @@ def "main setup upload" [
         tssh -i $"($home)/.vimu/key" -p 2022 localhost sudo install
         /tmp/vimu /usr/local/bin/vimu
     )
+}
+
+# Connect to virtual machine with SSH.
+def "main ssh" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start ssh $domain
+}
+
+# Connect to virtual machine as desktop.
+def "main view" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start view $domain
 }
