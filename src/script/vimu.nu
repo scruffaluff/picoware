@@ -620,28 +620,28 @@ def "main ssh" [
 def "main upload" [
     domain: string # Virtual machine name
 ] {
-    const script = path self
-    let home = get-home
+    const vimu = path self
     if ((virsh domstate $domain | str trim) != "running") {
         virsh start $domain
     }
 
+    let key = $"(get-home)/.vimu/key"
     let port = port
     (
         virsh qemu-monitor-command --domain $domain
         --hmp $"hostfwd_add tcp::($port)-:22"
     )
 
-    # Install Nushell by piping Curl output remote shell.
-    (
-        curl --fail --location 
-        --show-error https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"($home)/.vimu/key" -p $port localhost sh -s -- --global
-    )
+    http get https://scruffaluff.github.io/scripts/install/nushell.sh
+    | tssh -i $key -p $port localhost sh -s -- --global
+
     # Copy Vimu to remote machine and install with super command.
-    tscp -i $"($home)/.vimu/key" -P $port $script localhost:/tmp/vimu
-    (
-        tssh -i $"($home)/.vimu/key" -p $port localhost sudo install
-        /tmp/vimu /usr/local/bin/vimu
-    )
+    tscp -i $key -P $port $vimu localhost:/tmp/vimu
+    tssh -i $key -p $port localhost "
+if [ -x \"$(command -v doas)\" ]; then
+    doas install /tmp/vimu /usr/local/bin/vimu
+else
+    sudo install /tmp/vimu /usr/local/bin/vimu
+fi
+"
 }
