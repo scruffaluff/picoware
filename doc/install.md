@@ -90,6 +90,7 @@ https://scruffaluff.github.io/scripts/install/scripts.ps1 for Windows.
 | trsync      | Rsync for one time remote connections.         |
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
+| vimu        | Convenience script for QEMU and Virsh.         |
 
 The following command will install the clear-cache and rgi scripts. Other
 scripts can be installed by replacing the program names.

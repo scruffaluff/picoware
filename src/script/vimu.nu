@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 #
-# Convenience commands for Virsh and QEMU.
+# Convenience script for QEMU and Virsh.
 
 use std/log
 
@@ -173,7 +173,9 @@ def get-home [] {
 }
 
 # Create a virtual machine from an ISO disk.
-def install-cdrom [domain: string osinfo: string path: string] {
+def --wrapped install-cdrom [
+    domain: string osinfo: string path: string ...args: string
+] {
     let home = get-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
@@ -193,11 +195,14 @@ def install-cdrom [domain: string osinfo: string path: string] {
         --osinfo $osinfo
         --vcpus 4
         ...$params
+        ...$args
     )
 }
 
 # Create a virtual machine from a qcow2 disk.
-def install-disk [name: string osinfo: string path: string extension: string] {
+def --wrapped install-disk [
+    name: string osinfo: string path: string extension: string ...args: string
+] {
     let home = get-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
@@ -206,8 +211,8 @@ def install-disk [name: string osinfo: string path: string extension: string] {
     }
 
     print "Create user account for virtual machine."
-    let username = input "Username: "
-    let password = ask-password
+    let username = $env.VIMU_USERNAME? | default { input "Username: " }
+    let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $name $username $password
 
     let folder = $"($home)/.local/share/libvirt/images"
@@ -226,26 +231,25 @@ def install-disk [name: string osinfo: string path: string extension: string] {
         --osinfo $osinfo
         --vcpus 4
         ...$params
+        ...$args
     )
 }
 
 # Create a Windows virtual machine from an ISO disk.
-def install-windows [domain: string path: string] {
+def install-windows [domain: string cdrom: string drivers: string] {
     let home = get-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
         _ => [--cpu host-model --graphics vnc]
     }
-    let cdrom = $"($home)/.local/share/libvirt/cdroms/($domain).iso"
-    cp $path $cdrom
 
     (
         virt-install
-        --arch $nu.os-info.arch
+        --arch x86_64
         --cdrom $cdrom
         --disk bus=virtio,format=qcow2,size=64
-        --disk $"bus=sata,device=cdrom,path=($home)/.vimu/winvirt_drivers.iso"
+        --disk $"bus=sata,device=cdrom,path=($drivers)"
         --memory 8192
         --name $domain
         --osinfo win11
@@ -255,7 +259,7 @@ def install-windows [domain: string path: string] {
     )
 }
 
-# Convenience commands for Virsh and QEMU.
+# Convenience script for QEMU and Virsh.
 def --wrapped main [
     --version (-v) # Print version information
     ...$args: string # Virsh arguments
@@ -265,7 +269,7 @@ def --wrapped main [
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
-"Convenience commands for Virsh and QEMU.
+"Convenience script for QEMU and Virsh.
 
 Usage: vimu [OPTIONS] <SUBCOMMAND>
 
@@ -328,7 +332,7 @@ def "main create" [
                 | save --progress $image
             }
             (
-                main install --domain arch --log-level $log_level
+                main install --arch x86_64 --domain arch --log-level $log_level
                 --osinfo archlinux $image
             )
         }
@@ -352,9 +356,27 @@ def "main create" [
                 | save --progress $image
             }
             (
-                main install --domain freebsd --log-level $log_level
-                --osinfo freebsd14.2 $image
+                main install --arch x86_64 --domain freebsd
+                --log-level $log_level --osinfo freebsd14.2 $image
             )
+        }
+        "windows" => {
+            let cdrom = $"($home)/.vimu/window_amd64.iso"
+            let drivers = $"($home)/.vimu/winvirt_drivers.iso"
+
+            if not ($cdrom | path exists) {
+                print --stderr $"Windows ISO not found at ($cdrom)."
+                print --stderr $"Download the ISO manually and try again."
+                exit 1
+            }
+            if not ($drivers | path exists) {
+                log info "Downloading Windows drivers."
+                http get "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+                | save --progress $drivers
+            }
+
+            create-app "windows"
+            install-windows windows $cdrom $drivers
         }
         _ => { error make { msg: $"Domain '($domain)' is not supported." } }
     }
@@ -372,6 +394,7 @@ def "main gui" [
 
 # Create a virtual machine from a cdrom or disk file.
 def "main install" [
+    --arch (-a): string # Virtual machine architecture
     --domain (-d): string # Virtual machine name
     --log-level (-l): string = "debug" # Log level
     --osinfo (-o): string = "generic" # Virt-install osinfo
@@ -379,6 +402,7 @@ def "main install" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     main setup host
+    let arch = $arch | default $nu.os-info.arch
     let home = get-home
 
     # Check if domain is already used by libvirt.
@@ -401,11 +425,7 @@ def "main install" [
     match $extension {
         "iso" => {
             create-app $domain
-            if ($parts | get stem | str downcase | str contains "windows") {
-                install-windows $domain $path
-            } else {
-                install-cdrom $domain $osinfo $path
-            }
+            install-cdrom $domain $osinfo $path
         }
         "img" | "qcow2" | "raw" | "vmdk" => {
             create-app $domain
