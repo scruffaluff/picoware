@@ -44,7 +44,7 @@ users:
 # Connect to virtual machine.
 def connect [
     start: bool # Start virtual machine if not running
-    type: string # Connection type (ssh, view)
+    type: string # Connection type (console, gui, ssh)
     domain: string # Virtual machine name
 ] {
     if $start and not (virsh list --name | str contains $domain) {
@@ -52,6 +52,8 @@ def connect [
     }
 
     match $type {
+        "console" => { virsh console $domain }
+        "gui" => { virt-viewer $domain }
         "ssh" => {
             let home = get-home
             let port = port
@@ -62,7 +64,6 @@ def connect [
             tssh -i $"($home)/.vimu/key" -p $port localhost
             
         }
-        "view" => { virt-viewer $domain }
         _ => { 
             print --stderr $"Invalid connection type '($type)'."
             exit 2
@@ -83,7 +84,7 @@ def create-app [domain: string] {
             (
                 $"
 [Desktop Entry]
-Exec=vimu view ($domain)
+Exec=vimu gui ($domain)
 Icon=($icon)
 Name=($title)
 Terminal=false
@@ -110,7 +111,7 @@ Version=1.0
   <key>CFBundleDisplayName</key>
   <string>($title)</string>
   <key>CFBundleExecutable</key>
-  <string>vimu view ($domain)</string>
+  <string>vimu gui ($domain)</string>
   <key>CFBundleIconFile</key>
   <string>icon</string>
   <key>CFBundleIdentifier</key>
@@ -278,15 +279,18 @@ Options:
 
 Subcommands:
   create      Create virutal machine from default options
+  gui         Connect to virtual machine as desktop
   install     Create a virtual machine from a cdrom or disk file
   remove      Delete virtual machine and its disk images
   setup       Configure machine for emulation
   ssh         Connect to virtual machine with SSH
-  view        Connect to virtual machine as desktop
+  upload      Upload Vimu to guest machine
 
 Virsh Options:"
         )
-        virsh --help
+        if (which virsh | is-not-empty) {
+            virsh --help
+        }
     } else {
         virsh ...$args
     }
@@ -348,6 +352,16 @@ def "main create" [
     }
 }
 
+# Connect to virtual machine as desktop.
+def "main gui" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start gui $domain
+}
+
 # Create a virtual machine from a cdrom or disk file.
 def "main install" [
     --domain (-d): string # Virtual machine name
@@ -381,7 +395,7 @@ def "main install" [
             create-app $domain
             if ($parts | get stem | str downcase | str contains "windows") {
                 install-windows $domain $path
-            } else 
+            } else {
                 install-cdrom $domain $osinfo $path
             }
         }
@@ -450,6 +464,9 @@ def "main setup desktop" [] {
     if (which apk | is-not-empty) {
         ^$super apk update
         ^$super setup-desktop gnome
+    } else if (which apt | is-not-empty) {
+        ^$super apt-get update
+        ^$super apt-get install --yes task-gnome-desktop
     } else if (which pkg | is-not-empty) {
         # Configure GNOME desktop for FreeBSD.
         #
@@ -573,7 +590,7 @@ def "main setup host" [] {
         $"($home)/.local/share/libvirt/images"
     )
 
-    http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/waveform.svg
+    http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/faders-bold.svg
     | save --force $"($home)/.vimu/icon.svg"
 
     if not ($"($home)/.vimu/key" | path exists) {
@@ -582,40 +599,6 @@ def "main setup host" [] {
             chmod 600 $"($home)/.vimu/key" $"($home)/.vimu/key.pub"
         }
     }
-}
-
-# Forward host port to guest domain 22 port for SSH.
-def "main setup port" [
-    domain: string # Virtual machine name
-] {
-    # Setup SSH port.
-    virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::2022-:22"
-    # Setup Android debug port.
-    virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::4444-:5555"
-}
-
-# Upload Vimu to guest machine.
-def "main setup upload" [
-    domain: string # Virtual machine name
-] {
-    const script = path self
-    let home = get-home
-    if ((virsh domstate $domain | str trim) != "running") {
-        virsh start $domain
-    }
-
-    # Install Nushell by piping Curl output remote shell.
-    (
-        curl --fail --location 
-        --show-error https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"($home)/.vimu/key" -p 2022 localhost sh -s -- --global
-    )
-    # Copy Vimu to remote machine and install with super command.
-    tscp -i $"($home)/.vimu/key" -P 2022 $script localhost:/tmp/vimu
-    (
-        tssh -i $"($home)/.vimu/key" -p 2022 localhost sudo install
-        /tmp/vimu /usr/local/bin/vimu
-    )
 }
 
 # Connect to virtual machine with SSH.
@@ -628,12 +611,32 @@ def "main ssh" [
     connect $start ssh $domain
 }
 
-# Connect to virtual machine as desktop.
-def "main view" [
-    --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
+# Upload Vimu to guest machine.
+def "main upload" [
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    connect $start view $domain
+    const script = path self
+    let home = get-home
+    if ((virsh domstate $domain | str trim) != "running") {
+        virsh start $domain
+    }
+
+    let port = port
+    (
+        virsh qemu-monitor-command --domain $domain
+        --hmp $"hostfwd_add tcp::($port)-:22"
+    )
+
+    # Install Nushell by piping Curl output remote shell.
+    (
+        curl --fail --location 
+        --show-error https://scruffaluff.github.io/scripts/install/nushell.sh
+        | tssh -i $"($home)/.vimu/key" -p $port localhost sh -s -- --global
+    )
+    # Copy Vimu to remote machine and install with super command.
+    tscp -i $"($home)/.vimu/key" -P $port $script localhost:/tmp/vimu
+    (
+        tssh -i $"($home)/.vimu/key" -p $port localhost sudo install
+        /tmp/vimu /usr/local/bin/vimu
+    )
 }
