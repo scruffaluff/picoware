@@ -262,7 +262,7 @@ def --wrapped main [
 ] {
     if $version {
         print "Vimu 0.0.3"
-    } else if ("-h" in $args) or ("--help" in $args) {
+    } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
 "Convenience commands for Virsh and QEMU.
@@ -285,7 +285,7 @@ Subcommands:
 Virsh Options:"
         )
         if (which virsh | is-not-empty) {
-            virsh --help
+            virsh ...$args
         }
     } else {
         virsh ...$args
@@ -336,12 +336,24 @@ def "main create" [
             let image = $"($home)/.vimu/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
-                http get $"https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-($arch).qcow2"
+                http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
                 | save --progress $image
             }
             (
                 main install --domain debian --log-level $log_level
                 --osinfo debian12 $image
+            )
+        }
+        "freebsd" => {
+            let image = $"($home)/.vimu/freebsd_amd64.qcow2"
+            if not ($image | path exists) {
+                log info "Downloading FreeBSD image."
+                http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
+                | save --progress $image
+            }
+            (
+                main install --domain freebsd --log-level $log_level
+                --osinfo freebsd14.2 $image
             )
         }
         _ => { error make { msg: $"Domain '($domain)' is not supported." } }
@@ -521,8 +533,8 @@ def "main setup guest" [] {
     } else if (which pkg | is-not-empty) {
         ^$super pkg update
         # Seems as though openssh-server is builtin to FreeBSD.
-        ^$super pkg install --yes curl ncurses qemu-guest-agent rsync
-        ^$super service qemu-guest-agent start
+        ^$super pkg install --yes curl ncurses qemu-guest-agent rsync topgrade
+        try { ^$super service qemu-guest-agent start }
         ^$super sysrc qemu_guest_agent_enable="YES"
         # Enable serial console on next boot.
         let content = '
@@ -549,7 +561,7 @@ console="comconsole,vidconsole"
         }
     }
 
-    if (which topgrade | is-empty) {
+    if $nu.os-info.name == "linux" and (which topgrade | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir
         let version = (
             http get https://formulae.brew.sh/api/formula/topgrade.json
@@ -566,8 +578,9 @@ console="comconsole,vidconsole"
         )
         tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
         ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+    }
 
-        let config = '
+    let config = '
 # Topgrade configuration file for updating system packages.
 #
 # For more infomation, visit
@@ -580,9 +593,8 @@ no_retry = true
 notify_each_step = false
 skip_notify = true
 '
-        mkdir $"($home)/.config"
-        $config | save --force $"($home)/.config/topgrade.toml"
-    }
+    mkdir $"($home)/.config"
+    $config | save --force $"($home)/.config/topgrade.toml"
 }
 
 # Configure host machine.
