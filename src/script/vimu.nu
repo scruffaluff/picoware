@@ -28,7 +28,8 @@ def cloud-init [domain: string username: string password: string] {
 hostname: "($domain)"
 preserve_hostname: true
 users:
-  - lock_passwd: false
+  - doas: [permit nopass ($username)]
+    lock_passwd: false
     name: "($username)"
     plain_text_passwd: "($password)"
     ssh_authorized_keys:
@@ -142,11 +143,6 @@ Version=1.0
             )
         }
     }
-}
-
-# Default domain choices.
-def domain-choices [] {
-    ["alpine" "debian"]
 }
 
 # Find command to elevate as super user.
@@ -300,7 +296,7 @@ Virsh Options:"
 def "main create" [
     --gui (-g) # Use GUI version of domain
     --log-level (-l): string = "debug" # Log level
-    domain: string@domain-choices # Virtual machine name
+    domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let arch = match $nu.os-info.arch {
@@ -316,7 +312,7 @@ def "main create" [
             let image = $"($home)/.vimu/alpine_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.1-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-($nu.os-info.arch)-bios-cloudinit-r0.qcow2"
                 | save --progress $image
             }
             (
@@ -467,6 +463,10 @@ def "main setup desktop" [] {
     } else if (which apt | is-not-empty) {
         ^$super apt-get update
         ^$super apt-get install --yes task-gnome-desktop
+    } else if (which pacman | is-not-empty) {
+        ^$super pacman --noconfirm --refresh --sync --sysupgrade
+        ^$super pacman --noconfirm --sync gnome
+        ^$super systemctl enable --now gdm.service
     } else if (which pkg | is-not-empty) {
         # Configure GNOME desktop for FreeBSD.
         #
@@ -538,10 +538,15 @@ console="comconsole,vidconsole"
     }
 
     if (which systemctl | is-not-empty) {
-        # ^$super systemctl enable --now qemu-guest-agent.service
-        ^$super systemctl enable --now serial-getty@ttyS0.service
-        # ^$super systemctl enable --now spice-vdagentd.service
-        ^$super systemctl enable --now ssh.service
+        let services = systemctl list-units --type=service --all
+        for service in [
+            "qemu-guest-agent" "serial-getty@ttyS0" "spice-vdagentd" "ssh"
+            "sshd"
+        ] {
+            if ($services | str contains $"($service).service") {
+                try { ^$super systemctl enable --now $"($service).service" }
+            }
+        }
     }
 
     if (which topgrade | is-empty) {
