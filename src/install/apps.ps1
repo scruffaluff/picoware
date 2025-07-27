@@ -81,7 +81,6 @@ function FindRunner() {
 # Install application.
 function InstallApp($Target, $Version, $Name) {
     $Url = url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version"
-    $IconUrl="$Url/data/public/pwa-maskable-512x512.png"
     $Title = Capitalize $Name
 
     if ($Target -eq 'User') {
@@ -107,7 +106,6 @@ function InstallApp($Target, $Version, $Name) {
     Log "Installing app $Title."
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir/icon.ico" -Uri `
         "$Url/data/public/favicon.ico"
-    $Script = FetchApp $Version $Name $DestDir
 
     # Based on guide at
     # https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh.
