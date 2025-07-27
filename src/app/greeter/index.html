@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="Greeter example application" name="description" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@5"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"
+    ></script>
+    <title>Greeter</title>
+  </head>
+  <body>
+    <div id="app">
+      <div class="hero bg-base-200 min-h-screen">
+        <div class="hero-content text-center">
+          <div class="max-w-md">
+            <h1 class="text-5xl font-bold">Greeter</h1>
+            <p class="py-6">
+              Enter your name and click the button to receive a greeting.
+            </p>
+            <div class="flex flex-row mb-4">
+              <input
+                class="input mr-2"
+                placeholder="Your name"
+                type="text"
+                v-model="name"
+              />
+              <button class="btn btn-primary" @click="greet">Greet</button>
+            </div>
+            <p>{{ message }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <style>
+      .input {
+        outline-style: none;
+      }
+    </style>
+    <script type="module"></script>
+  </body>
+</html>

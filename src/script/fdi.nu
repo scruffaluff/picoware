@@ -20,7 +20,7 @@ Options:
 Fd Options:
 "
         )
-        fd --help
+        fd ...$args
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Fdi 0.1.0"

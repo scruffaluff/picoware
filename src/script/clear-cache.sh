@@ -182,12 +182,12 @@ log() {
 }
 
 #######################################
-# Print ClearCache version string.
+# Print Clear Cache version string.
 # Outputs:
-#   ClearCache version string.
+#   Clear Cache version string.
 #######################################
 version() {
-  echo 'ClearCache 0.3.0'
+  echo 'Clear Cache 0.3.0'
 }
 
 #######################################

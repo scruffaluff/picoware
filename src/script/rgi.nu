@@ -22,7 +22,7 @@ Options:
 Ripgrep Options:
 "
         )
-        rg --help
+        rg ...$args
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Rgi 0.2.0"

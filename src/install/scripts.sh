@@ -171,7 +171,7 @@ find_jq() {
 # Find all installable scripts inside repository.
 # Arguments:
 #   Scripts version.
-# Returns:
+# Outputs:
 #   Array of script names.
 #######################################
 find_scripts() {

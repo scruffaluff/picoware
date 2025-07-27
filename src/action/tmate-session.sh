@@ -92,9 +92,8 @@ install_tmate() {
 install_tmate_linux() {
   local arch tmate_arch tmate_version='2.4.0'
 
-  # Short form machine flag '-m' should be used since processor flag and long
-  # form machine flag '--machine' are non-portable. For more information, visit
-  # https://www.gnu.org/software/coreutils/manual/html_node/uname-invocation.html#index-_002dp-12.
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
   arch="$(uname -m)"
   case "${arch}" in
     x86_64 | amd64)
