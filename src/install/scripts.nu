@@ -40,7 +40,12 @@ Restart this script from an administrator console or install to a user directory
 
 # Install script to destination folder.
 def install-script [
-    super: string version: string dest: string preserve_env: bool script: string
+    super: string
+    system: bool
+    preserve_env: bool
+    version: string
+    dest: string
+    script: string
 ] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $script | path parse
@@ -55,10 +60,10 @@ def install-script [
 
     mut args = []
     if $preserve_env {
-        $args ++= ["--preserve-env"]
+        $args = [...$args "--preserve-env"]
     }
-    if $super {
-        $args ++= ["--global"]
+    if ($super | is-not-empty) {
+        $args = [...$args "--global"]
     }
     if $ext == "py" and (which uv | is-empty) {
         http get https://scruffaluff.github.io/scripts/install/uv.nu
@@ -76,6 +81,9 @@ def install-script [
     } else {
         http get $uri | save --force --progress $temp
     }
+    if $nu.os-info.name != "windows" {
+        chmod +x $temp
+    }
 
     if ($super | is-empty) {
         mkdir $dest
@@ -87,7 +95,7 @@ def install-script [
 
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
-            update-path $dest true
+            update-path $dest $system
         } else {
             update-shell $dest
         }
@@ -163,7 +171,7 @@ def main [
             let stem = $name | path parse | get stem
             if $script == $stem {
                 $match = true
-                install-script $super $version $dest $preserve_env $name
+                install-script $super $system $preserve_env $version $dest $name
             }
         }
         

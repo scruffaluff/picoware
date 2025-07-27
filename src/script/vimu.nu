@@ -26,7 +26,7 @@ def cloud-init [domain: string username: string password: string] {
 #cloud-config
 
 hostname: "($domain)"
-preserve_hostname: true
+preserve_hostname: false
 users:
   - doas: [permit nopass ($username)]
     lock_passwd: false
@@ -272,7 +272,7 @@ def --wrapped main [
     ...$args: string # Virsh arguments
 ] {
     if $version {
-        print "Vimu 0.0.3"
+        print "Vimu 0.1.0"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print

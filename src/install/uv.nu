@@ -63,6 +63,7 @@ def install [super: string dest: string version: string] {
         $"($temp)/uv.exe"
     } else {
         tar fx $"($temp)/uv.tar.gz" -C $temp
+        chmod +x $"($temp)/($target)/uv"
         $"($temp)/($target)/uv"
     }
 

@@ -48,6 +48,9 @@ def install [super: string dest: string subpath: string] {
     } else {
         http get $uri | save --progress $program
     }
+    if $nu.os-info.name != "windows" {
+        chmod +x $program
+    }
 
     if ($super | is-empty) {
         mkdir $dest
