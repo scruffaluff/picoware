@@ -82,7 +82,6 @@ def connect [
 # Create application desktop entry.
 def create-app [domain: string] {
     let home = get-home
-    let icon = $"($home)/.vimu/icon.svg"
     let title = $domain | str capitalize
 
     match $nu.os-info.name {
@@ -93,7 +92,7 @@ def create-app [domain: string] {
                 $"
 [Desktop Entry]
 Exec=vimu gui ($domain)
-Icon=($icon)
+Icon=($home)/.vimu/icon.svg
 Name=($title)
 Terminal=false
 Type=Application
@@ -104,9 +103,10 @@ Version=1.0
             )
         }
         "macos" => {
-            let dest = $"($home)/Applications/vimu_($domain).app/Contents"
+            let dest = $"($home)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
-            cp $"($home)/.vimu/icon.svg" $"($dest)/Resources/icon.svg"
+            cp $"($home)/.vimu/icon.png" $"($dest)/Resources/icon.png"
+            create-entry $domain $"($dest)/MacOS/main.sh"
 
             (
                 $"
@@ -119,11 +119,11 @@ Version=1.0
   <key>CFBundleDisplayName</key>
   <string>($title)</string>
   <key>CFBundleExecutable</key>
-  <string>vimu gui ($domain)</string>
+  <string>main.sh</string>
   <key>CFBundleIconFile</key>
   <string>icon</string>
   <key>CFBundleIdentifier</key>
-  <string>com.scruffaluff.vimu-$(domain)</string>
+  <string>com.scruffaluff.vimu-($domain)</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
@@ -150,6 +150,19 @@ Version=1.0
             )
         }
     }
+}
+
+# Create application entrypoint.
+def create-entry [domain: string path: string] {
+    const folder = path self | path dirname
+    $"
+#!/usr/bin/env sh
+set -eu
+
+export PATH="($folder):${PATH}"
+exec vimu gui ($domain)
+"  | str trim --left | save --force $path
+    chmod +x $path
 }
 
 # Find command to elevate as super user.
@@ -330,16 +343,16 @@ def "main create" [
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
-            let image = $"($home)/.vimu/alpine_($arch).qcow2"
+            let image = $"($home)/.vimu/alpine_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-($nu.os-info.arch)-bios-cloudinit-r0.qcow2"
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-x86_64-bios-cloudinit-r0.qcow2"
                 | save --progress $image
             }
 
             (
-                main install --domain alpine --log-level $log_level
-                --osinfo alpinelinux3.21 $image
+                main install --arch x86_64 --domain alpine
+                --log-level $log_level --osinfo alpinelinux3.21 $image
             )
         }
         "android" => {
@@ -479,6 +492,7 @@ def "main remove" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let home = get-home
+    let title = $domain | str capitalize
 
     # Stop domain if running.
     if (virsh list --name | str contains $domain) {
@@ -499,14 +513,14 @@ def "main remove" [
         "linux" => {
             (
                 rm --force --recursive
-                $"($home)/.local/share/applications/vimu_($domain).desktop"
+                $"($home)/.local/share/applications/($title).desktop"
                 $"($home)/.local/share/libvirt/cdroms/($domain).iso"
             )
         }
         "macos" => {
             (
                 rm --force --recursive
-                $"($home)/Applications/vimu_($domain).app"
+                $"($home)/Applications/($title).app"
                 $"($home)/.local/share/libvirt/cdroms/($domain).iso"
             )
         }
@@ -665,8 +679,14 @@ def "main setup host" [] {
         $"($home)/.local/share/libvirt/images"
     )
 
-    http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/faders-bold.svg
-    | save --force $"($home)/.vimu/icon.svg"
+    if not ($"($home)/.vimu/icon.png" | path exists) {
+        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.png
+        | save $"($home)/.vimu/icon.png"
+    }
+    if not ($"($home)/.vimu/icon.svg" | path exists) {
+        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.svg
+        | save $"($home)/.vimu/icon.svg"
+    }
 
     if not ($"($home)/.vimu/key" | path exists) {
         ssh-keygen -N '' -q -f $"($home)/.vimu/key" -t ed25519 -C vimu
