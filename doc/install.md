@@ -104,6 +104,10 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- c
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache rgi" }
 ```
 
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main clear-cache rgi"
+```
+
 :::
 
 To view usage options, run the following command.
@@ -116,6 +120,10 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- -
 
 ```powershell [PowerShell]
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } --help" }
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::

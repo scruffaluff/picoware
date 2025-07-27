@@ -361,6 +361,8 @@ main() {
     done
     return
   elif [ -n "${names}" ]; then
+    scripts="$(find_scripts "${version}")"
+
     # Find super user command if destination is not writable.
     #
     # Flags:
@@ -383,7 +385,7 @@ main() {
       done
 
       if [ -z "${match_found:-}" ]; then
-        log --stderr "error: No script found for '${names}'."
+        log --stderr "error: No script found for '${name}'."
       fi
     done
   else
