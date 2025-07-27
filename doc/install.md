@@ -90,6 +90,7 @@ https://scruffaluff.github.io/scripts/install/scripts.ps1 for Windows.
 | trsync      | Rsync for one time remote connections.         |
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
+| vimu        | Convenience script for QEMU and Virsh.         |
 
 The following command will install the clear-cache and rgi scripts. Other
 scripts can be installed by replacing the program names.
@@ -104,6 +105,10 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- c
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache rgi" }
 ```
 
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main clear-cache rgi"
+```
+
 :::
 
 To view usage options, run the following command.
@@ -116,6 +121,10 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- -
 
 ```powershell [PowerShell]
 powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } --help" }
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::

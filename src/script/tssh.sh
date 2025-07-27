@@ -53,11 +53,11 @@ main() {
         ;;
       -h | --help)
         usage
-        exit 0
+        return
         ;;
       -v | --version)
         version
-        exit 0
+        return
         ;;
       *)
         ssh \
@@ -67,7 +67,7 @@ main() {
           -o StrictHostKeyChecking=no \
           -o UserKnownHostsFile=/dev/null \
           "$@"
-        exit 0
+        return
         ;;
     esac
   done

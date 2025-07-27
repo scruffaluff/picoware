@@ -124,7 +124,7 @@ function Main() {
             }
             { $_ -in '-h', '--help' } {
                 Usage
-                exit 0
+                return
             }
             { $_ -in '-p', '--preserve-env' } {
                 $PreserveEnv = $True

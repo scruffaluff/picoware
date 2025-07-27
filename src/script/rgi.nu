@@ -26,7 +26,7 @@ Ripgrep Options:
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Rgi 0.2.0"
-        exit 0
+        return
     }
 
     let editor = $env.EDITOR? | default "vim"

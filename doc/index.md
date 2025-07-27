@@ -42,6 +42,7 @@ that peform convenience tasks. They can be installed with the repostiory's
 | trsync      | Rsync for one time remote connections.         |
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
+| vimu        | Convenience script for QEMU and Virsh.         |
 
 ## Actions
 

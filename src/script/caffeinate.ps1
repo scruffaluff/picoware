@@ -37,11 +37,11 @@ function Main() {
         switch ($Args[0][$ArgIdx]) {
             { $_ -in '-h', '--help' } {
                 Usage
-                exit 0
+                return
             }
             { $_ -in '-v', '--version' } {
                 Version
-                exit 0
+                return
             }
             default {
                 $CmdArgs += $Args[0][$ArgIdx]

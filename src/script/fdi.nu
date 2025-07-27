@@ -24,7 +24,7 @@ Fd Options:
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Fdi 0.1.0"
-        exit 0
+        return
     }
 
     let editor = $env.EDITOR? | default "vim"
