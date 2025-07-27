@@ -67,10 +67,10 @@ def install-script [
     }
     if $ext == "py" and (which uv | is-empty) {
         http get https://scruffaluff.github.io/scripts/install/uv.nu
-        | nu -c $"($in | decode); main --quiet (...$args)"
+        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     } else if $ext == "ts" and (which deno | is-empty) {
         http get https://scruffaluff.github.io/scripts/install/deno.nu
-        | nu -c $"($in | decode); main --quiet (...$args)"
+        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     }
 
     log $"Installing script ($script) to '($program)'."

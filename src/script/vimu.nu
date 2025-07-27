@@ -269,7 +269,7 @@ def install-windows [domain: string cdrom: string drivers: string] {
 # Convenience script for QEMU and Virsh.
 def --wrapped main [
     --version (-v) # Print version information
-    ...$args: string # Virsh arguments
+    ...args: string # Virsh arguments
 ] {
     if $version {
         print "Vimu 0.1.0"
@@ -617,7 +617,7 @@ console="comconsole,vidconsole"
     }
 
     http get https://scruffaluff.github.io/scripts/install/scripts.nu
-    | nu -c $"($in | decode); main clear-cache fdi rgi rstash"
+    | nu -c $"($in | decode); main --global clear-cache fdi rgi rstash"
 
     if $nu.os-info.name == "linux" and (which topgrade | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir

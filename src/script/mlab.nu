@@ -63,7 +63,7 @@ def "main dump" [
 # Launch Jupyter Lab with the Matlab kernel.
 def --wrapped "main jupyter" [
     --matlab (-m): string # Custom Matlab executable path
-    ...$args: string # Arguments to Jupyter Lab
+    ...args: string # Arguments to Jupyter Lab
 ] {
     let venv = match $nu.os-info.name {
         "windows" => $"($env.AppLocalData)/mlab/venv"
@@ -98,7 +98,7 @@ def "main run" [
     --sd: string # Set the Matlab startup folder
     --shebang # Strip shebang from start of script
     command: string = "" # Matlab command or script path
-    ...$args: string # Arguments to Matlab script
+    ...args: string # Arguments to Matlab script
 ] {
     mut flags = ["-nodesktop" "-nosplash"]
     if not $jvm {
