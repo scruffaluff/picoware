@@ -53,6 +53,14 @@ def connect [
     }
 
     match $type {
+        "adb" => {
+            let port = port
+            (
+                virsh qemu-monitor-command --domain $domain
+                --hmp $"hostfwd_add tcp::($port)-:5555"
+            )
+            adb -P $port connect
+        }
         "console" => { virsh console $domain }
         "gui" => { virt-viewer $domain }
         "ssh" => {
@@ -63,7 +71,6 @@ def connect [
                 --hmp $"hostfwd_add tcp::($port)-:22"
             )
             tssh -i $"($home)/.vimu/key" -p $port localhost
-            
         }
         _ => { 
             print --stderr $"Invalid connection type '($type)'."
@@ -296,6 +303,16 @@ Virsh Options:"
     }
 }
 
+# Connect to virtual machine with Android debug bridge.
+def "main adb" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start adb $domain
+}
+
 # Create virutal machine from default options.
 def "main create" [
     --gui (-g) # Use GUI version of domain
@@ -319,9 +336,24 @@ def "main create" [
                 http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-($nu.os-info.arch)-bios-cloudinit-r0.qcow2"
                 | save --progress $image
             }
+
             (
                 main install --domain alpine --log-level $log_level
                 --osinfo alpinelinux3.21 $image
+            )
+        }
+        "android" => {
+            let image = $"($home)/.vimu/android_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Android image."
+                http get $"https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
+                | save --progress $image
+            }
+
+            print "Follow instructions at https://youtu.be/MG7-S_88nDg?t=120 during first boot."
+            (
+                main install --arch x86_64 --domain android
+                --log-level $log_level --osinfo android-x86-9.0 $image
             )
         }
         "arch" => {
@@ -331,6 +363,7 @@ def "main create" [
                 http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
                 | save --progress $image
             }
+
             (
                 main install --arch x86_64 --domain arch --log-level $log_level
                 --osinfo archlinux $image
@@ -343,6 +376,7 @@ def "main create" [
                 http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
                 | save --progress $image
             }
+
             (
                 main install --domain debian --log-level $log_level
                 --osinfo debian12 $image
@@ -355,6 +389,7 @@ def "main create" [
                 http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
                 | save --progress $image
             }
+
             (
                 main install --arch x86_64 --domain freebsd
                 --log-level $log_level --osinfo freebsd14.2 $image
@@ -581,6 +616,9 @@ console="comconsole,vidconsole"
         }
     }
 
+    http get https://scruffaluff.github.io/scripts/install/scripts.nu
+    | nu -c $"($in | decode); main clear-cache fdi rgi rstash"
+
     if $nu.os-info.name == "linux" and (which topgrade | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir
         let version = (
@@ -664,8 +702,11 @@ def "main upload" [
         --hmp $"hostfwd_add tcp::($port)-:22"
     )
 
-    http get https://scruffaluff.github.io/scripts/install/nushell.sh
-    | tssh -i $key -p $port localhost sh -s -- --global
+    let check = tssh -i $key -p $port localhost command -v nu | complete
+    if $check.exit_code != 0 {
+        http get https://scruffaluff.github.io/scripts/install/nushell.sh
+        | tssh -i $key -p $port localhost sh -s -- --global
+    }
 
     # Copy Vimu to remote machine and install with super command.
     tscp -i $key -P $port $vimu localhost:/tmp/vimu
