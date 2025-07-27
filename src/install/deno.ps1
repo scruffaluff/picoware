@@ -113,7 +113,7 @@ function Log($Text) {
     }
 }
 
-# Script entry point.
+# Script entrypoint.
 function Main() {
     $ArgIdx = 0
     $DestDir = ''

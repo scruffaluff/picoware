@@ -76,7 +76,7 @@ version() {
 }
 
 #######################################
-# Script entry point.
+# Script entrypoint.
 #######################################
 main() {
   # Use system caffeinate if it exists.

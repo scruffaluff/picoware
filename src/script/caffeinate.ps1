@@ -28,7 +28,7 @@ function Version() {
     Write-Output 'Caffeinate 0.2.0'
 }
 
-# Script entry point.
+# Script entrypoint.
 function Main() {
     $ArgIdx = 0
     $CmdArgs = @()

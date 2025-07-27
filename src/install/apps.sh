@@ -52,12 +52,12 @@ capitalize() {
 }
 
 #######################################
-# Create application entry point script.
+# Create application entrypoint script.
 # Arguments:
 #   Super user command for installation.
 #   Application script name.
 #   Runner folder path.
-#   Entry point file path.
+#   Entrypoint file path.
 #######################################
 create_entry() {
   local folder="${3}" script="${2}" super="${1}" path="${4}"
@@ -431,7 +431,7 @@ log() {
 }
 
 #######################################
-# Script entry point.
+# Script entrypoint.
 #######################################
 main() {
   local global_='' names='' super='' version='main'

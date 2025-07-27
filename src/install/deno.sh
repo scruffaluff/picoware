@@ -293,7 +293,7 @@ log() {
 }
 
 #######################################
-# Script entry point.
+# Script entrypoint.
 #######################################
 main() {
   local dst_dir='' global_='' preserve_env='' super='' version=''

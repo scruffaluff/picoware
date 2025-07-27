@@ -35,7 +35,7 @@ function Version() {
     Write-Output 'Tssh 0.3.0'
 }
 
-# Script entry point.
+# Script entrypoint.
 function Main() {
     $ArgIdx = 0
     $CmdArgs = @()

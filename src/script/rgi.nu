@@ -8,8 +8,9 @@ def --wrapped main [
     if ($args | is-empty) {
         rg
     } else if ("-h" in $args) or ("--help" in $args) {
-        print "
-Interactive Ripgrep searcher.
+        (
+            print
+"Interactive Ripgrep searcher.
 
 Usage: rgi [OPTIONS]
 
@@ -20,8 +21,9 @@ Options:
 
 Ripgrep Options:
 "
-        rg --help
-        exit 0
+        )
+        rg ...$args
+        return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Rgi 0.2.0"
         exit 0

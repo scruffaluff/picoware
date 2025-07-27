@@ -144,7 +144,7 @@ version() {
 }
 
 #######################################
-# Script entry point.
+# Script entrypoint.
 #######################################
 main() {
   # Parse command line arguments.
