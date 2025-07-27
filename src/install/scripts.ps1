@@ -46,7 +46,7 @@ function FindJq() {
     }
 }
 
-# Find all scripts inside GitHub repository.
+# Find all installable scripts inside repository.
 function FindScripts($Version) {
     $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\") or endswith(\".py\") or endswith(\".ts\")) | ltrimstr(\"src/script/\")'
     $JqBin = FindJq
@@ -186,7 +186,7 @@ function Main() {
             }
             { $_ -in '-h', '--help' } {
                 Usage
-                exit 0
+                return
             }
             { $_ -in '-l', '--list' } {
                 $List = $True
@@ -215,13 +215,15 @@ function Main() {
         }
     }
 
-    $Scripts = FindScripts "$Version"
     if ($List) {
+        $Scripts = FindScripts "$Version"
         foreach ($Script in $Scripts) {
             Write-Output "$([IO.Path]::GetFileNameWithoutExtension($Script))"
         }
     }
     elseif ($Names) {
+        $Scripts = FindScripts "$Version"
+
         # Create destination folder if it does not exist for Resolve-Path.
         if (-not $DestDir) {
             $DestDir = "$Env:LocalAppData\Programs\Bin"

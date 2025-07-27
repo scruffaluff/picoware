@@ -156,11 +156,11 @@ main() {
         ;;
       -h | --help)
         usage
-        exit 0
+        return
         ;;
       -v | --version)
         version
-        exit 0
+        return
         ;;
       *)
         log --stderr "error: No such option '${1}'."

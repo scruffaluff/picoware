@@ -53,17 +53,17 @@ main() {
         ;;
       -h | --help)
         usage
-        exit 0
+        return
         ;;
       -v | --version)
         version
-        exit 0
+        return
         ;;
       *)
         rsync \
           -e 'ssh -o IdentitiesOnly=yes -o LogLevel=ERROR -o PreferredAuthentications=publickey,password -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' \
           "$@"
-        exit 0
+        return
         ;;
     esac
   done

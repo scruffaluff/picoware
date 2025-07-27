@@ -337,7 +337,7 @@ main() {
         ;;
       -h | --help)
         usage
-        exit 0
+        return
         ;;
       -p | --preserve-env)
         preserve_env='true'
@@ -362,7 +362,7 @@ main() {
   # Handle special FreeBSD case.
   if [ "$(uname -s)" = 'FreeBSD' ]; then
     install_uv_freebsd
-    exit 0
+    return
   fi
 
   # Find super user command if destination is not writable.

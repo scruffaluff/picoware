@@ -168,7 +168,7 @@ find_jq() {
 }
 
 #######################################
-# Find all scripts inside GitHub repository.
+# Find all installable scripts inside repository.
 # Arguments:
 #   Scripts version.
 # Returns:
@@ -182,7 +182,6 @@ find_scripts() {
   jq_bin="$(find_jq)"
   response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
-
 }
 
 #######################################
@@ -324,7 +323,7 @@ main() {
         ;;
       -h | --help)
         usage
-        exit 0
+        return
         ;;
       -l | --list)
         list_scripts='true'
@@ -353,43 +352,45 @@ main() {
     esac
   done
 
-  scripts="$(find_scripts "${version}")"
-
   # Flags:
   #   -n: Check if string has nonzero length.
-  #   -z: Check if string has zero length.
   if [ -n "${list_scripts:-}" ]; then
+    scripts="$(find_scripts "${version}")"
     for script in ${scripts}; do
       echo "${script%.*}"
     done
     return
-  fi
+  elif [ -n "${names}" ]; then
+    # Find super user command if destination is not writable.
+    #
+    # Flags:
+    #   -p: Make parent directories if necessary.
+    #   -w: Check if file exists and is writable.
+    dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
+    if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
+      [ ! -w "${dst_dir}" ]; then
+      super="$(find_super)"
+    fi
 
-  # Find super user command if destination is not writable.
-  #
-  # Flags:
-  #   -p: Make parent directories if necessary.
-  #   -w: Check if file exists and is writable.
-  dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
-  if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
-    [ ! -w "${dst_dir}" ]; then
-    super="$(find_super)"
-  fi
+    for name in ${names}; do
+      match_found=''
+      for script in ${scripts}; do
+        if [ "${script%.*}" = "${name}" ]; then
+          match_found='true'
+          install_script "${super}" "${version}" "${dst_dir}" "${script}" \
+            "${preserve_env}"
+        fi
+      done
 
-  for name in ${names}; do
-    match_found=''
-    for script in ${scripts}; do
-      if [ "${script%.*}" = "${name}" ]; then
-        match_found='true'
-        install_script "${super}" "${version}" "${dst_dir}" "${script}" \
-          "${preserve_env}"
+      if [ -z "${match_found:-}" ]; then
+        log --stderr "error: No script found for '${names}'."
       fi
     done
-
-    if [ -z "${match_found:-}" ]; then
-      log --stderr "error: No script found for '${names}'."
-    fi
-  done
+  else
+    log --stderr 'error: Script argument required.'
+    log --stderr "Run 'install-scripts --help' for usage."
+    exit 2
+  fi
 }
 
 # Add ability to selectively skip main function during test suite.

@@ -82,7 +82,7 @@ main() {
   # Use system caffeinate if it exists.
   if [ -x /usr/bin/caffeinate ]; then
     /usr/bin/caffeinate "$@"
-    exit 0
+    return
   fi
 
   case "${1:-}" in
@@ -92,11 +92,11 @@ main() {
       ;;
     -h | --help)
       usage
-      exit 0
+      return
       ;;
     -v | --version)
       version
-      exit 0
+      return
       ;;
     *) ;;
   esac
