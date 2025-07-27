@@ -25,9 +25,9 @@ install each program for immediate use.
 
 ## Scripts
 
-The following table shows the available scripts. These are single file programs
-that peform convenience tasks. They can be installed with the repostiory's
-`scripts` installer.
+The following table shows the available scripts. These scripts are single file
+programs that perform convenience tasks. They can be installed with the
+repository's `scripts` installer.
 
 | Name        | Description                                    |
 | ----------- | ---------------------------------------------- |
@@ -39,6 +39,7 @@ that peform convenience tasks. They can be installed with the repostiory's
 | trsync      | Rsync for one time remote connections.         |
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
+| vimu        | Convenience script for QEMU and Virsh.         |
 
 ## Actions
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 #
-# Convenience commands for Virsh and QEMU.
+# Convenience script for QEMU and Virsh.
 
 use std/log
 
@@ -28,7 +28,8 @@ def cloud-init [domain: string username: string password: string] {
 hostname: "($domain)"
 preserve_hostname: true
 users:
-  - lock_passwd: false
+  - doas: [permit nopass ($username)]
+    lock_passwd: false
     name: "($username)"
     plain_text_passwd: "($password)"
     ssh_authorized_keys:
@@ -44,7 +45,7 @@ users:
 # Connect to virtual machine.
 def connect [
     start: bool # Start virtual machine if not running
-    type: string # Connection type (ssh, view)
+    type: string # Connection type (console, gui, ssh)
     domain: string # Virtual machine name
 ] {
     if $start and not (virsh list --name | str contains $domain) {
@@ -52,6 +53,16 @@ def connect [
     }
 
     match $type {
+        "adb" => {
+            let port = port
+            (
+                virsh qemu-monitor-command --domain $domain
+                --hmp $"hostfwd_add tcp::($port)-:5555"
+            )
+            adb -P $port connect
+        }
+        "console" => { virsh console $domain }
+        "gui" => { virt-viewer $domain }
         "ssh" => {
             let home = get-home
             let port = port
@@ -60,9 +71,7 @@ def connect [
                 --hmp $"hostfwd_add tcp::($port)-:22"
             )
             tssh -i $"($home)/.vimu/key" -p $port localhost
-            
         }
-        "view" => { virt-viewer $domain }
         _ => { 
             print --stderr $"Invalid connection type '($type)'."
             exit 2
@@ -70,29 +79,77 @@ def connect [
     }
 }
 
-# Create application bundle or desktop entry.
+# Create application desktop entry.
 def create-app [domain: string] {
     let home = get-home
+    let icon = $"($home)/.vimu/icon.svg"
+    let title = $domain | str capitalize
 
     match $nu.os-info.name {
         "linux" => {
-            $"
+            let dest = $"($home)/.local/share/applications"
+            mkdir $dest
+            (
+                $"
 [Desktop Entry]
-Exec=vimu start desktop ($domain)
-Icon=($home)/.vimu/waveform.svg
-Name=($domain | str capitalize)
+Exec=vimu gui ($domain)
+Icon=($icon)
+Name=($title)
 Terminal=false
 Type=Application
 Version=1.0
 "
-        | save --force $"($home)/.local/share/applications/vimu_($domain).desktop"
+                | str trim --left
+                | save --force $"($dest)/vimu_($domain).desktop"
+            )
+        }
+        "macos" => {
+            let dest = $"($home)/Applications/vimu_($domain).app/Contents"
+            mkdir $"($dest)/MacOS" $"($dest)/Resources"
+            cp $"($home)/.vimu/icon.svg" $"($dest)/Resources/icon.svg"
+
+            (
+                $"
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>English</string>
+  <key>CFBundleDisplayName</key>
+  <string>($title)</string>
+  <key>CFBundleExecutable</key>
+  <string>vimu gui ($domain)</string>
+  <key>CFBundleIconFile</key>
+  <string>icon</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.scruffaluff.vimu-$(domain)</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>($domain)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>0.1.0</string>
+  <key>CSResourcesFileMapped</key>
+  <true/>
+  <key>LSMinimumSystemVersion</key>
+  <string>10.13</string>
+  <key>LSRequiresCarbon</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>
+"
+                | str trim
+                | save $"($dest)/Info.plist"
+            )
         }
     }
-}
-
-# Default domain choices.
-def domain-choices [] {
-    ["alpine" "debian"]
 }
 
 # Find command to elevate as super user.
@@ -123,7 +180,9 @@ def get-home [] {
 }
 
 # Create a virtual machine from an ISO disk.
-def install-cdrom [domain: string osinfo: string path: string] {
+def --wrapped install-cdrom [
+    domain: string osinfo: string path: string ...args: string
+] {
     let home = get-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
@@ -143,11 +202,14 @@ def install-cdrom [domain: string osinfo: string path: string] {
         --osinfo $osinfo
         --vcpus 4
         ...$params
+        ...$args
     )
 }
 
 # Create a virtual machine from a qcow2 disk.
-def install-disk [name: string osinfo: string path: string extension: string] {
+def --wrapped install-disk [
+    name: string osinfo: string path: string extension: string ...args: string
+] {
     let home = get-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
@@ -156,8 +218,8 @@ def install-disk [name: string osinfo: string path: string extension: string] {
     }
 
     print "Create user account for virtual machine."
-    let username = input "Username: "
-    let password = ask-password
+    let username = $env.VIMU_USERNAME? | default { input "Username: " }
+    let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $name $username $password
 
     let folder = $"($home)/.local/share/libvirt/images"
@@ -176,20 +238,45 @@ def install-disk [name: string osinfo: string path: string extension: string] {
         --osinfo $osinfo
         --vcpus 4
         ...$params
+        ...$args
     )
 }
 
-# Convenience commands for Virsh and QEMU.
+# Create a Windows virtual machine from an ISO disk.
+def install-windows [domain: string cdrom: string drivers: string] {
+    let home = get-home
+    let params = match $nu.os-info.name {
+        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "macos" => [--graphics vnc]
+        _ => [--cpu host-model --graphics vnc]
+    }
+
+    (
+        virt-install
+        --arch x86_64
+        --cdrom $cdrom
+        --disk bus=virtio,format=qcow2,size=64
+        --disk $"bus=sata,device=cdrom,path=($drivers)"
+        --memory 8192
+        --name $domain
+        --osinfo win11
+        --tpm model=tpm-tis,backend.type=emulator,backend.version=2.0
+        --vcpus 4
+        ...$params
+    )
+}
+
+# Convenience script for QEMU and Virsh.
 def --wrapped main [
     --version (-v) # Print version information
     ...$args: string # Virsh arguments
 ] {
     if $version {
         print "Vimu 0.0.3"
-    } else if ("-h" in $args) or ("--help" in $args) {
+    } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
-"Convenience commands for Virsh and QEMU.
+"Convenience script for QEMU and Virsh.
 
 Usage: vimu [OPTIONS] <SUBCOMMAND>
 
@@ -199,25 +286,38 @@ Options:
 
 Subcommands:
   create      Create virutal machine from default options
+  gui         Connect to virtual machine as desktop
   install     Create a virtual machine from a cdrom or disk file
   remove      Delete virtual machine and its disk images
   setup       Configure machine for emulation
   ssh         Connect to virtual machine with SSH
-  view        Connect to virtual machine as desktop
+  upload      Upload Vimu to guest machine
 
 Virsh Options:"
         )
-        virsh --help
+        if (which virsh | is-not-empty) {
+            virsh ...$args
+        }
     } else {
         virsh ...$args
     }
+}
+
+# Connect to virtual machine with Android debug bridge.
+def "main adb" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start adb $domain
 }
 
 # Create virutal machine from default options.
 def "main create" [
     --gui (-g) # Use GUI version of domain
     --log-level (-l): string = "debug" # Log level
-    domain: string@domain-choices # Virtual machine name
+    domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let arch = match $nu.os-info.arch {
@@ -227,37 +327,109 @@ def "main create" [
     let home = get-home
     main setup host
 
+    # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
             let image = $"($home)/.vimu/alpine_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/nocloud_alpine-3.22.1-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-($nu.os-info.arch)-bios-cloudinit-r0.qcow2"
                 | save --progress $image
             }
+
             (
                 main install --domain alpine --log-level $log_level
                 --osinfo alpinelinux3.21 $image
+            )
+        }
+        "android" => {
+            let image = $"($home)/.vimu/android_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Android image."
+                http get $"https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
+                | save --progress $image
+            }
+
+            print "Follow instructions at https://youtu.be/MG7-S_88nDg?t=120 during first boot."
+            (
+                main install --arch x86_64 --domain android
+                --log-level $log_level --osinfo android-x86-9.0 $image
+            )
+        }
+        "arch" => {
+            let image = $"($home)/.vimu/arch_amd64.qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Arch image."
+                http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
+                | save --progress $image
+            }
+
+            (
+                main install --arch x86_64 --domain arch --log-level $log_level
+                --osinfo archlinux $image
             )
         }
         "debian" => {
             let image = $"($home)/.vimu/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
-                http get $"https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-($arch).qcow2"
+                http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
                 | save --progress $image
             }
+
             (
                 main install --domain debian --log-level $log_level
                 --osinfo debian12 $image
             )
         }
+        "freebsd" => {
+            let image = $"($home)/.vimu/freebsd_amd64.qcow2"
+            if not ($image | path exists) {
+                log info "Downloading FreeBSD image."
+                http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
+                | save --progress $image
+            }
+
+            (
+                main install --arch x86_64 --domain freebsd
+                --log-level $log_level --osinfo freebsd14.2 $image
+            )
+        }
+        "windows" => {
+            let cdrom = $"($home)/.vimu/window_amd64.iso"
+            let drivers = $"($home)/.vimu/winvirt_drivers.iso"
+
+            if not ($cdrom | path exists) {
+                print --stderr $"Windows ISO not found at ($cdrom)."
+                print --stderr $"Download the ISO manually and try again."
+                exit 1
+            }
+            if not ($drivers | path exists) {
+                log info "Downloading Windows drivers."
+                http get "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+                | save --progress $drivers
+            }
+
+            create-app "windows"
+            install-windows windows $cdrom $drivers
+        }
         _ => { error make { msg: $"Domain '($domain)' is not supported." } }
     }
 }
 
+# Connect to virtual machine as desktop.
+def "main gui" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    connect $start gui $domain
+}
+
 # Create a virtual machine from a cdrom or disk file.
 def "main install" [
+    --arch (-a): string # Virtual machine architecture
     --domain (-d): string # Virtual machine name
     --log-level (-l): string = "debug" # Log level
     --osinfo (-o): string = "generic" # Virt-install osinfo
@@ -265,6 +437,7 @@ def "main install" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     main setup host
+    let arch = $arch | default $nu.os-info.arch
     let home = get-home
 
     # Check if domain is already used by libvirt.
@@ -275,24 +448,28 @@ def "main install" [
 
     let path = if ($uri | str starts-with "https://") {
         let image = $"($home)/.vimu/($uri | path basename)"
+        log info $"Downloading image from ($uri)."
         http get $uri | save --progress $image
         $image
     } else {
         $uri
     }
 
-    let extension = $path | path parse | get extension
+    let parts = $path | path parse
+    let extension = $parts | get extension
     match $extension {
-        "iso" => { install-cdrom $domain $osinfo $path }
+        "iso" => {
+            create-app $domain
+            install-cdrom $domain $osinfo $path
+        }
         "img" | "qcow2" | "raw" | "vmdk" => {
+            create-app $domain
             install-disk $domain $osinfo $path $extension
         }
         _ => {
             error make { msg: $"Unsupported extension '$extension'." }
         }
     }
-
-    create-app $domain
 }
 
 # Delete virtual machine and its disk images.
@@ -308,7 +485,7 @@ def "main remove" [
         virsh destroy $domain
     }
 
-    # Detele domain snapshots and then domain itself.
+    # Delete domain snapshots and then domain itself.
     if (virsh list --all --name | str contains $domain) {
         for snapshot in (
             virsh snapshot-list --name --domain $domain | split words
@@ -318,11 +495,22 @@ def "main remove" [
         virsh undefine --nvram --remove-all-storage $domain
     }
 
-    (
-        rm --force 
-        $"($home)/.local/share/applications/vimu_($domain).desktop"
-        $"($home)/.local/share/libvirt/cdroms/($domain).iso"
-    )
+    match $nu.os-info.name {
+        "linux" => {
+            (
+                rm --force --recursive
+                $"($home)/.local/share/applications/vimu_($domain).desktop"
+                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+            )
+        }
+        "macos" => {
+            (
+                rm --force --recursive
+                $"($home)/Applications/vimu_($domain).app"
+                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+            )
+        }
+    }
 }
 
 # Configure machine for emulation.
@@ -339,6 +527,13 @@ def "main setup desktop" [] {
     if (which apk | is-not-empty) {
         ^$super apk update
         ^$super setup-desktop gnome
+    } else if (which apt | is-not-empty) {
+        ^$super apt-get update
+        ^$super apt-get install --yes task-gnome-desktop
+    } else if (which pacman | is-not-empty) {
+        ^$super pacman --noconfirm --refresh --sync --sysupgrade
+        ^$super pacman --noconfirm --sync gnome
+        ^$super systemctl enable --now gdm.service
     } else if (which pkg | is-not-empty) {
         # Configure GNOME desktop for FreeBSD.
         #
@@ -393,8 +588,8 @@ def "main setup guest" [] {
     } else if (which pkg | is-not-empty) {
         ^$super pkg update
         # Seems as though openssh-server is builtin to FreeBSD.
-        ^$super pkg install --yes curl ncurses qemu-guest-agent rsync
-        ^$super service qemu-guest-agent start
+        ^$super pkg install --yes curl ncurses qemu-guest-agent rsync topgrade
+        try { ^$super service qemu-guest-agent start }
         ^$super sysrc qemu_guest_agent_enable="YES"
         # Enable serial console on next boot.
         let content = '
@@ -410,13 +605,21 @@ console="comconsole,vidconsole"
     }
 
     if (which systemctl | is-not-empty) {
-        # ^$super systemctl enable --now qemu-guest-agent.service
-        ^$super systemctl enable --now serial-getty@ttyS0.service
-        # ^$super systemctl enable --now spice-vdagentd.service
-        ^$super systemctl enable --now ssh.service
+        let services = systemctl list-units --type=service --all
+        for service in [
+            "qemu-guest-agent" "serial-getty@ttyS0" "spice-vdagentd" "ssh"
+            "sshd"
+        ] {
+            if ($services | str contains $"($service).service") {
+                try { ^$super systemctl enable --now $"($service).service" }
+            }
+        }
     }
 
-    if (which topgrade | is-empty) {
+    http get https://scruffaluff.github.io/scripts/install/scripts.nu
+    | nu -c $"($in | decode); main clear-cache fdi rgi rstash"
+
+    if $nu.os-info.name == "linux" and (which topgrade | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir
         let version = (
             http get https://formulae.brew.sh/api/formula/topgrade.json
@@ -433,8 +636,9 @@ console="comconsole,vidconsole"
         )
         tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
         ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+    }
 
-        let config = '
+    let config = '
 # Topgrade configuration file for updating system packages.
 #
 # For more infomation, visit
@@ -447,9 +651,8 @@ no_retry = true
 notify_each_step = false
 skip_notify = true
 '
-        mkdir $"($home)/.config"
-        $config | save --force $"($home)/.config/topgrade.toml"
-    }
+    mkdir $"($home)/.config"
+    $config | save --force $"($home)/.config/topgrade.toml"
 }
 
 # Configure host machine.
@@ -462,8 +665,8 @@ def "main setup host" [] {
         $"($home)/.local/share/libvirt/images"
     )
 
-    http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/waveform.svg
-    | save --force $"($home)/.vimu/waveform.svg"
+    http get https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/faders-bold.svg
+    | save --force $"($home)/.vimu/icon.svg"
 
     if not ($"($home)/.vimu/key" | path exists) {
         ssh-keygen -N '' -q -f $"($home)/.vimu/key" -t ed25519 -C vimu
@@ -471,40 +674,6 @@ def "main setup host" [] {
             chmod 600 $"($home)/.vimu/key" $"($home)/.vimu/key.pub"
         }
     }
-}
-
-# Forward host port to guest domain 22 port for SSH.
-def "main setup port" [
-    domain: string # Virtual machine name
-] {
-    # Setup SSH port.
-    virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::2022-:22"
-    # Setup Android debug port.
-    virsh qemu-monitor-command --domain $domain --hmp "hostfwd_add tcp::4444-:5555"
-}
-
-# Upload Vimu to guest machine.
-def "main setup upload" [
-    domain: string # Virtual machine name
-] {
-    const script = path self
-    let home = get-home
-    if ((virsh domstate $domain | str trim) != "running") {
-        virsh start $domain
-    }
-
-    # Install Nushell by piping Curl output remote shell.
-    (
-        curl --fail --location 
-        --show-error https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"($home)/.vimu/key" -p 2022 localhost sh -s -- --global
-    )
-    # Copy Vimu to remote machine and install with super command.
-    tscp -i $"($home)/.vimu/key" -P 2022 $script localhost:/tmp/vimu
-    (
-        tssh -i $"($home)/.vimu/key" -p 2022 localhost sudo install
-        /tmp/vimu /usr/local/bin/vimu
-    )
 }
 
 # Connect to virtual machine with SSH.
@@ -517,12 +686,35 @@ def "main ssh" [
     connect $start ssh $domain
 }
 
-# Connect to virtual machine as desktop.
-def "main view" [
-    --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
+# Upload Vimu to guest machine.
+def "main upload" [
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    connect $start view $domain
+    const vimu = path self
+    if ((virsh domstate $domain | str trim) != "running") {
+        virsh start $domain
+    }
+
+    let key = $"(get-home)/.vimu/key"
+    let port = port
+    (
+        virsh qemu-monitor-command --domain $domain
+        --hmp $"hostfwd_add tcp::($port)-:22"
+    )
+
+    let check = tssh -i $key -p $port localhost command -v nu | complete
+    if $check.exit_code != 0 {
+        http get https://scruffaluff.github.io/scripts/install/nushell.sh
+        | tssh -i $key -p $port localhost sh -s -- --global
+    }
+
+    # Copy Vimu to remote machine and install with super command.
+    tscp -i $key -P $port $vimu localhost:/tmp/vimu
+    tssh -i $key -p $port localhost "
+if [ -x \"$(command -v doas)\" ]; then
+    doas install /tmp/vimu /usr/local/bin/vimu
+else
+    sudo install /tmp/vimu /usr/local/bin/vimu
+fi
+"
 }
