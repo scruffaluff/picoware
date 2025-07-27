@@ -52,12 +52,6 @@ def install-script [
     let ext = $parts | get extension
     let name = $parts | get stem
 
-    let program = if $nu.os-info.name == "windows" {
-        $"($dest)/($script)"
-    } else {
-        $"($dest)/($name)"
-    }
-
     mut args = []
     if $preserve_env {
         $args = [...$args "--preserve-env"]
@@ -73,6 +67,12 @@ def install-script [
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     }
 
+    let program = if $nu.os-info.name == "windows" {
+        $"($dest)/($script)"
+    } else {
+        $"($dest)/($name)"
+    }
+
     log $"Installing script ($script) to '($program)'."
     let temp = mktemp --tmpdir
     let uri = $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/script/($script)"
@@ -81,10 +81,12 @@ def install-script [
     } else {
         http get $uri | save --force --progress $temp
     }
-    if $nu.os-info.name != "windows" {
+
+    if $nu.os-info.name == "windows" {
+        install-wrapper $ext $"($dest)/($name)"
+    } else {
         chmod +x $temp
     }
-
     if ($super | is-empty) {
         mkdir $dest
         mv $temp $program
@@ -106,11 +108,23 @@ def install-script [
     log $"Installed ($version)."
 }
 
+# Install wrapper script for Windows.
+def install-wrapper [ext: string dest: string] {
+    let wrapper = match $ext {
+        "nu" => 'nu "%~dnp0.nu" %*'
+        "ps1" => 'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*'
+        "py" => 'uv --no-config run --script "%~dnp0.py" %*'
+        "ts" => 'deno run --allow-all "%~dnp0.ts" %*'
+    }
+    
+    $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"
+}
+
 # Print message if error or logging is enabled.
 def --wrapped log [...args: string] {
     if (
         not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
-        and not ("-e" in $args) and not ("--stderr" in $args)
+        or ("-e" in $args) or ("--stderr" in $args)
     ) {
         print ...$args
     }

@@ -80,7 +80,7 @@ def install [super: string dest: string version: string] {
 def --wrapped log [...args: string] {
     if (
         not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
-        and not ("-e" in $args) and not ("--stderr" in $args)
+        or ("-e" in $args) or ("--stderr" in $args)
     ) {
         print ...$args
     }
