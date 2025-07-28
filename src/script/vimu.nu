@@ -91,7 +91,7 @@ def create-app [domain: string] {
             (
                 $"
 [Desktop Entry]
-Exec=vimu gui ($domain)
+Exec=vimu gui --start ($domain)
 Icon=($home)/.vimu/icon.svg
 Name=($title)
 Terminal=false
@@ -99,7 +99,7 @@ Type=Application
 Version=1.0
 "
                 | str trim --left
-                | save --force $"($dest)/vimu_($domain).desktop"
+                | save --force $"($dest)/($title).desktop"
             )
         }
         "macos" => {
@@ -160,7 +160,7 @@ def create-entry [domain: string path: string] {
 set -eu
 
 export PATH="($folder):${PATH}"
-exec vimu gui ($domain)
+exec vimu gui --start ($domain)
 "  | str trim --left | save --force $path
     chmod +x $path
 }
@@ -268,7 +268,7 @@ def install-windows [domain: string cdrom: string drivers: string] {
         virt-install
         --arch x86_64
         --cdrom $cdrom
-        --disk bus=virtio,format=qcow2,size=64
+        --disk bus=virtio,format=qcow2,size=128
         --disk $"bus=sata,device=cdrom,path=($drivers)"
         --memory 8192
         --name $domain
@@ -298,13 +298,14 @@ Options:
   -v, --version     Print version information
 
 Subcommands:
-  create      Create virutal machine from default options
-  gui         Connect to virtual machine as desktop
-  install     Create a virtual machine from a cdrom or disk file
-  remove      Delete virtual machine and its disk images
-  setup       Configure machine for emulation
-  ssh         Connect to virtual machine with SSH
-  upload      Upload Vimu to guest machine
+  create            Create virutal machine from default options
+  detach-cdroms     Remove all cdrom disks from virtual machine
+  gui               Connect to virtual machine as desktop
+  install           Create a virtual machine from a cdrom or disk file
+  remove            Delete virtual machine and its disk images
+  setup             Configure machine for emulation
+  ssh               Connect to virtual machine with SSH
+  upload            Upload Vimu to guest machine
 
 Virsh Options:"
         )
@@ -427,6 +428,21 @@ def "main create" [
             install-windows windows $cdrom $drivers
         }
         _ => { error make { msg: $"Domain '($domain)' is not supported." } }
+    }
+}
+
+# Remove all cdrom disks from virtual machine.
+def "main detach-cdroms" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    let cdroms = virsh domblklist --details windows | from ssv | reject 0
+    | where Device == "cdrom" | get Source
+
+    for cdrom in $cdroms {
+        log info $"Removing disk ($cdrom)."
+        virsh detach-disk --persistent $domain $cdrom
     }
 }
 
