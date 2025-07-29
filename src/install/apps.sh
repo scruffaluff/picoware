@@ -290,7 +290,7 @@ install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
   local runner='' script='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/public/pwa-maskable-512x512.png"
+  local icon_url="${url}/data/image/icon.png"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
@@ -331,7 +331,7 @@ install_app_macos() {
   local name="${3}" super="${1}" version="${2}"
   local identifier='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/public/pwa-maskable-512x512.png"
+  local icon_url="${url}/data/public/icon.png"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
   title="$(capitalize "${name}")"
 
@@ -364,7 +364,7 @@ install_app_macos() {
   <key>CFBundleExecutable</key>
   <string>index.sh</string>
   <key>CFBundleIconFile</key>
-  <string>icon</string>
+  <string>icon.png</string>
   <key>CFBundleIdentifier</key>
   <string>${identifier}</string>
   <key>CFBundleInfoDictionaryVersion</key>
