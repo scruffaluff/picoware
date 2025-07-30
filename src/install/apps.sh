@@ -290,18 +290,18 @@ install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
   local runner='' script='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
-  local icon_url="${url}/data/image/icon.png"
+  local icon_url="${url}/data/image/icon.svg"
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
     dest="/usr/local/app/${name}"
-    manifest="/usr/local/share/applications/${3}.desktop"
+    manifest="/usr/local/share/applications/${name}.desktop"
   else
     dest="${HOME}/.local/app/${name}"
-    manifest="${HOME}/.local/share/applications/${3}.desktop"
+    manifest="${HOME}/.local/share/applications/${name}.desktop"
   fi
   entry_point="${dest}/index.sh"
-  icon="${dest}/icon.png"
+  icon="${dest}/icon.svg"
 
   log "Installing app ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
@@ -309,11 +309,25 @@ install_app_linux() {
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
 
+  # Parse window class to ensure correct dock icon.
+  case "$(basename "${runner}")" in
+    deno)
+      wmclass='GTK Application'
+      ;;
+    uv)
+      wmclass='python3'
+      ;;
+    *)
+      wmclass=''
+      ;;
+  esac
+
   cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 [Desktop Entry]
 Exec=${entry_point}
 Icon=${icon}
 Name=${title}
+StartupWMClass=${wmclass}
 Terminal=false
 Type=Application
 EOF
@@ -337,11 +351,11 @@ install_app_macos() {
 
   if [ -n "${super}" ]; then
     dest="/Applications/${title}.app/Contents/MacOS"
-    icon="/Applications/${title}.app/Contents/Resources/icon.png"
+    icon="/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="/Applications/${title}.app/Contents/Info.plist"
   else
     dest="${HOME}/Applications/${title}.app/Contents/MacOS"
-    icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.png"
+    icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
   entry_point="${dest}/index.sh"

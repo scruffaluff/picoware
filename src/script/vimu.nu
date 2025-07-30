@@ -94,12 +94,13 @@ def create-app [domain: string] {
 Exec=vimu gui --start ($domain)
 Icon=($home)/.vimu/icon.svg
 Name=($title)
+StartupWMClass=virt-viewer
 Terminal=false
 Type=Application
 Version=1.0
 "
                 | str trim --left
-                | save --force $"($dest)/($title).desktop"
+                | save --force $"($dest)/($domain).desktop"
             )
         }
         "macos" => {
@@ -520,7 +521,7 @@ def "main remove" [
         "linux" => {
             (
                 rm --force --recursive
-                $"($home)/.local/share/applications/($title).desktop"
+                $"($home)/.local/share/applications/($domain).desktop"
                 $"($home)/.local/share/libvirt/cdroms/($domain).iso"
             )
         }
