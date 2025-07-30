@@ -16,9 +16,9 @@ def main [] {
     magick $"($data)/image/icon.svg" -background none -resize 192x192 $"($data)/image/icon.png"
 
     if $nu.os-info.name == "macos" {
-        (
-            sips -s format icns $"($data)/image/icon.png" --out
-            $"($data)/image/icon.icns"
-        )
+        # Sips icns file generation only works for specific resolutions.
+        let temp = mktemp --tmpdir --suffix ".png"
+        magick $"($data)/image/icon.svg" -background none -resize 256x256 $temp
+        sips -s format icns $temp --out $"($data)/image/icon.icns"
     }
 }

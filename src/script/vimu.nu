@@ -20,7 +20,7 @@ def ask-password [] {
 
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
-    let home = get-home
+    let home = path-home
     let pub_key = open $"($home)/.vimu/key.pub"
     let content = $"
 #cloud-config
@@ -64,7 +64,7 @@ def connect [
         "console" => { virsh console $domain }
         "gui" => { virt-viewer $domain }
         "ssh" => {
-            let home = get-home
+            let home = path-home
             let port = port
             (
                 virsh qemu-monitor-command --domain $domain
@@ -81,7 +81,7 @@ def connect [
 
 # Create application desktop entry.
 def create-app [domain: string] {
-    let home = get-home
+    let home = path-home
     let title = $domain | str capitalize
 
     match $nu.os-info.name {
@@ -105,7 +105,7 @@ Version=1.0
         "macos" => {
             let dest = $"($home)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
-            cp $"($home)/.vimu/icon.png" $"($dest)/Resources/icon.png"
+            cp $"($home)/.vimu/icon.icns" $"($dest)/Resources/icon.icns"
             create-entry $domain $"($dest)/MacOS/main.sh"
 
             (
@@ -121,7 +121,7 @@ Version=1.0
   <key>CFBundleExecutable</key>
   <string>main.sh</string>
   <key>CFBundleIconFile</key>
-  <string>icon</string>
+  <string>icon.icns</string>
   <key>CFBundleIdentifier</key>
   <string>com.scruffaluff.vimu-($domain)</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -183,20 +183,11 @@ Restart this script from an administrator console or install to a user directory
     }
 }
 
-# Parse user home directory from environment variables.
-def get-home [] {
-    if $nu.os-info.name == "windows" {
-        $"($env.HOMEDRIVE)($env.HOMEPATH)"
-    } else {
-        $env.HOME
-    }
-}
-
 # Create a virtual machine from an ISO disk.
 def --wrapped install-cdrom [
     domain: string osinfo: string path: string ...args: string
 ] {
-    let home = get-home
+    let home = path-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
@@ -223,7 +214,7 @@ def --wrapped install-cdrom [
 def --wrapped install-disk [
     name: string osinfo: string path: string extension: string ...args: string
 ] {
-    let home = get-home
+    let home = path-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
@@ -257,7 +248,7 @@ def --wrapped install-disk [
 
 # Create a Windows virtual machine from an ISO disk.
 def install-windows [domain: string cdrom: string drivers: string] {
-    let home = get-home
+    let home = path-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
@@ -338,7 +329,7 @@ def "main create" [
         "aarch64" => "arm64"
         "x86_64" => "amd64"
     }
-    let home = get-home
+    let home = path-home
     main setup host
 
     # To find all osinfo options, run "virt-install --osinfo list".
@@ -467,7 +458,7 @@ def "main install" [
     $env.NU_LOG_LEVEL = $log_level | str upcase
     main setup host
     let arch = $arch | default $nu.os-info.arch
-    let home = get-home
+    let home = path-home
 
     # Check if domain is already used by libvirt.
     if (virsh list --all --name | str contains $domain) {
@@ -507,7 +498,7 @@ def "main remove" [
     domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    let home = get-home
+    let home = path-home
     let title = $domain | str capitalize
 
     # Stop domain if running.
@@ -583,7 +574,7 @@ def "main setup desktop" [] {
 
 # Configure guest filesystem.
 def "main setup guest" [] {
-    let home = get-home
+    let home = path-home
     let super = find-super
 
     if (which apk | is-not-empty) {
@@ -687,7 +678,7 @@ skip_notify = true
 
 # Configure host machine.
 def "main setup host" [] {
-    let home = get-home
+    let home = path-home
     (
         mkdir
         $"($home)/.vimu"
@@ -695,6 +686,14 @@ def "main setup host" [] {
         $"($home)/.local/share/libvirt/images"
     )
 
+    if not ($"($home)/.vimu/icon.icns" | path exists) {
+        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.icns
+        | save $"($home)/.vimu/icon.icns"
+    }
+    if not ($"($home)/.vimu/icon.ico" | path exists) {
+        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.ico
+        | save $"($home)/.vimu/icon.ico"
+    }
     if not ($"($home)/.vimu/icon.png" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.png
         | save $"($home)/.vimu/icon.png"
@@ -731,7 +730,7 @@ def "main upload" [
         virsh start $domain
     }
 
-    let key = $"(get-home)/.vimu/key"
+    let key = $"(path-home)/.vimu/key"
     let port = port
     (
         virsh qemu-monitor-command --domain $domain
@@ -753,4 +752,13 @@ else
     sudo install /tmp/vimu /usr/local/bin/vimu
 fi
 "
+}
+
+# Get user home folder.
+def path-home [] {
+    if $nu.os-info.name == "windows" {
+        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
+    } else {
+        $env.HOME? 
+    }
 }
