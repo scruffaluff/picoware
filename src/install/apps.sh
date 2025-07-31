@@ -16,7 +16,7 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Scripts apps.
+Installer script for Scripts application.
 
 Usage: install-apps [OPTIONS] [APPS]...
 
@@ -297,23 +297,23 @@ install_app_linux() {
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
-    cli="/usr/local/bin/${name}"
+    cli_dir="/usr/local/bin"
     dest="/usr/local/app/${name}"
     manifest="/usr/local/share/applications/${name}.desktop"
   else
-    cli="${HOME}/.local/bin/${name}"
+    cli_dir="${HOME}/.local/bin"
     dest="${HOME}/.local/app/${name}"
     manifest="${HOME}/.local/share/applications/${name}.desktop"
   fi
   entry_point="${dest}/index.sh"
   icon="${dest}/icon.svg"
 
-  log "Installing app ${title}."
+  log "Installing application ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
   script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
-  ${super:+"${super}"} ln -fs "${entry_point}" "${cli}"
+  ${super:+"${super}"} ln -fs "${entry_point}" "${cli_dir}/${name}"
 
   # Parse window class to ensure correct dock icon.
   case "$(basename "${runner}")" in
@@ -337,7 +337,7 @@ StartupWMClass=${wmclass}
 Terminal=false
 Type=Application
 EOF
-  export PATH="${dest}:${PATH}"
+  export PATH="${cli_dir}:${PATH}"
   log "Installed $("${name}" --version)."
 }
 
@@ -357,24 +357,24 @@ install_app_macos() {
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
-    cli="/usr/local/bin/${name}"
+    cli_dir="/usr/local/bin"
     dest="/Applications/${title}.app/Contents/MacOS"
     icon="/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="/Applications/${title}.app/Contents/Info.plist"
   else
-    cli="${HOME}/.local/bin/${name}"
+    cli_dir="${HOME}/.local/bin"
     dest="${HOME}/Applications/${title}.app/Contents/MacOS"
     icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
   entry_point="${dest}/index.sh"
 
-  log "Installing app ${title}."
+  log "Installing application ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
   script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
-  ${super:+"${super}"} ln -fs "${entry_point}" "${cli}"
+  ${super:+"${super}"} ln -fs "${entry_point}" "${cli_dir}/${name}"
 
   cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 <?xml version="1.0" encoding="UTF-8"?>
@@ -412,7 +412,7 @@ install_app_macos() {
 </dict>
 </plist>
 EOF
-  export PATH="${dest}:${PATH}"
+  export PATH="${cli_dir}:${PATH}"
   log "Installed $("${name}" --version)."
 }
 

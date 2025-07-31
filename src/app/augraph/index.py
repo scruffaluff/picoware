@@ -18,7 +18,9 @@ from typing import Annotated
 
 import audioread
 import numpy
+from numpy.typing import NDArray
 import webview
+from webview.menu import Menu, MenuAction
 from typer import Option, Typer
 
 
@@ -34,7 +36,23 @@ cli = Typer(
 class App:
     """Application backend logic."""
 
-    def read(self, path) -> list[list[float]]:
+    def __init__(self) -> None:
+        self.samples: list[NDArray] = []
+
+    def load(self) -> list[list[float]]:
+        samples = [sample.tolist() for sample in self.samples]
+        return samples[0] if samples else []
+
+    def open(self) -> None:
+        """Audio file opener callback."""
+        types = ("Audio Files (*.mp3;*.wav)",)
+        window = webview.active_window()
+        files = window.create_file_dialog(
+            webview.OPEN_DIALOG, directory=str(Path.home()), file_types=types
+        )
+        self.samples = [self.read(file) for file in files]
+
+    def read(self, path) -> list[float]:
         """Read audio file as mono signal."""
         path = Path.home() / path
 
@@ -48,7 +66,7 @@ class App:
         audio = arrays.reshape((file.channels, -1)) / scale
         samples = numpy.mean(audio, axis=0)
         times = numpy.arange(len(samples)) / file.samplerate
-        return numpy.stack((times, samples)).T.tolist()
+        return numpy.stack((times, samples)).T
 
 
 def print_version(value: bool) -> None:
@@ -74,13 +92,15 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """Application entrypoint."""
+    """Audio plotting example application."""
+    app = App()
     gui = "qt" if sys.platform == "linux" else None
+    menu = [Menu("File", [MenuAction("Open", app.open)])]
+    webview.settings["OPEN_DEVTOOLS_IN_DEBUG"] = False
 
     html = Path(__file__).parent / "index.html"
-    app = App()
     webview.create_window("Augraph", url=str(html), js_api=app)
-    webview.start(debug=debug, gui=gui)
+    webview.start(debug=debug, gui=gui, menu=menu)
 
 
 if __name__ == "__main__":
