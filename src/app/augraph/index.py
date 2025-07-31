@@ -5,7 +5,7 @@
 #   "audioread~=3.0",
 #   "cryptography~=44.0",
 #   "numpy~=2.3",
-#   "pywebview[qt]~=5.4",
+#   "pywebview~=5.4",
 #   "pywebview[qt]~=5.4; sys_platform == 'linux'",
 #   "typer~=0.16.0",
 # ]
@@ -14,12 +14,15 @@
 
 from pathlib import Path
 import sys
+from typing import Annotated
 
 import audioread
 import numpy
 import webview
-from typer import Typer
+from typer import Option, Typer
 
+
+__version__ = "0.0.1"
 
 cli = Typer(
     add_completion=False,
@@ -48,13 +51,35 @@ class App:
         return numpy.stack((times, samples)).T.tolist()
 
 
+def print_version(value: bool) -> None:
+    """Print Rstash version string."""
+    if value:
+        print(f"Augraph {__version__}")
+        sys.exit()
+
+
 @cli.command()
-def main(debug: bool = False) -> None:
+def main(
+    debug: Annotated[
+        bool, Option("--debug", help="Launch application in debug mode.")
+    ] = False,
+    version: Annotated[
+        bool,
+        Option(
+            "-v",
+            "--version",
+            callback=print_version,
+            help="Print version information.",
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
     """Application entrypoint."""
+    gui = "qt" if sys.platform == "linux" else None
+
     html = Path(__file__).parent / "index.html"
     app = App()
     webview.create_window("Augraph", url=str(html), js_api=app)
-    gui = "qt" if sys.platform == "linux" else None
     webview.start(debug=debug, gui=gui)
 
 

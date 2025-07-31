@@ -66,8 +66,11 @@ create_entry() {
 #!/usr/bin/env sh
 set -eu
 
+# Add interpreter to system path.
 export PATH="${folder}:\${PATH}"
-exec "\$(dirname "\${0}")/$(basename "${script}")"
+# Resolve symlinks to find script folder.
+folder="\$(dirname "\$(readlink "\${0}")")"
+exec "\${folder}/$(basename "${script}")" "\$@"
 EOF
   ${super:+"${super}"} chmod +x "${path}"
 }
@@ -294,9 +297,11 @@ install_app_linux() {
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
+    cli="/usr/local/bin/${name}"
     dest="/usr/local/app/${name}"
     manifest="/usr/local/share/applications/${name}.desktop"
   else
+    cli="${HOME}/.local/bin/${name}"
     dest="${HOME}/.local/app/${name}"
     manifest="${HOME}/.local/share/applications/${name}.desktop"
   fi
@@ -308,6 +313,7 @@ install_app_linux() {
   script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
+  ${super:+"${super}"} ln -fs "${entry_point}" "${cli}"
 
   # Parse window class to ensure correct dock icon.
   case "$(basename "${runner}")" in
@@ -331,7 +337,8 @@ StartupWMClass=${wmclass}
 Terminal=false
 Type=Application
 EOF
-  log "Installed ${title}."
+  export PATH="${dest}:${PATH}"
+  log "Installed $("${name}" --version)."
 }
 
 #######################################
@@ -350,10 +357,12 @@ install_app_macos() {
   title="$(capitalize "${name}")"
 
   if [ -n "${super}" ]; then
+    cli="/usr/local/bin/${name}"
     dest="/Applications/${title}.app/Contents/MacOS"
     icon="/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="/Applications/${title}.app/Contents/Info.plist"
   else
+    cli="${HOME}/.local/bin/${name}"
     dest="${HOME}/Applications/${title}.app/Contents/MacOS"
     icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
@@ -365,6 +374,7 @@ install_app_macos() {
   script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
+  ${super:+"${super}"} ln -fs "${entry_point}" "${cli}"
 
   cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
 <?xml version="1.0" encoding="UTF-8"?>
@@ -402,7 +412,8 @@ install_app_macos() {
 </dict>
 </plist>
 EOF
-  log "Installed ${title}."
+  export PATH="${dest}:${PATH}"
+  log "Installed $("${name}" --version)."
 }
 
 #######################################

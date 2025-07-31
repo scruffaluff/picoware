@@ -6,7 +6,7 @@ import { Webview } from "jsr:@webview/webview@0.9.0";
 
 async function main(): Promise<void> {
   await new Command()
-    .name("greeter")
+    .name("Greeter")
     .description("Greeter example application.")
     .version("0.0.1")
     .action(async () => {
