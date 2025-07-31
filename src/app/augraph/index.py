@@ -51,6 +51,7 @@ class App:
             webview.OPEN_DIALOG, directory=str(Path.home()), file_types=types
         )
         self.samples = [self.read(file) for file in files]
+        window.run_js("plot();")
 
     def read(self, path) -> list[float]:
         """Read audio file as mono signal."""
