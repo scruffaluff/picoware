@@ -183,19 +183,19 @@ def download() -> None:
 @cli.callback()
 def main(
     config_path: Annotated[
-        Path | None, Option("-c", "--config", help="Configuration file path")
+        Path | None, Option("-c", "--config", help="Configuration file path.")
     ] = None,
     dry_run: Annotated[
-        bool, Option("-d", "--dry-run", help="Only print actions to be taken")
+        bool, Option("-d", "--dry-run", help="Only print actions to be taken.")
     ] = False,
-    log_level: Annotated[str, Option("-l", "--log-level", help="Log level")] = "info",
+    log_level: Annotated[str, Option("-l", "--log-level", help="Log level.")] = "info",
     version: Annotated[
         bool,
         Option(
             "-v",
             "--version",
             callback=print_version,
-            help="Print version information",
+            help="Print version information.",
             is_eager=True,
         ),
     ] = False,

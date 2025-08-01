@@ -321,7 +321,7 @@ def "main adb" [
 
 # Create virutal machine from default options.
 def "main create" [
-    --gui (-g) # Use GUI version of domain
+    --iso (-i) # Use ISO version of domain
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
@@ -710,6 +710,17 @@ def "main setup host" [] {
             chmod 600 $"($home)/.vimu/key" $"($home)/.vimu/key.pub"
         }
     }
+}
+
+# List snapshots for all virtual machines.
+def "main snapshots" [
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    virsh list --all --name | str trim | lines | each {|domain|
+        virsh snapshot-list --parent $domain | str trim | lines | drop nth 1
+        | str join "\n" | from ssv | insert Domain $domain | move Domain --first
+    } | flatten
 }
 
 # Connect to virtual machine with SSH.
