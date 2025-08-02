@@ -20,8 +20,7 @@ def ask-password [] {
 
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
-    let home = path-home
-    let pub_key = open $"($home)/.vimu/key.pub"
+    let pub_key = open $"(path-config)/key.pub"
     let content = $"
 #cloud-config
 
@@ -44,6 +43,7 @@ users:
 
 # Create application desktop entry.
 def create-app [domain: string] {
+    let config = path-config
     let home = path-home
     let title = $domain | str capitalize
 
@@ -54,8 +54,8 @@ def create-app [domain: string] {
             (
                 $"
 [Desktop Entry]
-Exec=vimu gui --start ($domain)
-Icon=($home)/.vimu/icon.svg
+Exec=vimu gui ($domain)
+Icon=($config)/icon.svg
 Name=($title)
 StartupWMClass=virt-viewer
 Terminal=false
@@ -69,7 +69,7 @@ Version=1.0
         "macos" => {
             let dest = $"($home)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
-            cp $"($home)/.vimu/icon.icns" $"($dest)/Resources/icon.icns"
+            cp $"($config)/icon.icns" $"($dest)/Resources/icon.icns"
             create-entry $domain $"($dest)/MacOS/main.sh"
 
             (
@@ -124,7 +124,7 @@ def create-entry [domain: string path: path] {
 set -eu
 
 export PATH="($folder):${PATH}"
-exec vimu gui --start ($domain)
+exec vimu gui ($domain)
 "  | str trim --left | save --force $path
     chmod +x $path
 }
@@ -236,9 +236,11 @@ def install-windows [domain: string cdrom: path drivers: string] {
 
 # Convenience script for QEMU and Virsh.
 def --wrapped main [
+    --log-level (-l): string = "debug" # Log level
     --version (-v) # Print version information
     ...args: string # Virsh arguments
 ] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
         print "Vimu 0.1.0"
     } else if $args == ["-h"] or $args == ["--help"] {
@@ -277,12 +279,11 @@ Virsh Options:"
 # Connect to virtual machine with Android debug bridge.
 def --wrapped "main adb" [
     --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
     ...args: string # Android debug bridge arguments.
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    if $start and not (virsh list --name | str contains $domain) {
+    if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
     let port = port-map $domain 5555
@@ -300,13 +301,13 @@ def "main create" [
         "aarch64" => "arm64"
         "x86_64" => "amd64"
     }
-    let home = path-home
+    let config = path-config
     main setup host
 
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
-            let image = $"($home)/.vimu/alpine_amd64.qcow2"
+            let image = $"($config)/alpine_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
                 http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-x86_64-bios-cloudinit-r0.qcow2"
@@ -319,7 +320,7 @@ def "main create" [
             )
         }
         "android" => {
-            let image = $"($home)/.vimu/android_($arch).qcow2"
+            let image = $"($config)/android_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Android image."
                 http get $"https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
@@ -333,7 +334,7 @@ def "main create" [
             )
         }
         "arch" => {
-            let image = $"($home)/.vimu/arch_amd64.qcow2"
+            let image = $"($config)/arch_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Arch image."
                 http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
@@ -346,7 +347,7 @@ def "main create" [
             )
         }
         "debian" => {
-            let image = $"($home)/.vimu/debian_($arch).qcow2"
+            let image = $"($config)/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
                 http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
@@ -359,7 +360,7 @@ def "main create" [
             )
         }
         "freebsd" => {
-            let image = $"($home)/.vimu/freebsd_amd64.qcow2"
+            let image = $"($config)/freebsd_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading FreeBSD image."
                 http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
@@ -372,8 +373,8 @@ def "main create" [
             )
         }
         "windows" => {
-            let cdrom = $"($home)/.vimu/window_amd64.iso"
-            let drivers = $"($home)/.vimu/winvirt_drivers.iso"
+            let cdrom = $"($config)/window_amd64.iso"
+            let drivers = $"($config)/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {
                 print --stderr $"Windows ISO not found at ($cdrom)."
@@ -411,12 +412,11 @@ def "main detach-cdroms" [
 # Connect to virtual machine as desktop.
 def "main gui" [
     --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
     ...args: string # Virt Viewer arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    if $start and not (virsh list --name | str contains $domain) {
+    if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
 
@@ -434,7 +434,7 @@ def "main install" [
     $env.NU_LOG_LEVEL = $log_level | str upcase
     main setup host
     let arch = $arch | default $nu.os-info.arch
-    let home = path-home
+    let config = path-config
 
     # Check if domain is already used by libvirt.
     if (virsh list --all --name | str contains $domain) {
@@ -443,7 +443,7 @@ def "main install" [
     }
 
     let path = if ($uri | str starts-with "https://") {
-        let image = $"($home)/.vimu/($uri | path basename)"
+        let image = $"($config)/($uri | path basename)"
         log info $"Downloading image from ($uri)."
         http get $uri | save --progress $image
         $image
@@ -518,7 +518,10 @@ def "main setup" [
 }
 
 # Configure desktop environment on guest filesystem.
-def "main setup desktop" [] {
+def "main setup desktop" [
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     let super = find-super
 
     if (which apk | is-not-empty) {
@@ -551,7 +554,10 @@ def "main setup desktop" [] {
 }
 
 # Configure guest filesystem.
-def "main setup guest" [] {
+def "main setup guest" [
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     let home = path-home
     let super = find-super
 
@@ -612,14 +618,14 @@ console="comconsole,vidconsole"
         )
     }
 
+    # Services qemu-guest-agnet and spice-vdagentd appear to only available as
+    # on demand services.
     if (which systemctl | is-not-empty) {
         let services = systemctl list-units --type=service --all
-        for service in [
-            "qemu-guest-agent" "serial-getty@ttyS0" "spice-vdagentd" "ssh"
-            "sshd"
-        ] {
+        for service in ["serial-getty@ttyS0" "ssh" "sshd"] {
             if ($services | str contains $"($service).service") {
-                try { ^$super systemctl enable --now $"($service).service" }
+                log debug $"Enabling ($service) service."
+                ^$super systemctl enable --now $"($service).service"
             }
         }
     }
@@ -673,36 +679,40 @@ skip_notify = true
 }
 
 # Configure host machine.
-def "main setup host" [] {
+def "main setup host" [
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    let config = path-config
     let home = path-home
     (
         mkdir
-        $"($home)/.vimu"
+        $config
         $"($home)/.local/share/libvirt/cdroms"
         $"($home)/.local/share/libvirt/images"
     )
 
-    if not ($"($home)/.vimu/icon.icns" | path exists) {
+    if not ($"($config)/icon.icns" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.icns
-        | save $"($home)/.vimu/icon.icns"
+        | save $"($config)/icon.icns"
     }
-    if not ($"($home)/.vimu/icon.ico" | path exists) {
+    if not ($"($config)/icon.ico" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.ico
-        | save $"($home)/.vimu/icon.ico"
+        | save $"($config)/icon.ico"
     }
-    if not ($"($home)/.vimu/icon.png" | path exists) {
+    if not ($"($config)/icon.png" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.png
-        | save $"($home)/.vimu/icon.png"
+        | save $"($config)/icon.png"
     }
-    if not ($"($home)/.vimu/icon.svg" | path exists) {
+    if not ($"($config)/icon.svg" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.svg
-        | save $"($home)/.vimu/icon.svg"
+        | save $"($config)/icon.svg"
     }
 
-    if not ($"($home)/.vimu/key" | path exists) {
-        ssh-keygen -N '' -q -f $"($home)/.vimu/key" -t ed25519 -C vimu
+    if not ($"($config)/key" | path exists) {
+        ssh-keygen -N '' -q -f $"($config)/key" -t ed25519 -C vimu
         if $nu.os-info.name != "windows" {
-            chmod 600 $"($home)/.vimu/key" $"($home)/.vimu/key.pub"
+            chmod 600 $"($config)/key" $"($config)/key.pub"
         }
     }
 }
@@ -721,12 +731,9 @@ def "main snapshot-table" [
 # Copy files between host and virtual machine.
 def --wrapped "main scp" [
     --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
     ...args: string # Secure copy arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    let home = path-home
-    let port = port
 
     mut domain = ""
     mut params = $args
@@ -744,42 +751,41 @@ def --wrapped "main scp" [
         exit 1
     }
     
-    if $start and not (virsh list --name | str contains $domain) {
+    if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
     let port = port-map $domain 22
-    tscp -i $"($home)/.vimu/key" -P $port ...$params
+    tscp -i $"(path-config)/key" -P $port ...$params
 }
 
 # Connect to virtual machine with SSH.
 def --wrapped "main ssh" [
     --log-level (-l): string = "debug" # Log level
-    --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
     ...args: string
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    let home = path-home
 
-    if $start and not (virsh list --name | str contains $domain) {
+    if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
     let port = port-map $domain 22
-    tssh -i $"($home)/.vimu/key" -p $port localhost ...$args
+    tssh -i $"(path-config)/key" -p $port localhost ...$args
 }
 
 # Upload Vimu to guest machine.
 def "main upload" [
+    --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
     const vimu = path self
 
-    let check = main ssh --start $domain command -v nu | complete
+    let check = main ssh $domain command -v nu | complete
     if $check.exit_code != 0 {
         let port = port-map $domain 22
         http get https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"(path-home)/.vimu/key" -p $port localhost sh -s -- --global
-
+        | tssh -i $"(path-config)/key" -p $port localhost sh -s -- --global
     }
 
     # Copy Vimu to remote machine and install with super command.
@@ -791,6 +797,16 @@ else
     sudo install /tmp/vimu /usr/local/bin/vimu
 fi
 "
+}
+
+# Get Vimu configuration folder.
+def path-config [] {
+    let home = path-home
+    match $nu.os-info.name {
+        "macos" => $"($home)/Library/Application Support/vimu"
+        "windows" => $"($home)/AppData/Roaming/vimu"
+        _ => $"($home)/.config/vimu"
+    }
 }
 
 # Get user home folder.
