@@ -24,15 +24,15 @@ def cloud-init [domain: string username: string password: string] {
     let content = $"
 #cloud-config
 
-hostname: "($domain)"
+hostname: \"($domain)\"
 preserve_hostname: false
 users:
   - doas: [permit nopass ($username)]
     lock_passwd: false
-    name: "($username)"
-    plain_text_passwd: "($password)"
+    name: \"($username)\"
+    plain_text_passwd: \"($password)\"
     ssh_authorized_keys:
-      - "($pub_key)"
+      - \"($pub_key)\"
     sudo: ALL=\(ALL\) NOPASSWD:ALL
 "
 
@@ -110,7 +110,7 @@ Version=1.0
 </plist>
 "
                 | str trim
-                | save $"($dest)/Info.plist"
+                | save --force $"($dest)/Info.plist"
             )
         }
     }
@@ -123,7 +123,7 @@ def create-entry [domain: string path: path] {
 #!/usr/bin/env sh
 set -eu
 
-export PATH="($folder):${PATH}"
+export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
 "  | str trim --left | save --force $path
     chmod +x $path
@@ -609,6 +609,7 @@ boot_serial="YES"
 comconsole_speed="115200"
 console="comconsole,vidconsole"
 '
+        | str trim --left
         ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
     } else if (which zypper | is-not-empty) {
         ^$super zypper update --no-confirm
