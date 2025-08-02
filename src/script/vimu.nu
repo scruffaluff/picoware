@@ -584,7 +584,10 @@ def "main setup guest" [] {
 
     if (which apk | is-not-empty) {
         ^$super apk update
-        ^$super apk add curl ncurses openssh-server python3 qemu-guest-agent spice-vdagent
+        (
+            ^$super apk add curl ncurses openssh-server python3 qemu-guest-agent
+            rclone spice-vdagent
+        )
         ^$super rc-update add qemu-guest-agent
         ^$super service qemu-guest-agent start
         # Starting spice-vdagentd service causes an error.
@@ -595,24 +598,27 @@ def "main setup guest" [] {
         ^$super DEBIAN_FRONTEND=noninteractive apt-get update
         (
             ^$super DEBIAN_FRONTEND=noninteractive apt-get install --yes curl
-            libncurses6 openssh-server qemu-guest-agent spice-vdagent
+            libncurses6 openssh-server qemu-guest-agent rclone spice-vdagent
         )
     } else if (which dnf | is-not-empty) {
-        ^$super dnf check-update
+        ^$super dnf makecache
         (
             ^$super dnf install --assumeyes curl ncurses openssh-server
-            qemu-guest-agent spice-vdagent
+            qemu-guest-agent rclone spice-vdagent
         )
     } else if (which pacman | is-not-empty) {
         ^$super pacman --noconfirm --refresh --sync --sysupgrade
         (
             ^$super pacman --noconfirm --sync curl ncurses openssh
-            qemu-guest-agent spice-vdagent
+            qemu-guest-agent rclone spice-vdagent
         )
     } else if (which pkg | is-not-empty) {
         ^$super pkg update
         # Seems as though openssh-server is builtin to FreeBSD.
-        ^$super pkg install --yes curl ncurses qemu-guest-agent rsync topgrade
+        (
+            ^$super pkg install --yes curl ncurses qemu-guest-agent rclone rsync
+            topgrade
+        )
         try { ^$super service qemu-guest-agent start }
         ^$super sysrc qemu_guest_agent_enable="YES"
         # Enable serial console on next boot.
@@ -625,7 +631,10 @@ console="comconsole,vidconsole"
         ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
     } else if (which zypper | is-not-empty) {
         ^$super zypper update --no-confirm
-        ^$super zypper install --no-confirm curl ncurses openssh-server qemu-guest-agent spice-vdagent
+        (
+            ^$super zypper install --no-confirm curl ncurses openssh-server
+            qemu-guest-agent rclone spice-vdagent
+        )
     }
 
     if (which systemctl | is-not-empty) {
