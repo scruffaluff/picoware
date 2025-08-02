@@ -130,8 +130,8 @@ purge_snaps() {
   ${super:+"${super}"} systemctl disable snapd.service
 
   # Delete Snap package and prevent reinstallation.
-  ${super:+"${super}"} apt-get purge --yes snapd
-  ${super:+"${super}"} apt-mark hold snapd
+  ${super:+"${super}"} DEBIAN_FRONTEND=noninteractive apt-get purge --yes snapd
+  ${super:+"${super}"} DEBIAN_FRONTEND=noninteractive apt-mark hold snapd
 }
 
 #######################################

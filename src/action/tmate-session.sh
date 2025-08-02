@@ -118,8 +118,9 @@ install_tmate_linux() {
     if [ -x "$(command -v apk)" ]; then
       ${1:+"${1}"} apk add curl openssh-client tar xz
     elif [ -x "$(command -v apt-get)" ]; then
-      ${1:+"${1}"} apt-get update
-      ${1:+"${1}"} apt-get install --yes curl openssh-client tar xz-utils
+      ${1:+"${1}"} DEBIAN_FRONTEND=noninteractive apt-get update
+      ${1:+"${1}"} DEBIAN_FRONTEND=noninteractive apt-get install --yes curl \
+        openssh-client tar xz-utils
     elif [ -x "$(command -v dnf)" ]; then
       ${1:+"${1}"} dnf install --assumeyes curl openssh tar xz
     elif [ -x "$(command -v pacman)" ]; then

@@ -551,8 +551,11 @@ def "main setup desktop" [] {
         ^$super apk update
         ^$super setup-desktop gnome
     } else if (which apt | is-not-empty) {
-        ^$super apt-get update
-        ^$super apt-get install --yes task-gnome-desktop
+        ^$super DEBIAN_FRONTEND=noninteractive apt-get update
+        (
+            ^$super DEBIAN_FRONTEND=noninteractive apt-get install --yes
+            task-gnome-desktop
+        )
     } else if (which pacman | is-not-empty) {
         ^$super pacman --noconfirm --refresh --sync --sysupgrade
         ^$super pacman --noconfirm --sync gnome
@@ -589,13 +592,11 @@ def "main setup guest" [] {
         ^$super rc-update add sshd
         ^$super service sshd start
     } else if (which apt-get | is-not-empty) {
-        ^$super apt-get update
-        with-env { DEBIAN_FRONTEND: noninteractive } {
-            (
-                ^$super apt-get install --yes curl libncurses6 openssh-server
-                qemu-guest-agent spice-vdagent
-            )
-        }
+        ^$super DEBIAN_FRONTEND=noninteractive apt-get update
+        (
+            ^$super DEBIAN_FRONTEND=noninteractive apt-get install --yes curl
+            libncurses6 openssh-server qemu-guest-agent spice-vdagent
+        )
     } else if (which dnf | is-not-empty) {
         ^$super dnf check-update
         (
@@ -637,6 +638,15 @@ console="comconsole,vidconsole"
                 try { ^$super systemctl enable --now $"($service).service" }
             }
         }
+    }
+
+    if $nu.os-info.name == "windows" {
+        powershell { iex 
+            "& { $(iwr -useb https://scruffaluff.github.io/bootware/install.ps1) } --help"
+        }
+    } else {
+        http get https://scruffaluff.github.io/bootware/install.sh
+        | sh -s -- --global
     }
 
     http get https://scruffaluff.github.io/scripts/install/scripts.nu

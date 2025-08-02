@@ -41,7 +41,7 @@ clear_cache() {
   fi
 
   if [ -x "$(command -v apt-get)" ]; then
-    ${super:+"${super}"} apt-get clean --yes
+    ${super:+"${super}"} DEBIAN_FRONTEND=noninteractive apt-get clean --yes
   fi
 
   if [ -x "$(command -v brew)" ]; then
