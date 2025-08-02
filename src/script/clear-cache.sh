@@ -41,7 +41,9 @@ clear_cache() {
   fi
 
   if [ -x "$(command -v apt-get)" ]; then
-    ${super:+"${super}"} DEBIAN_FRONTEND=noninteractive apt-get clean --yes
+    # Avoid APT interactive configuration requests.
+    export DEBIAN_FRONTEND='noninteractive'
+    ${super:+"${super}" -E} apt-get clean --yes
   fi
 
   if [ -x "$(command -v brew)" ]; then

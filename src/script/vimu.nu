@@ -525,11 +525,10 @@ def "main setup desktop" [] {
         ^$super apk update
         ^$super setup-desktop gnome
     } else if (which apt | is-not-empty) {
-        ^$super DEBIAN_FRONTEND=noninteractive apt-get update
-        (
-            ^$super DEBIAN_FRONTEND=noninteractive apt-get install --yes
-            task-gnome-desktop
-        )
+        # Avoid APT interactive configuration requests.
+        $env.DEBIAN_FRONTEND = "noninteractive"
+        ^$super -E apt-get update
+        ^$super -E apt-get install --yes task-gnome-desktop
     } else if (which pacman | is-not-empty) {
         ^$super pacman --noconfirm --refresh --sync --sysupgrade
         ^$super pacman --noconfirm --sync gnome
@@ -569,10 +568,12 @@ def "main setup guest" [] {
         ^$super rc-update add sshd
         ^$super service sshd start
     } else if (which apt-get | is-not-empty) {
-        ^$super DEBIAN_FRONTEND=noninteractive apt-get update
+        # Avoid APT interactive configuration requests.
+        $env.DEBIAN_FRONTEND = "noninteractive"
+        ^$super -E apt-get update
         (
-            ^$super DEBIAN_FRONTEND=noninteractive apt-get install --yes curl
-            libncurses6 openssh-server qemu-guest-agent rclone spice-vdagent
+            ^$super -E apt-get install --yes curl libncurses6 openssh-server
+            qemu-guest-agent rclone spice-vdagent
         )
     } else if (which dnf | is-not-empty) {
         ^$super dnf makecache
