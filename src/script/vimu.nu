@@ -42,43 +42,6 @@ users:
     $path
 }
 
-# Connect to virtual machine.
-def connect [
-    start: bool # Start virtual machine if not running
-    type: string # Connection type (console, gui, ssh)
-    domain: string # Virtual machine name
-] {
-    if $start and not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-
-    match $type {
-        "adb" => {
-            let port = port
-            (
-                virsh qemu-monitor-command --domain $domain
-                --hmp $"hostfwd_add tcp::($port)-:5555"
-            )
-            adb -P $port connect
-        }
-        "console" => { virsh console $domain }
-        "gui" => { virt-viewer $domain }
-        "ssh" => {
-            let home = path-home
-            let port = port
-            (
-                virsh qemu-monitor-command --domain $domain
-                --hmp $"hostfwd_add tcp::($port)-:22"
-            )
-            tssh -i $"($home)/.vimu/key" -p $port localhost
-        }
-        _ => { 
-            print --stderr $"Invalid connection type '($type)'."
-            exit 2
-        }
-    }
-}
-
 # Create application desktop entry.
 def create-app [domain: string] {
     let home = path-home
@@ -296,7 +259,8 @@ Subcommands:
   install           Create a virtual machine from a cdrom or disk file
   remove            Delete virtual machine and its disk images
   setup             Configure machine for emulation
-  snapshots         List snapshots for all virtual machines
+  snapshot-table    List snapshots for all virtual machines
+  scp               Copy files between host and virtual machine
   ssh               Connect to virtual machine with SSH
   upload            Upload Vimu to guest machine
 
@@ -311,13 +275,18 @@ Virsh Options:"
 }
 
 # Connect to virtual machine with Android debug bridge.
-def "main adb" [
+def --wrapped "main adb" [
     --log-level (-l): string = "debug" # Log level
     --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
+    ...args: string # Android debug bridge arguments.
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    connect $start adb $domain
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = port-map $domain 5555
+    adb -P $port connect ...$args
 }
 
 # Create virutal machine from default options.
@@ -444,9 +413,14 @@ def "main gui" [
     --log-level (-l): string = "debug" # Log level
     --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
+    ...args: string # Virt Viewer arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    connect $start gui $domain
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+
+    virt-viewer $domain ...$args
 }
 
 # Create a virtual machine from a cdrom or disk file.
@@ -733,7 +707,7 @@ def "main setup host" [] {
 }
 
 # List snapshots for all virtual machines.
-def "main snapshots" [
+def "main snapshot-table" [
     --log-level (-l): string = "debug" # Log level
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
@@ -743,14 +717,54 @@ def "main snapshots" [
     } | flatten
 }
 
+# Copy files between host and virtual machine.
+def --wrapped "main scp" [
+    --log-level (-l): string = "debug" # Log level
+    --start (-s) # Start virtual machine if not running
+    ...args: string # Secure copy arguments
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    let home = path-home
+    let port = port
+
+    mut domain = ""
+    mut params = $args
+    for iter in ($args | enumerate) {
+        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):[^:]+$'
+        if ($match | is-not-empty) {
+            $domain = $match | get domain.0
+            $params = $params | update $iter.index (
+                $iter.item | str replace $"($domain):" "localhost:"
+            )
+        }
+    }
+    if ($domain | is-empty) {
+        print --stderr $"No domain found in '($args | str join ' ')'."
+        exit 1
+    }
+    
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = port-map $domain 22
+    tscp -i $"($home)/.vimu/key" -P $port ...$params
+}
+
 # Connect to virtual machine with SSH.
-def "main ssh" [
+def --wrapped "main ssh" [
     --log-level (-l): string = "debug" # Log level
     --start (-s) # Start virtual machine if not running
     domain: string # Virtual machine name
+    ...args: string
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    connect $start ssh $domain
+    let home = path-home
+
+    if $start and not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = port-map $domain 22
+    tssh -i $"($home)/.vimu/key" -p $port localhost ...$args
 }
 
 # Upload Vimu to guest machine.
@@ -758,26 +772,18 @@ def "main upload" [
     domain: string # Virtual machine name
 ] {
     const vimu = path self
-    if ((virsh domstate $domain | str trim) != "running") {
-        virsh start $domain
-    }
 
-    let key = $"(path-home)/.vimu/key"
-    let port = port
-    (
-        virsh qemu-monitor-command --domain $domain
-        --hmp $"hostfwd_add tcp::($port)-:22"
-    )
-
-    let check = tssh -i $key -p $port localhost command -v nu | complete
+    let check = main ssh --start $domain command -v nu | complete
     if $check.exit_code != 0 {
+        let port = port-map $domain 22
         http get https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $key -p $port localhost sh -s -- --global
+        | tssh -i $"(path-home)/.vimu/key" -p $port localhost sh -s -- --global
+
     }
 
     # Copy Vimu to remote machine and install with super command.
-    tscp -i $key -P $port $vimu localhost:/tmp/vimu
-    tssh -i $key -p $port localhost "
+    main scp $vimu $"($domain):/tmp/vimu"
+    main ssh $domain "
 if [ -x \"$(command -v doas)\" ]; then
     doas install /tmp/vimu /usr/local/bin/vimu
 else
@@ -792,5 +798,29 @@ def path-home [] {
         $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
     } else {
         $env.HOME? 
+    }
+}
+
+# Get host port mapping to domain and create one if non-existant.
+#
+# QEMU monitor commands are taken from
+# https://qemu-project.gitlab.io/qemu/system/monitor.html.
+def port-map [domain: string to: int] {
+    let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
+    | str trim | lines | skip 2 | str join "\n"
+    | from ssv --minimum-spaces 1 --noheaders
+    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
+    | rename from to | into int from to
+
+    let match = $maps | where to == $to | get --optional 0
+    if $match == null {
+        let port = port
+        (
+            virsh qemu-monitor-command --domain $domain --hmp
+            $"hostfwd_add tcp::($port)-:($to)"
+        )
+        $port
+    } else {
+        $match.from
     }
 }
