@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Installer script for Scripts application.
 
-Usage: install-apps [OPTIONS] [APPS]...
+Usage: install-apps [OPTIONS] <APPS>...
 
 Options:
       --debug               Show shell debug traces

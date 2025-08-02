@@ -154,7 +154,7 @@ Version=1.0
 }
 
 # Create application entrypoint.
-def create-entry [domain: string path: string] {
+def create-entry [domain: string path: path] {
     const folder = path self | path dirname
     $"
 #!/usr/bin/env sh
@@ -186,7 +186,7 @@ Restart this script from an administrator console or install to a user directory
 
 # Create a virtual machine from an ISO disk.
 def --wrapped install-cdrom [
-    domain: string osinfo: string path: string ...args: string
+    domain: string osinfo: string path: path ...args: string
 ] {
     let home = path-home
     let params = match $nu.os-info.name {
@@ -213,7 +213,7 @@ def --wrapped install-cdrom [
 
 # Create a virtual machine from a qcow2 disk.
 def --wrapped install-disk [
-    name: string osinfo: string path: string extension: string ...args: string
+    name: string osinfo: string path: path extension: string ...args: string
 ] {
     let home = path-home
     let params = match $nu.os-info.name {
@@ -248,7 +248,7 @@ def --wrapped install-disk [
 }
 
 # Create a Windows virtual machine from an ISO disk.
-def install-windows [domain: string cdrom: string drivers: string] {
+def install-windows [domain: string cdrom: path drivers: string] {
     let home = path-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
@@ -296,6 +296,7 @@ Subcommands:
   install           Create a virtual machine from a cdrom or disk file
   remove            Delete virtual machine and its disk images
   setup             Configure machine for emulation
+  snapshots         List snapshots for all virtual machines
   ssh               Connect to virtual machine with SSH
   upload            Upload Vimu to guest machine
 

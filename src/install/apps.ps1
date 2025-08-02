@@ -18,7 +18,7 @@ function Usage() {
     Write-Output @'
 Installer script for Scripts apps.
 
-Usage: install-apps [OPTIONS] [APPS]...
+Usage: install-apps [OPTIONS] <APPS>...
 
 Options:
   -g, --global              Install apps for all users

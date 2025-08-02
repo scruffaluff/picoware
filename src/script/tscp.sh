@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 SCP for one time remote connections.
 
-Usage: tscp [OPTIONS] [ARGS]...
+Usage: tscp [OPTIONS] <ARGS>...
 
 Options:
       --debug     Show shell debug traces

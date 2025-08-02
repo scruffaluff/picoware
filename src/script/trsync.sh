@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Rsync for one time remote connections.
 
-Usage: trsync [OPTIONS] [ARGS]...
+Usage: trsync [OPTIONS] <ARGS>...
 
 Options:
       --debug     Show shell debug traces

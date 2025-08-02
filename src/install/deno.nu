@@ -41,7 +41,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder.
-def install [super: string dest: string version: string] {
+def install [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let target = match $nu.os-info.name {
         "linux" => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
@@ -76,7 +76,7 @@ def install [super: string dest: string version: string] {
 }
 
 # Check if super user elevation is required.
-def need-super [$dest: string, global: bool] {
+def need-super [dest: directory global: bool] {
     if $global {
         return true
     }
@@ -88,7 +88,7 @@ def need-super [$dest: string, global: bool] {
 
 # Install Deno for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): string # Directory to install Deno
+    --dest (-d): directory # Directory to install Deno
     --global (-g) # Install Deno for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
@@ -127,7 +127,7 @@ def main [
 }
 
 # Add destination path to Windows environment path.
-def update-path [$dest: string, global: bool] {
+def update-path [dest: directory global: bool] {
     let target = if $global { "Machine" } else { "User" }
     powershell -command $"
 $Path = [Environment]::GetEnvironmentVariable\('Path', '($target)'\)
@@ -143,7 +143,7 @@ if \(-not \($Path -like \"*($dest)*\"\)\) {
 }
 
 # Add script to system path in shell profile.
-def update-shell [dest: string] {
+def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {

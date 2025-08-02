@@ -9,7 +9,7 @@ def build-code [setup: string command: string args: list<string>] {
 }
 
 # Find Matlab executable path.
-def find-matlab [path: string] {
+def find-matlab [path: path] {
     if ($path | is-not-empty) {
         return $path
     } else if ($env.MLAB_PROGRAM? | is-not-empty) {
@@ -48,7 +48,7 @@ def main [
 def "main dump" [
     --matlab (-m): string # Custom Matlab executable path
     --pretty (-p) # Pretty format output JSON
-    file: string # MAT file path
+    file: path # MAT file path
 ] {
     let encode = if $pretty {
         $"jsonencode\(load\('($file)'\), PrettyPrint=true\)"
@@ -62,7 +62,7 @@ def "main dump" [
 
 # Launch Jupyter Lab with the Matlab kernel.
 def --wrapped "main jupyter" [
-    --matlab (-m): string # Custom Matlab executable path
+    --matlab (-m): path # Custom Matlab executable path
     ...args: string # Arguments to Jupyter Lab
 ] {
     let venv = match $nu.os-info.name {
@@ -86,16 +86,16 @@ def --wrapped "main jupyter" [
 
 # Execute Matlab command or script.
 def "main run" [
-    --addpath (-a): string # Add folder to Matlab path
+    --addpath (-a): directory # Add folder to Matlab path
     --batch (-b) # Execute in non-interactive batch mode
     --debug (-d) # Launch in Matlab debugger
-    --genpath (-g): string # Add folder and recursive children to Matlab path
+    --genpath (-g): directory # Add folder and recursive children to Matlab path
     --jvm (-j) # Enable Java virtual machine
-    --license (-c): string # Location of Matlab license file
-    --logfile (-l): string # Copy command window output to logfile
-    --matlab (-m): string # Custom Matlab executable path
+    --license (-c): path # Location of Matlab license file
+    --logfile (-l): path # Copy command window output to logfile
+    --matlab (-m): path # Custom Matlab executable path
     --script (-s) # Always run command as Matlab script
-    --sd: string # Set the Matlab startup folder
+    --sd: directory # Set the Matlab startup folder
     --shebang # Strip shebang from start of script
     command: string = "" # Matlab command or script path
     ...args: string # Arguments to Matlab script
@@ -141,13 +141,13 @@ def "main run" [
 }
 
 def script [
-    program: string
+    program: path
     shebang: bool
     batch: bool
     debug: bool
     flags: list<string>
     setup: string
-    module: string
+    module: path
     args: list<string>
 ] {
     # Script must end in the ".m" extension to be discoverable by Matlab.

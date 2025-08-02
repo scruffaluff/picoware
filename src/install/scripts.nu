@@ -44,7 +44,7 @@ def install-script [
     system: bool
     preserve_env: bool
     version: string
-    dest: string
+    dest: directory
     script: string
 ] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
@@ -109,7 +109,7 @@ def install-script [
 }
 
 # Install wrapper script for Windows.
-def install-wrapper [ext: string dest: string] {
+def install-wrapper [ext: string dest: path] {
     let wrapper = match $ext {
         "nu" => 'nu "%~dnp0.nu" %*'
         "ps1" => 'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*'
@@ -131,7 +131,7 @@ def --wrapped log [...args: string] {
 }
 
 # Check if super user elevation is required.
-def need-super [$dest: string, global: bool] {
+def need-super [dest: directory global: bool] {
     if $global {
         return true
     }
@@ -143,7 +143,7 @@ def need-super [$dest: string, global: bool] {
 
 # Installer script for Scripts.
 def main [
-    --dest (-d): string # Directory to install scripts
+    --dest (-d): directory # Directory to install scripts
     --global (-g) # Install scripts for all users
     --list (-l) # List all available scripts
     --preserve-env (-p) # Do not update system environment
@@ -196,7 +196,7 @@ def main [
 }
 
 # Add destination path to Windows environment path.
-def update-path [$dest: string, global: bool] {
+def update-path [dest: directory global: bool] {
     let target = if $global { "Machine" } else { "User" }
     powershell -command $"
 $Path = [Environment]::GetEnvironmentVariable\('Path', '($target)'\)
@@ -212,7 +212,7 @@ if \(-not \($Path -like \"*($dest)*\"\)\) {
 }
 
 # Add script to system path in shell profile.
-def update-shell [dest: string] {
+def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {

@@ -15,7 +15,7 @@ function Usage() {
     Write-Output @'
 SSH for one time remote connections.
 
-Usage: tssh [OPTIONS] [ARGS]...
+Usage: tssh [OPTIONS] <ARGS>...
 
 Options:
   -h, --help      Print help information

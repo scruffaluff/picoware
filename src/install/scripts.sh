@@ -18,7 +18,7 @@ usage() {
   cat 1>&2 << EOF
 Installer script for Scripts.
 
-Usage: install-scripts [OPTIONS] [SCRIPTS]...
+Usage: install-scripts [OPTIONS] <SCRIPTS>...
 
 Options:
       --debug               Show shell debug traces
