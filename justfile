@@ -128,8 +128,8 @@ setup:
   done
   bats --version
   if [ ! -d .vendor/lib/nutest ]; then
-    git clone -c advice.detachedHead=false --branch v1.1.0 --depth 1 \
-      https://github.com/vyadh/nutest.git .vendor/lib/nutest
+    git clone -c advice.detachedHead=false --branch migrate-ignore-errors \
+      --depth 1 https://github.com/scruffaluff/nutest.git .vendor/lib/nutest
   fi
   if [ ! -x "$(command -v shellcheck)" ]; then
     shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
@@ -229,7 +229,7 @@ test: && test-nushell test-python
 # Run Nushell test suite.
 test-nushell *args:
   nu --commands \
-    "use .vendor/lib/nutest/nutest run-tests; run-tests --path test {{args}}"
+    "use .vendor/lib/nutest/nutest run-tests; run-tests --fail --path test {{args}}"
 
 # Run Python test suite.
 test-python *args:

@@ -20,21 +20,21 @@ def ask-password [] {
 
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
-    let pub_key = open $"(path-config)/key.pub"
+    let pub_key = open --raw $"(path-config)/key.pub" | str trim
     let content = $"
 #cloud-config
 
-hostname: \"($domain)\"
+hostname: '($domain)'
 preserve_hostname: false
 users:
   - doas: [permit nopass ($username)]
     lock_passwd: false
-    name: \"($username)\"
-    plain_text_passwd: \"($password)\"
+    name: '($username)'
+    plain_text_passwd: '($password)'
     ssh_authorized_keys:
-      - \"($pub_key)\"
+      - '($pub_key)'
     sudo: ALL=\(ALL\) NOPASSWD:ALL
-"
+"   | str trim --left
 
     let path = mktemp --tmpdir --suffix .yaml
     $content | save --force $path
@@ -127,6 +127,17 @@ export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
 "  | str trim --left | save --force $path
     chmod +x $path
+}
+
+# Create SSH key.
+def create-key [] {
+    let config = path-config
+    if not ($"($config)/key" | path exists) {
+        ssh-keygen -N '' -q -f $"($config)/key" -t ed25519 -C vimu
+        if $nu.os-info.name != "windows" {
+            chmod 600 $"($config)/key" $"($config)/key.pub"
+        }
+    }
 }
 
 # Find command to elevate as super user.
@@ -710,12 +721,7 @@ def "main setup host" [
         | save $"($config)/icon.svg"
     }
 
-    if not ($"($config)/key" | path exists) {
-        ssh-keygen -N '' -q -f $"($config)/key" -t ed25519 -C vimu
-        if $nu.os-info.name != "windows" {
-            chmod 600 $"($config)/key" $"($config)/key.pub"
-        }
-    }
+    create-key
 }
 
 # List snapshots for all virtual machines.

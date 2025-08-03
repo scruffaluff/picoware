@@ -4,7 +4,7 @@ use std/assert
 use std/testing *
 
 @test
-def deno_prints_version [] {
+def deno-prints=version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/deno.nu --preserve-env --dest $tmp_dir
     | complete
@@ -13,7 +13,7 @@ def deno_prints_version [] {
 }
 
 @test
-def deno_quiet_is_silent [] {
+def deno-quiet-is-silent [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/deno.nu --quiet --preserve-env --dest $tmp_dir
     | complete
@@ -22,7 +22,7 @@ def deno_quiet_is_silent [] {
 }
 
 @test
-def jq_prints_version [] {
+def jq-prints-version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/jq.nu --preserve-env --dest $tmp_dir
     | complete
@@ -31,7 +31,7 @@ def jq_prints_version [] {
 }
 
 @test
-def jq_quiet_is_silent [] {
+def jq-quiet-is-silent [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/jq.nu --quiet --preserve-env --dest $tmp_dir
     | complete
@@ -40,7 +40,7 @@ def jq_quiet_is_silent [] {
 }
 
 @test
-def just_prints_version [] {
+def just-prints-version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/just.nu --preserve-env --dest $tmp_dir
     | complete
@@ -49,7 +49,7 @@ def just_prints_version [] {
 }
 
 @test
-def just_quiet_is_silent [] {
+def just-quiet-is-silent [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/just.nu --quiet --preserve-env --dest $tmp_dir
     | complete
@@ -58,7 +58,7 @@ def just_quiet_is_silent [] {
 }
 
 @test
-def uv_prints_version [] {
+def uv-prints-version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/uv.nu --preserve-env --dest $tmp_dir
     | complete
@@ -67,7 +67,7 @@ def uv_prints_version [] {
 }
 
 @test
-def uv_quiet_is_silent [] {
+def uv-quiet-is-silent [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/uv.nu --quiet --preserve-env --dest $tmp_dir
     | complete
