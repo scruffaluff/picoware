@@ -313,7 +313,7 @@ def "main create" [
         "x86_64" => "amd64"
     }
     let config = path-config
-    main setup host
+    setup-host
 
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
@@ -443,7 +443,7 @@ def "main install" [
     uri: string # Machine image URL or file path
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    main setup host
+    setup-host
     let arch = $arch | default $nu.os-info.arch
     let config = path-config
 
@@ -524,15 +524,152 @@ def "main remove" [
 # Configure machine for emulation.
 def "main setup" [
     --log-level (-l): string = "debug" # Log level
+    ...commands: string # Setup commands (desktop,guest,host) 
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
+
+    for command in $commands {
+        match $command {
+            "desktop" => { setup-desktop }
+            "guest" => { setup-guest }
+            "host" => { setup-host }
+        }
+    }
 }
 
-# Configure desktop environment on guest filesystem.
-def "main setup desktop" [
+# List snapshots for all virtual machines.
+def "main snapshot-table" [
     --log-level (-l): string = "debug" # Log level
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
+    virsh list --all --name | str trim | lines | each {|domain|
+        virsh snapshot-list --parent $domain | str trim | lines | drop nth 1
+        | str join "\n" | from ssv | insert Domain $domain | move Domain --first
+    } | flatten
+}
+
+# Copy files between host and virtual machine.
+def --wrapped "main scp" [
+    --log-level (-l): string = "debug" # Log level
+    ...args: string # Secure copy arguments
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+
+    mut domain = ""
+    mut params = $args
+    for iter in ($args | enumerate) {
+        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):[^:]+$'
+        if ($match | is-not-empty) {
+            $domain = $match | get domain.0
+            $params = $params | update $iter.index (
+                $iter.item | str replace $"($domain):" "localhost:"
+            )
+        }
+    }
+    if ($domain | is-empty) {
+        print --stderr $"No domain found in '($args | str join ' ')'."
+        exit 1
+    }
+    
+    if not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = port-map $domain 22
+    tscp -i $"(path-config)/key" -P $port ...$params
+}
+
+# Connect to virtual machine with SSH.
+def --wrapped "main ssh" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+    ...args: string
+]: [nothing -> nothing string -> string] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    let key = $"(path-config)/key"
+    if not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = port-map $domain 22
+
+    # Appears that `$in` needs to be saved to a variable for mutliple uses.
+    let pipe = $in
+    if ($pipe | is-empty) {
+        tssh -i $key -p $port localhost ...$args
+    } else {
+        $pipe | tssh -i $key -p $port localhost ...$args
+    }
+}
+
+# Upload Vimu to guest machine.
+def "main upload" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    const vimu = path self
+
+    let check = main ssh $domain command -v nu | complete
+    if $check.exit_code != 0 {
+        http get https://scruffaluff.github.io/scripts/install/nushell.sh
+        | main ssh $domain sh -s -- --global
+    }
+
+    # Copy Vimu to remote machine and install with super command.
+    main scp $vimu $"($domain):/tmp/vimu"
+    main ssh $domain "
+if [ -x \"$(command -v doas)\" ]; then
+    doas install /tmp/vimu /usr/local/bin/vimu
+else
+    sudo install /tmp/vimu /usr/local/bin/vimu
+fi
+"
+}
+
+# Get Vimu configuration folder.
+def path-config [] {
+    let home = path-home
+    match $nu.os-info.name {
+        "macos" => $"($home)/Library/Application Support/vimu"
+        "windows" => $"($home)/AppData/Roaming/vimu"
+        _ => $"($home)/.config/vimu"
+    }
+}
+
+# Get user home folder.
+def path-home [] {
+    if $nu.os-info.name == "windows" {
+        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
+    } else {
+        $env.HOME? 
+    }
+}
+
+# Get host port mapping to domain and create one if non-existant.
+#
+# QEMU monitor commands are taken from
+# https://qemu-project.gitlab.io/qemu/system/monitor.html.
+def port-map [domain: string to: int] {
+    let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
+    | str trim | lines | skip 2 | str join "\n"
+    | from ssv --minimum-spaces 1 --noheaders
+    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
+    | rename from to | into int from to
+
+    let match = $maps | where to == $to | get --optional 0
+    if $match == null {
+        let port = port
+        (
+            virsh qemu-monitor-command --domain $domain --hmp
+            $"hostfwd_add tcp::($port)-:($to)"
+        )
+        $port
+    } else {
+        $match.from
+    }
+}
+
+# Configure desktop environment on guest filesystem.
+def setup-desktop [] {
     let super = find-super
 
     if (which apk | is-not-empty) {
@@ -565,10 +702,7 @@ def "main setup desktop" [
 }
 
 # Configure guest filesystem.
-def "main setup guest" [
-    --log-level (-l): string = "debug" # Log level
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+def setup-guest [] {
     let home = path-home
     let super = find-super
 
@@ -691,10 +825,7 @@ skip_notify = true
 }
 
 # Configure host machine.
-def "main setup host" [
-    --log-level (-l): string = "debug" # Log level
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+def setup-host [] {
     let config = path-config
     let home = path-home
     (
@@ -722,129 +853,4 @@ def "main setup host" [
     }
 
     create-key
-}
-
-# List snapshots for all virtual machines.
-def "main snapshot-table" [
-    --log-level (-l): string = "debug" # Log level
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    virsh list --all --name | str trim | lines | each {|domain|
-        virsh snapshot-list --parent $domain | str trim | lines | drop nth 1
-        | str join "\n" | from ssv | insert Domain $domain | move Domain --first
-    } | flatten
-}
-
-# Copy files between host and virtual machine.
-def --wrapped "main scp" [
-    --log-level (-l): string = "debug" # Log level
-    ...args: string # Secure copy arguments
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-
-    mut domain = ""
-    mut params = $args
-    for iter in ($args | enumerate) {
-        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):[^:]+$'
-        if ($match | is-not-empty) {
-            $domain = $match | get domain.0
-            $params = $params | update $iter.index (
-                $iter.item | str replace $"($domain):" "localhost:"
-            )
-        }
-    }
-    if ($domain | is-empty) {
-        print --stderr $"No domain found in '($args | str join ' ')'."
-        exit 1
-    }
-    
-    if not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-    let port = port-map $domain 22
-    tscp -i $"(path-config)/key" -P $port ...$params
-}
-
-# Connect to virtual machine with SSH.
-def --wrapped "main ssh" [
-    --log-level (-l): string = "debug" # Log level
-    domain: string # Virtual machine name
-    ...args: string
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-
-    if not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-    let port = port-map $domain 22
-    tssh -i $"(path-config)/key" -p $port localhost ...$args
-}
-
-# Upload Vimu to guest machine.
-def "main upload" [
-    --log-level (-l): string = "debug" # Log level
-    domain: string # Virtual machine name
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    const vimu = path self
-
-    let check = main ssh $domain command -v nu | complete
-    if $check.exit_code != 0 {
-        let port = port-map $domain 22
-        http get https://scruffaluff.github.io/scripts/install/nushell.sh
-        | tssh -i $"(path-config)/key" -p $port localhost sh -s -- --global
-    }
-
-    # Copy Vimu to remote machine and install with super command.
-    main scp $vimu $"($domain):/tmp/vimu"
-    main ssh $domain "
-if [ -x \"$(command -v doas)\" ]; then
-    doas install /tmp/vimu /usr/local/bin/vimu
-else
-    sudo install /tmp/vimu /usr/local/bin/vimu
-fi
-"
-}
-
-# Get Vimu configuration folder.
-def path-config [] {
-    let home = path-home
-    match $nu.os-info.name {
-        "macos" => $"($home)/Library/Application Support/vimu"
-        "windows" => $"($home)/AppData/Roaming/vimu"
-        _ => $"($home)/.config/vimu"
-    }
-}
-
-# Get user home folder.
-def path-home [] {
-    if $nu.os-info.name == "windows" {
-        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
-    } else {
-        $env.HOME? 
-    }
-}
-
-# Get host port mapping to domain and create one if non-existant.
-#
-# QEMU monitor commands are taken from
-# https://qemu-project.gitlab.io/qemu/system/monitor.html.
-def port-map [domain: string to: int] {
-    let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
-    | str trim | lines | skip 2 | str join "\n"
-    | from ssv --minimum-spaces 1 --noheaders
-    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
-    | rename from to | into int from to
-
-    let match = $maps | where to == $to | get --optional 0
-    if $match == null {
-        let port = port
-        (
-            virsh qemu-monitor-command --domain $domain --hmp
-            $"hostfwd_add tcp::($port)-:($to)"
-        )
-        $port
-    } else {
-        $match.from
-    }
 }
