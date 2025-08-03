@@ -14,7 +14,8 @@ set -eu
 
 export PATH=\"($folder):${PATH}\"
 exec vimu gui machine
-"   | str trim --left
+"
+    | str trim --left
 
     let temp = mktemp --tmpdir
     create-entry machine $temp

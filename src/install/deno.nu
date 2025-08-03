@@ -6,7 +6,8 @@ def check-deps [] {
         error make { msg: ("
 error: Unable to find zip file archiver.
 Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
-" | str trim)
+"
+            | str trim)
         }
     }
 }
@@ -19,7 +20,8 @@ def find-super [] {
         error make { msg: ("
 System level installation requires an administrator console.
 Restart this script from an administrator console or install to a user directory.
-" | str trim)
+"
+            | str trim)
         }
     } else if (which doas | is-not-empty) {
         "doas"

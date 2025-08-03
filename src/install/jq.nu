@@ -8,7 +8,8 @@ def find-super [] {
         error make { msg: ("
 System level installation requires an administrator console.
 Restart this script from an administrator console or install to a user directory.
-" | str trim)
+"
+            | str trim)
         }
     } else if (which doas | is-not-empty) {
         "doas"

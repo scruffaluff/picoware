@@ -34,7 +34,8 @@ users:
     ssh_authorized_keys:
       - '($pub_key)'
     sudo: ALL=\(ALL\) NOPASSWD:ALL
-"   | str trim --left
+"
+    | str trim --left
 
     let path = mktemp --tmpdir --suffix .yaml
     $content | save --force $path
@@ -125,7 +126,8 @@ set -eu
 
 export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
-"  | str trim --left | save --force $path
+"
+    | str trim --left | save --force $path
     chmod +rx $path
 }
 
@@ -509,7 +511,7 @@ def "main remove" [
             (
                 rm --force --recursive
                 $"($home)/.local/share/applications/($domain).desktop"
-                $"($libvirt/cdroms/($domain).iso"
+                $"($libvirt)/cdroms/($domain).iso"
             )
         }
         "macos" => {
@@ -559,7 +561,7 @@ def --wrapped "main scp" [
     mut domain = ""
     mut params = $args
     for iter in ($args | enumerate) {
-        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):[^:]+$'
+        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):.*$'
         if ($match | is-not-empty) {
             $domain = $match | get domain.0
             $params = $params | update $iter.index (
@@ -608,22 +610,51 @@ def "main upload" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     const vimu = path self
-
-    let check = main ssh $domain command -v nu | complete
-    if $check.exit_code != 0 {
-        http get https://scruffaluff.github.io/scripts/install/nushell.sh
-        | main ssh $domain sh -s -- --global
-    }
+    let info = os-info $domain
 
     # Copy Vimu to remote machine and install with super command.
-    main scp $vimu $"($domain):/tmp/vimu"
-    main ssh $domain "
+    if $info.name == "windows" {
+        main ssh $domain '
+if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
+    $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
+        https://scruffaluff.github.io/scripts/install/nushell.ps1
+    Invoke-Expression "& { $NushellScript } --global"
+}
+New-Item -Force -ItemType Directory -Path "C:\Program Files\Bin" | Out-Null
+Set-Content -Path "C:\Program Files\Bin\vimu.cmd" -Value @"
+@echo off
+nu "%~dnp0.nu" %*
+"@
+'
+        main scp $vimu $"($domain):C:/Program Files/Bin/vimu.nu"
+    } else {
+        let check = main ssh $domain command -v nu | complete
+        if $check.exit_code != 0 {
+            http get https://scruffaluff.github.io/scripts/install/nushell.sh
+            | main ssh $domain sh -s -- --global
+        }
+
+        main scp $vimu $"($domain):/tmp/vimu"
+        main ssh $domain "
 if [ -x \"$(command -v doas)\" ]; then
     doas install /tmp/vimu /usr/local/bin/vimu
 else
     sudo install /tmp/vimu /usr/local/bin/vimu
 fi
 "
+    }
+}
+
+# Get operating system information about a domain.
+def os-info [domain: string] {
+    let unix = (main ssh $domain "echo $PSVersionTable") | str trim | is-empty
+    if $unix {
+        let query = (main ssh $domain uname -ms) | str trim | str downcase
+        | split row " "
+        { arch: ($query | get 1) name: ($query | get 0) }
+    } else {
+        { arch: "x86_64" name: "windows" }
+    }
 }
 
 # Get Vimu configuration folder.
