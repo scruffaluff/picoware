@@ -38,6 +38,44 @@ Restart this script from an administrator console or install to a user directory
     }
 }
 
+# Create entrypoint script if necessary.
+def handle-shebang [super: string path: path extension: string] {
+    let split_env = "#!/usr/bin/env -S "
+    let shebang = open --raw $path | lines | first
+    let script = $"($path).($extension)"
+
+    # Exit early if `env` can handle the shebang arguments.
+    if ($shebang | str contains $split_env) {
+        let result = /usr/bin/env -S echo test | complete
+        if $result.exit_code == 0 { return }
+    } else {
+        return
+    }
+
+    # Add entrypoint replacement for script.
+    let command = $shebang | str replace "#!/usr/bin/env -S " ""
+    let temp = mktemp --tmpdir
+    $"
+#!/usr/bin/env sh
+set -eu
+
+exec ($command) '($script)' \"$@\"
+"
+    | str trim --left | save --force $temp
+    chmod +x $temp
+
+    # Move script to new location.
+    if ($super | is-empty) {
+        mv $path $script
+        mv $temp $path
+        chmod -x $script
+    } else {
+        ^$super cp $path $script
+        ^$super cp $temp $path
+        ^$super chmod -x $script
+    }
+}
+
 # Install script to destination folder.
 def install-script [
     super: string
@@ -56,7 +94,7 @@ def install-script [
     if $preserve_env {
         $args = [...$args "--preserve-env"]
     }
-    if ($super | is-not-empty) {
+    if $system {
         $args = [...$args "--global"]
     }
     if $ext == "py" and (which uv | is-empty) {
@@ -92,9 +130,12 @@ def install-script [
         mv $temp $program
     } else {
         ^$super mkdir -p $dest
-        ^$super mv $temp $program
+        ^$super cp $temp $program
     }
 
+    if $nu.os-info.name != "windows" {
+        handle-shebang $super $program $ext
+    }
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system
@@ -152,6 +193,9 @@ def main [
     ...scripts: string # Scripts names
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
+    # Force global if root on Unix.
+    let global = $global or ((is-admin) and $nu.os-info.name != "windows")
+
     let names = if $list {
         for script in (find-scripts $version) {
             print ($script | path parse | get stem)

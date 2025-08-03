@@ -208,29 +208,69 @@ find_super() {
 }
 
 #######################################
+# Create entrypoint script if necessary.
+# Arguments:
+#   Super user command for installation.
+#   Script file path.
+#   Original extension for script.
+#######################################
+handle_shebang() {
+  local extension="${3}" path="${2}" super="${1}"
+  local command='' script="${path}.${extension}" shebang=''
+  shebang="$(head -n 1 "${path}")"
+
+  # Exit early if `env` can handle the shebang arguments.
+  case "${shebang}" in
+    '#!/usr/bin/env -S'*)
+      if /usr/bin/env -S echo test > /dev/null 2>&1; then
+        return
+      fi
+      ;;
+    *)
+      return
+      ;;
+  esac
+
+  # Move script to new location.
+  command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //')"
+  ${super:+"${super}"} mv "${path}" "${script}"
+  ${super:+"${super}"} chmod -x "${script}"
+
+  # Add entrypoint replacement for script.
+  cat << EOF | ${super:+"${super}"} tee "${path}" > /dev/null
+#!/usr/bin/env sh
+set -eu
+
+exec ${command} '${script}' "\$@"
+EOF
+  ${super:+"${super}"} chmod +x "${path}"
+}
+
+#######################################
 # Download and install script.
 # Arguments:
 #   Super user command for installation.
+#   Whether installation is global.
 #   Script version.
 #   Destination path.
 #   Script file name.
 #   Whether to update system environment.
 #######################################
 install_script() {
-  local super="${1}" version="${2}" dst_dir="${3}" script="${4}"
-  local preserve_env="${5}" name="${4%.*}"
+  local super="${1}" global_="${2}" version="${3}" dst_dir="${4}" script="${5}"
+  local preserve_env="${6}" extension="${script##*.}" name="${script%.*}"
   local dst_file="${dst_dir}/${name}"
   local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
 
-  if [ "${script##*.}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
+  if [ "${extension}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
-      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
-  elif [ "${script##*.}" = 'py' ] && [ ! -x "$(command -v uv)" ]; then
+      ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
+  elif [ "${extension}" = 'py' ] && [ ! -x "$(command -v uv)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/uv.sh | sh -s -- \
-      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
-  elif [ "${script##*.}" = 'ts' ] && [ ! -x "$(command -v deno)" ]; then
+      ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
+  elif [ "${extension}" = 'ts' ] && [ ! -x "$(command -v deno)" ]; then
     fetch https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- \
-      ${super:+--global} ${preserve_env:+--preserve-env} --quiet
+      ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   fi
 
   # Create installation directory.
@@ -242,6 +282,7 @@ install_script() {
   log "Installing script ${name} to '${dst_file}'."
   fetch --dest "${dst_file}" --mode 755 --super "${super}" \
     "${repo}/script/${script}"
+  handle_shebang "${super}" "${dst_file}" "${extension}"
 
   # Update shell profile if destination is not in system path.
   #
@@ -363,14 +404,28 @@ main() {
   elif [ -n "${names}" ]; then
     scripts="$(find_scripts "${version}")"
 
+    # Choose destination if not selected.
+    #
+    # Flags:
+    #   -z: Check if string has zero length.
+    if [ -z "${dst_dir}" ]; then
+      if [ "$(id -u)" -eq 0 ]; then
+        global_='true'
+        dst_dir='/usr/local/bin'
+      else
+        dst_dir="${HOME}/.local/bin"
+      fi
+    fi
+
     # Find super user command if destination is not writable.
     #
     # Flags:
+    #   -n: Check if string has nonzero length.
     #   -p: Make parent directories if necessary.
     #   -w: Check if file exists and is writable.
-    dst_dir="${dst_dir:-"${HOME}/.local/bin"}"
     if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
       [ ! -w "${dst_dir}" ]; then
+      global_='true'
       super="$(find_super)"
     fi
 
@@ -379,8 +434,8 @@ main() {
       for script in ${scripts}; do
         if [ "${script%.*}" = "${name}" ]; then
           match_found='true'
-          install_script "${super}" "${version}" "${dst_dir}" "${script}" \
-            "${preserve_env}"
+          install_script "${super}" "${global_}" "${version}" "${dst_dir}" \
+            "${script}" "${preserve_env}"
         fi
       done
 

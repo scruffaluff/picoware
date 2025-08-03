@@ -61,6 +61,9 @@ capitalize() {
 #######################################
 create_entry() {
   local folder="${3}" script="${2}" super="${1}" path="${4}"
+  local command='' shebang=''
+  shebang="$(head -n 1 "$(dirname "${path}")/$(basename "${script}")")"
+  command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //;#!\/usr\/bin\/env //')"
 
   cat << EOF | ${super:+"${super}"} tee "${path}" > /dev/null
 #!/usr/bin/env sh
@@ -70,7 +73,8 @@ set -eu
 export PATH="${folder}:\${PATH}"
 # Resolve symlinks to find script folder.
 folder="\$(dirname "\$(readlink "\${0}")")"
-exec "\${folder}/$(basename "${script}")" "\$@"
+# Use interpeter to avoid env shebang conflicts.
+exec ${command} "\${folder}/$(basename "${script}")" "\$@"
 EOF
   ${super:+"${super}"} chmod +x "${path}"
 }
@@ -512,6 +516,8 @@ main() {
   fi
   if [ -n "${global_}" ]; then
     super="$(find_super)"
+  elif [ "$(id -u)" -eq 0 ]; then
+    global_='true'
   fi
 
   # Do not use long form flags for uname. They are not supported on some

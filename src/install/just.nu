@@ -72,7 +72,7 @@ def install [super: string dest: directory version: string] {
         mv $program $"($dest)/($program | path basename)"
     } else {
         ^$super mkdir -p $dest
-        ^$super mv $program $"($dest)/($program | path basename)"
+        ^$super cp $program $"($dest)/($program | path basename)"
     }
 }
 
@@ -106,6 +106,9 @@ def main [
     --version (-v): string # Version of Just to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
+    # Force global if root on Unix.
+    let global = $global or ((is-admin) and $nu.os-info.name != "windows")
+
     let dest_default = if $nu.os-info.name == "windows" {
         if $global {
             "C:\\Program Files\\Bin"
