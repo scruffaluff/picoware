@@ -168,7 +168,7 @@ def --wrapped install-cdrom [
         "macos" => [--graphics vnc]
         _ => [--cpu host-model --graphics vnc]
     }
-    let cdrom = $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+    let cdrom = $"(path-libvirt)/cdroms/($domain).iso"
     cp $path $cdrom
 
     (
@@ -201,7 +201,7 @@ def --wrapped install-disk [
     let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $name $username $password
 
-    let folder = $"($home)/.local/share/libvirt/images"
+    let folder = $"(path-libvirt)/images"
     let destpath = $"($folder)/($name).qcow2"
     mkdir $folder
 
@@ -486,6 +486,7 @@ def "main remove" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let home = path-home
+    let libvirt = path-libvirt
     let title = $domain | str capitalize
 
     # Stop domain if running.
@@ -508,14 +509,14 @@ def "main remove" [
             (
                 rm --force --recursive
                 $"($home)/.local/share/applications/($domain).desktop"
-                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+                $"($libvirt/cdroms/($domain).iso"
             )
         }
         "macos" => {
             (
                 rm --force --recursive
                 $"($home)/Applications/($title).app"
-                $"($home)/.local/share/libvirt/cdroms/($domain).iso"
+                $"($libvirt)/cdroms/($domain).iso"
             )
         }
     }
@@ -642,6 +643,11 @@ def path-home [] {
     } else {
         $env.HOME? 
     }
+}
+
+# Get Libvirt folder.
+def path-libvirt [] {
+    $"(path-home)/.local/share/libvirt"
 }
 
 # Get host port mapping to domain and create one if non-existant.
@@ -807,6 +813,13 @@ console="comconsole,vidconsole"
         ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
     }
 
+    mkdir $"($home)/.config/rclone"
+    match $nu.os-info.name {
+        "macos" => { mkdir $"($home)/Library/Application Support/rstash" }
+        "windows" => { mkdir $"($home)/AppData/Roaming/rstash" }
+        _ => { mkdir $"($home)/.config/rstash" }
+    }
+    
     let config = '
 # Topgrade configuration file for updating system packages.
 #
@@ -820,20 +833,15 @@ no_retry = true
 notify_each_step = false
 skip_notify = true
 '
-    mkdir $"($home)/.config"
-    $config | save --force $"($home)/.config/topgrade.toml"
+    | str trim --left | save --force $"($home)/.config/topgrade.toml"
 }
 
 # Configure host machine.
 def setup-host [] {
     let config = path-config
     let home = path-home
-    (
-        mkdir
-        $config
-        $"($home)/.local/share/libvirt/cdroms"
-        $"($home)/.local/share/libvirt/images"
-    )
+    let libvirt = path-libvirt
+    mkdir $config $"($libvirt)/cdroms" $"($libvirt)/images"
 
     if not ($"($config)/icon.icns" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.icns
