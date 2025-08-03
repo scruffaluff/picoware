@@ -62,7 +62,7 @@ set -eu
 exec ($command) '($script)' \"$@\"
 "
     | str trim --left | save --force $temp
-    chmod +x $temp
+    chmod +rx $temp
 
     # Move script to new location.
     if ($super | is-empty) {
@@ -123,7 +123,7 @@ def install-script [
     if $nu.os-info.name == "windows" {
         install-wrapper $ext $"($dest)/($name)"
     } else {
-        chmod +x $temp
+        chmod +rx $temp
     }
     if ($super | is-empty) {
         mkdir $dest

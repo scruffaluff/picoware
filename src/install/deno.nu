@@ -62,7 +62,7 @@ def install [super: string dest: directory version: string] {
     let program = if $nu.os-info.name == "windows" {
         $"($temp)/deno.exe"
     } else {
-        chmod +x $"($temp)/deno"
+        chmod +rx $"($temp)/deno"
         $"($temp)/deno"
     }
 

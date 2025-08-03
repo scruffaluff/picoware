@@ -76,7 +76,7 @@ folder="\$(dirname "\$(readlink "\${0}")")"
 # Use interpeter to avoid env shebang conflicts.
 exec ${command} "\${folder}/$(basename "${script}")" "\$@"
 EOF
-  ${super:+"${super}"} chmod +x "${path}"
+  ${super:+"${super}"} chmod +rx "${path}"
 }
 
 #######################################

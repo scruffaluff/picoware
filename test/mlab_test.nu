@@ -9,7 +9,7 @@ def mock-matlab [] {
         "@echo off\necho %*\n" | save --force $temp
     } else {
         "#!/usr/bin/env sh\necho $@" | save --force $temp
-        chmod +x $temp
+        chmod +rx $temp
     }
     $temp
 }

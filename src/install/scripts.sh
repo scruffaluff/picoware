@@ -243,7 +243,7 @@ set -eu
 
 exec ${command} '${script}' "\$@"
 EOF
-  ${super:+"${super}"} chmod +x "${path}"
+  ${super:+"${super}"} chmod +rx "${path}"
 }
 
 #######################################

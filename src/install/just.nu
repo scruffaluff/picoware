@@ -63,7 +63,7 @@ def install [super: string dest: directory version: string] {
         $"($temp)/just.exe"
     } else {
         tar fx $"($temp)/just.tar.gz" -C $temp
-        chmod +x $"($temp)/just"
+        chmod +rx $"($temp)/just"
         $"($temp)/just"
     }
 

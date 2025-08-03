@@ -126,7 +126,7 @@ set -eu
 export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
 "  | str trim --left | save --force $path
-    chmod +x $path
+    chmod +rx $path
 }
 
 # Create SSH key.

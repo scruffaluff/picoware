@@ -49,7 +49,7 @@ def install [super: string dest: directory subpath: string] {
         http get $uri | save --progress $program
     }
     if $nu.os-info.name != "windows" {
-        chmod +x $program
+        chmod +rx $program
     }
 
     if ($super | is-empty) {
