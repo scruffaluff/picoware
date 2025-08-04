@@ -2,7 +2,7 @@
 
 # Ensure script dependencies are available.
 def check-deps [] {
-    if (which unzip | is-empty) {
+    if $nu.os-info.name != "windows" and (which unzip | is-empty) {
         error make { msg: ("
 error: Unable to find zip file archiver.
 Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
@@ -55,15 +55,18 @@ def install [super: string dest: directory version: string] {
     let uri = $"https://dl.deno.land/release/($version)/($target).zip"
     if $quiet {
         http get $uri | save $"($temp)/deno.zip"
-        unzip -qq -d $temp $"($temp)/deno.zip"
     } else {
         http get $uri | save --progress $"($temp)/deno.zip"
-        unzip -d $temp $"($temp)/deno.zip"
     }
-
+    
     let program = if $nu.os-info.name == "windows" {
+        powershell -command $"
+$ProgressPreference = 'SilentlyContinue'
+Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
+"
         $"($temp)/deno.exe"
     } else {
+        unzip -qq -d $temp $"($temp)/deno.zip"
         chmod +rx $"($temp)/deno"
         $"($temp)/deno"
     }

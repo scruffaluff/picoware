@@ -2,14 +2,7 @@
 
 # Ensure script dependencies are available.
 def check-deps [] {
-    if $nu.os-info.name == "windows" and (which unzip | is-empty) {
-        error make { msg: ("
-error: Unable to find zip file archiver.
-Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
-"
-            | str trim)
-        }
-    } else if $nu.os-info.name != "windows" and (which tar | is-empty) {
+    if $nu.os-info.name != "windows" and (which tar | is-empty) {
         error make { msg: ("
 error: Unable to find tar file archiver.
 Install tar, https://www.gnu.org/software/tar, manually before continuing.
@@ -58,11 +51,10 @@ def install [super: string dest: directory version: string] {
     }
 
     let program = if $nu.os-info.name == "windows" {
-        if $quiet {
-            unzip -qq -d $temp $"($temp)/uv.zip"
-        } else {
-            unzip -d $temp $"($temp)/uv.zip"
-        }
+        powershell -command $"
+$ProgressPreference = 'SilentlyContinue'
+Expand-Archive -DestinationPath '($temp)' -Path '($temp)/uv.zip'
+"
         $"($temp)/uv.exe"
     } else {
         tar fx $"($temp)/uv.tar.gz" -C $temp
