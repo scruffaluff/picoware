@@ -274,10 +274,12 @@ Options:
   -v, --version     Print version information
 
 Subcommands:
+  bootstrap         Bootstrap virtual machine with Bootware
   create            Create virutal machine from default options
   detach-cdroms     Remove all cdrom disks from virtual machine
   gui               Connect to virtual machine as desktop
   install           Create a virtual machine from a cdrom or disk file
+  port              Get host port mapping to domain
   remove            Delete virtual machine and its disk images
   setup             Configure machine for emulation
   snapshot-table    List snapshots for all virtual machines
@@ -307,6 +309,25 @@ def --wrapped "main adb" [
     }
     let port = main port $domain 5555
     adb -P $port connect ...$args
+}
+
+# Bootstrap virtual machine with Bootware.
+def --wrapped "main bootstrap" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+    ...args: string # Bootware arguments.
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    if not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let key = $"(path-config)/key"
+    let port = main port $domain 22
+    
+    (
+        bootware bootstrap --port $port --inventory localhost --temp-key $key
+        ...$args
+    )
 }
 
 # Create virutal machine from default options.
@@ -487,7 +508,7 @@ def "main install" [
     }
 }
 
-# Get host port mapping to domain and create one if non-existant.
+# Get host port mapping to domain.
 def "main port" [
     domain: string # Virtual machine name
     to: int # Destination port
