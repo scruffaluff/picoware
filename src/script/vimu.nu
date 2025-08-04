@@ -715,32 +715,37 @@ def port-map [domain: string to: int] {
 def setup-desktop [] {
     let super = find-super
 
-    if (which apk | is-not-empty) {
-        ^$super apk update
-        ^$super setup-desktop gnome
-    } else if (which apt | is-not-empty) {
-        # Avoid APT interactive configuration requests.
-        $env.DEBIAN_FRONTEND = "noninteractive"
-        ^$super -E apt-get update
-        ^$super -E apt-get install --yes task-gnome-desktop
-    } else if (which pacman | is-not-empty) {
-        ^$super pacman --noconfirm --refresh --sync --sysupgrade
-        ^$super pacman --noconfirm --sync gnome
-        ^$super systemctl enable --now gdm.service
-    } else if (which pkg | is-not-empty) {
-        # Configure GNOME desktop for FreeBSD.
-        #
-        # Based on instructions at
-        # https://docs.freebsd.org/en/books/handbook/desktop/#gnome-environment.
-        ^$super pkg update
-        ^$super pkg install --yes gnome
-        (
-            ^$super nu --commands
-            "'proc /proc procfs rw 0 0' | save --append /etc/fstab"
-        )
-        ^$super sysrc dbus_enable="YES"
-        ^$super sysrc gdm_enable="YES"
-        ^$super sysrc gnome_enable="YES"
+    match $nu.os-info.name {
+        "freebsd" => {
+            # Configure GNOME desktop for FreeBSD.
+            #
+            # Based on instructions at
+            # https://docs.freebsd.org/en/books/handbook/desktop/#gnome-environment.
+            ^$super pkg update
+            ^$super pkg install --yes gnome
+            (
+                ^$super nu --commands
+                "'proc /proc procfs rw 0 0' | save --append /etc/fstab"
+            )
+            ^$super sysrc dbus_enable="YES"
+            ^$super sysrc gdm_enable="YES"
+            ^$super sysrc gnome_enable="YES"
+        }
+        "linux" => {
+            if (which apk | is-not-empty) {
+                ^$super apk update
+                ^$super setup-desktop gnome
+            } else if (which apt | is-not-empty) {
+                # Avoid APT interactive configuration requests.
+                $env.DEBIAN_FRONTEND = "noninteractive"
+                ^$super -E apt-get update
+                ^$super -E apt-get install --yes task-gnome-desktop
+            } else if (which pacman | is-not-empty) {
+                ^$super pacman --noconfirm --refresh --sync --sysupgrade
+                ^$super pacman --noconfirm --sync gnome
+                ^$super systemctl enable --now gdm.service
+            }
+        }
     }
 }
 
@@ -748,6 +753,58 @@ def setup-desktop [] {
 def setup-guest [] {
     let home = path-home
     let super = find-super
+
+    match $nu.os-info.name {
+        "freebsd" => {
+            ^$super pkg update
+            # Seems as though openssh-server is builtin to FreeBSD.
+            (
+                ^$super pkg install --yes curl ncurses qemu-guest-agent rclone
+                rsync topgrade
+            )
+            try { ^$super service qemu-guest-agent start }
+            ^$super sysrc qemu_guest_agent_enable="YES"
+
+            # Enable serial console on next boot.
+            let content = '
+boot_multicons="YES"
+boot_serial="YES"
+comconsole_speed="115200"
+console="comconsole,vidconsole"
+'
+            | str trim --left
+            ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
+
+            mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
+            http get https://scruffaluff.github.io/bootware/install.sh
+            | sh -s -- --global
+            }
+        "linux" => { setup-guest-linux $super }
+        "windows" => { setup-guest-windows }
+    }
+
+    http get https://scruffaluff.github.io/scripts/install/scripts.nu
+    | nu -c $"($in | decode); main --global clear-cache fdi rgi rstash"
+
+    let config = '
+# Topgrade configuration file for updating system packages.
+#
+# For more infomation, visit
+# https://github.com/topgrade-rs/topgrade/blob/main/config.example.toml.
+
+[misc]
+assume_yes = true
+disable = ["certbot", "containers", "gem", "git_repos", "helm", "ruby_gems", "uv"]
+no_retry = true
+notify_each_step = false
+skip_notify = true
+'
+    | str trim --left | save --force $"($home)/.config/topgrade.toml"
+}
+
+# Configure guest filesystem for Linux.
+def setup-guest-linux [super: string] {
+    let home = path-home
 
     if (which apk | is-not-empty) {
         ^$super apk update
@@ -781,24 +838,6 @@ def setup-guest [] {
             ^$super pacman --noconfirm --sync curl ncurses openssh
             qemu-guest-agent rclone spice-vdagent
         )
-    } else if (which pkg | is-not-empty) {
-        ^$super pkg update
-        # Seems as though openssh-server is builtin to FreeBSD.
-        (
-            ^$super pkg install --yes curl ncurses qemu-guest-agent rclone rsync
-            topgrade
-        )
-        try { ^$super service qemu-guest-agent start }
-        ^$super sysrc qemu_guest_agent_enable="YES"
-        # Enable serial console on next boot.
-        let content = '
-boot_multicons="YES"
-boot_serial="YES"
-comconsole_speed="115200"
-console="comconsole,vidconsole"
-'
-        | str trim --left
-        ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
     } else if (which zypper | is-not-empty) {
         ^$super zypper update --no-confirm
         (
@@ -819,58 +858,43 @@ console="comconsole,vidconsole"
         }
     }
 
-    if $nu.os-info.name == "windows" {
-        powershell { iex 
-            "& { $(iwr -useb https://scruffaluff.github.io/bootware/install.ps1) } --help"
-        }
-    } else {
-        http get https://scruffaluff.github.io/bootware/install.sh
-        | sh -s -- --global
-    }
+    let tmp_dir = mktemp --directory --tmpdir
+    let version = http get https://formulae.brew.sh/api/formula/topgrade.json
+    | get versions.stable
+    let file_name = (
+        $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
+    )
+    http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
+    | save --progress $"($tmp_dir)/topgrade.tar.gz"
+    tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
+    ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
 
-    http get https://scruffaluff.github.io/scripts/install/scripts.nu
-    | nu -c $"($in | decode); main --global clear-cache fdi rgi rstash"
+    mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
+    http get https://scruffaluff.github.io/bootware/install.sh
+    | sh -s -- --global
+}
 
-    if $nu.os-info.name == "linux" and (which topgrade | is-empty) {
-        let tmp_dir = mktemp --directory --tmpdir
-        let version = (
-            http get https://formulae.brew.sh/api/formula/topgrade.json
-            | get versions.stable
-        )
-        let file_name = (
-            $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
-        )
+# Configure guest filesystem for Windows.
+def setup-guest-windows [] {
+    let home = path-home
 
-        (
-            http get
-            $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
-            | save --progress $"($tmp_dir)/topgrade.tar.gz"
-        )
-        tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
-        ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
-    }
+    let tmp_dir = mktemp --directory --tmpdir
+    let rclone_uri = http get https://raw.githubusercontent.com/ScoopInstaller/Main/refs/heads/master/bucket/rclone.json
+    | get architecture.64bit.url
+    http get $rclone_uri | save --force --progress $"($tmp_dir)/rclone.zip"
+    powershell -command $"
+$ProgressPreference = 'SilentlyContinue'
+Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
+"
+    let rclone = glob $"($tmp_dir | str replace --all '\' '/')/**/rclone.exe"
+    | first
+    mv $rclone "C:/Program Files/Bin/rclone.exe"
 
-    mkdir $"($home)/.config/rclone"
-    match $nu.os-info.name {
-        "macos" => { mkdir $"($home)/Library/Application Support/rstash" }
-        "windows" => { mkdir $"($home)/AppData/Roaming/rstash" }
-        _ => { mkdir $"($home)/.config/rstash" }
-    }
-    
-    let config = '
-# Topgrade configuration file for updating system packages.
-#
-# For more infomation, visit
-# https://github.com/topgrade-rs/topgrade/blob/main/config.example.toml.
-
-[misc]
-assume_yes = true
-disable = ["certbot", "containers", "gem", "git_repos", "helm", "ruby_gems", "uv"]
-no_retry = true
-notify_each_step = false
-skip_notify = true
-'
-    | str trim --left | save --force $"($home)/.config/topgrade.toml"
+    mkdir $"($home)/.config/rclone" $"($home)/AppData/Roaming/rstash"
+    powershell -command "
+$ProgressPreference = 'SilentlyContinue'
+iex \"& { $(iwr -useb https://scruffaluff.github.io/bootware/install.ps1) } --global\"
+"
 }
 
 # Configure host machine.
