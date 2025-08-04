@@ -49,24 +49,6 @@ def create-app [domain: string] {
     let title = $domain | str capitalize
 
     match $nu.os-info.name {
-        "linux" => {
-            let dest = $"($home)/.local/share/applications"
-            mkdir $dest
-            (
-                $"
-[Desktop Entry]
-Exec=vimu gui ($domain)
-Icon=($config)/icon.svg
-Name=($title)
-StartupWMClass=virt-viewer
-Terminal=false
-Type=Application
-Version=1.0
-"
-                | str trim --left
-                | save --force $"($dest)/($domain).desktop"
-            )
-        }
         "macos" => {
             let dest = $"($home)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
@@ -114,6 +96,27 @@ Version=1.0
                 | save --force $"($dest)/Info.plist"
             )
         }
+        "windows" => {
+            error make { msg: "Windows application is not yet supported." }
+        }
+        _ => {
+            let dest = $"($home)/.local/share/applications"
+            mkdir $dest
+            (
+                $"
+[Desktop Entry]
+Exec=vimu gui ($domain)
+Icon=($config)/icon.svg
+Name=($title)
+StartupWMClass=virt-viewer
+Terminal=false
+Type=Application
+Version=1.0
+"
+                | str trim --left
+                | save --force $"($dest)/($domain).desktop"
+            )
+        }
     }
 }
 
@@ -140,6 +143,7 @@ def create-key [] {
             chmod 600 $"($config)/key" $"($config)/key.pub"
         }
     }
+    $"($config)/key"
 }
 
 # Find command to elevate as super user.
@@ -162,7 +166,7 @@ Restart this script from an administrator console or install to a user directory
 
 # Create a virtual machine from an ISO disk.
 def --wrapped install-cdrom [
-    domain: string osinfo: string path: path ...args: string
+    domain: string osinfo: string cdrom: path ...args: string
 ] {
     let home = path-home
     let params = match $nu.os-info.name {
@@ -170,13 +174,13 @@ def --wrapped install-cdrom [
         "macos" => [--graphics vnc]
         _ => [--cpu host-model --graphics vnc]
     }
-    let cdrom = $"(path-libvirt)/cdroms/($domain).iso"
-    cp $path $cdrom
+    let disk = $"(path-libvirt)/cdroms/($domain).iso"
+    cp $cdrom $disk
 
     (
         virt-install
         --arch $nu.os-info.arch
-        --cdrom $cdrom
+        --cdrom $disk
         --disk bus=virtio,format=qcow2,size=64
         --memory 8192
         --name $domain
@@ -189,9 +193,8 @@ def --wrapped install-cdrom [
 
 # Create a virtual machine from a qcow2 disk.
 def --wrapped install-disk [
-    name: string osinfo: string path: path extension: string ...args: string
+    name: string osinfo: string image: path extension: string ...args: string
 ] {
-    let home = path-home
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
@@ -203,17 +206,15 @@ def --wrapped install-disk [
     let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $name $username $password
 
-    let folder = $"(path-libvirt)/images"
-    let destpath = $"($folder)/($name).qcow2"
-    mkdir $folder
+    let disk = $"(path-libvirt)/images/($name).qcow2"
+    qemu-img convert -p -f $extension -O qcow2 $image $disk
+    qemu-img resize $disk 64G
 
-    qemu-img convert -p -f $extension -O qcow2 $path $destpath
-    qemu-img resize $destpath 64G
     (
         virt-install
         --arch $nu.os-info.arch
         --cloud-init $"user-data=($user_data)"
-        --disk $"($destpath),bus=virtio"
+        --disk $"($disk),bus=virtio"
         --memory 8192
         --name $name
         --osinfo $osinfo
@@ -225,19 +226,24 @@ def --wrapped install-disk [
 
 # Create a Windows virtual machine from an ISO disk.
 def install-windows [domain: string cdrom: path drivers: string] {
-    let home = path-home
+    let libvirt = path-libvirt
     let params = match $nu.os-info.name {
         "linux" => [--cpu host-model --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
         _ => [--cpu host-model --graphics vnc]
     }
 
+    let disk = $"(path-libvirt)/cdroms/($domain).iso"
+    let devices = $"(path-libvirt)/cdroms/($drivers | path basename).iso"
+    cp $cdrom $disk
+    cp $drivers $devices
+
     (
         virt-install
         --arch x86_64
-        --cdrom $cdrom
+        --cdrom $disk
         --disk bus=virtio,format=qcow2,size=128
-        --disk $"bus=sata,device=cdrom,path=($drivers)"
+        --disk $"bus=sata,device=cdrom,path=($devices)"
         --memory 8192
         --name $domain
         --osinfo win11
@@ -320,7 +326,7 @@ def "main create" [
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
-            let image = $"($config)/alpine_amd64.qcow2"
+            let image = $"($config)/image/alpine_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
                 http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-x86_64-bios-cloudinit-r0.qcow2"
@@ -333,7 +339,7 @@ def "main create" [
             )
         }
         "android" => {
-            let image = $"($config)/android_($arch).qcow2"
+            let image = $"($config)/image/android_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Android image."
                 http get $"https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
@@ -347,7 +353,7 @@ def "main create" [
             )
         }
         "arch" => {
-            let image = $"($config)/arch_amd64.qcow2"
+            let image = $"($config)/image/arch_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Arch image."
                 http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
@@ -360,7 +366,7 @@ def "main create" [
             )
         }
         "debian" => {
-            let image = $"($config)/debian_($arch).qcow2"
+            let image = $"($config)/image/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
                 http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
@@ -373,7 +379,7 @@ def "main create" [
             )
         }
         "freebsd" => {
-            let image = $"($config)/freebsd_amd64.qcow2"
+            let image = $"($config)/image/freebsd_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading FreeBSD image."
                 http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
@@ -386,8 +392,8 @@ def "main create" [
             )
         }
         "windows" => {
-            let cdrom = $"($config)/window_amd64.iso"
-            let drivers = $"($config)/winvirt_drivers.iso"
+            let cdrom = $"($config)/cdrom/window_amd64.iso"
+            let drivers = $"($config)/cdrom/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {
                 print --stderr $"Windows ISO not found at ($cdrom)."
@@ -456,7 +462,7 @@ def "main install" [
     }
 
     let path = if ($uri | str starts-with "https://") {
-        let image = $"($config)/($uri | path basename)"
+        let image = $"($config)/image/($uri | path basename)"
         log info $"Downloading image from ($uri)."
         http get $uri | save --progress $image
         $image
