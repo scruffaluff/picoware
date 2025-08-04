@@ -305,7 +305,7 @@ def --wrapped "main adb" [
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
-    let port = port-map $domain 5555
+    let port = main port $domain 5555
     adb -P $port connect ...$args
 }
 
@@ -487,6 +487,32 @@ def "main install" [
     }
 }
 
+# Get host port mapping to domain and create one if non-existant.
+def "main port" [
+    domain: string # Virtual machine name
+    to: int # Destination port
+] {
+    # QEMU monitor commands are taken from
+    # https://qemu-project.gitlab.io/qemu/system/monitor.html.
+    let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
+    | str trim | lines | skip 2 | str join "\n"
+    | from ssv --minimum-spaces 1 --noheaders
+    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
+    | rename from to | into int from to
+
+    let match = $maps | where to == $to | get --optional 0
+    if $match == null {
+        let port = port
+        (
+            virsh qemu-monitor-command --domain $domain --hmp
+            $"hostfwd_add tcp::($port)-:($to)"
+        )
+        $port
+    } else {
+        $match.from
+    }
+}
+
 # Delete virtual machine and its disk images.
 def "main remove" [
     --log-level (-l): string = "debug" # Log level
@@ -583,7 +609,7 @@ def --wrapped "main scp" [
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
-    let port = port-map $domain 22
+    let port = main port $domain 22
     tscp -i $"(path-config)/key" -P $port ...$params
 }
 
@@ -598,7 +624,7 @@ def --wrapped "main ssh" [
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
-    let port = port-map $domain 22
+    let port = main port $domain 22
 
     # Appears that `$in` needs to be saved to a variable for mutliple uses.
     let pipe = $in
@@ -687,30 +713,6 @@ def path-libvirt [] {
     $"(path-home)/.local/share/libvirt"
 }
 
-# Get host port mapping to domain and create one if non-existant.
-#
-# QEMU monitor commands are taken from
-# https://qemu-project.gitlab.io/qemu/system/monitor.html.
-def port-map [domain: string to: int] {
-    let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
-    | str trim | lines | skip 2 | str join "\n"
-    | from ssv --minimum-spaces 1 --noheaders
-    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
-    | rename from to | into int from to
-
-    let match = $maps | where to == $to | get --optional 0
-    if $match == null {
-        let port = port
-        (
-            virsh qemu-monitor-command --domain $domain --hmp
-            $"hostfwd_add tcp::($port)-:($to)"
-        )
-        $port
-    } else {
-        $match.from
-    }
-}
-
 # Configure desktop environment on guest filesystem.
 def setup-desktop [] {
     let super = find-super
@@ -776,15 +778,21 @@ console="comconsole,vidconsole"
             ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
 
             mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-            http get https://scruffaluff.github.io/bootware/install.sh
-            | sh -s -- --global
+            if (which bootware | is-empty) {
+                http get https://scruffaluff.github.io/bootware/install.sh
+                | sh -s -- --global
             }
+        }
         "linux" => { setup-guest-linux $super }
         "windows" => { setup-guest-windows }
     }
 
-    http get https://scruffaluff.github.io/scripts/install/scripts.nu
-    | nu -c $"($in | decode); main --global clear-cache fdi rgi rstash"
+    let programs = ["clear-cache" "fdi" "rgi" "rstash"]
+    | where {|program| which $program | is-empty }
+    if ($programs | is-not-empty) {
+        http get https://scruffaluff.github.io/scripts/install/scripts.nu
+        | nu -c $"($in | decode); main --global ($programs | str join ' ')"
+    }
 
     let config = '
 # Topgrade configuration file for updating system packages.
@@ -858,43 +866,51 @@ def setup-guest-linux [super: string] {
         }
     }
 
-    let tmp_dir = mktemp --directory --tmpdir
-    let version = http get https://formulae.brew.sh/api/formula/topgrade.json
-    | get versions.stable
-    let file_name = (
-        $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
-    )
-    http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
-    | save --progress $"($tmp_dir)/topgrade.tar.gz"
-    tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
-    ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+    if (which topgrade | is-empty) {
+        let tmp_dir = mktemp --directory --tmpdir
+        let version = http get https://formulae.brew.sh/api/formula/topgrade.json
+        | get versions.stable
+        let file_name = (
+            $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
+        )
+
+        http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
+        | save --progress $"($tmp_dir)/topgrade.tar.gz"
+        tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
+        ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+    }
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-    http get https://scruffaluff.github.io/bootware/install.sh
-    | sh -s -- --global
+    if (which bootware | is-empty) {
+        http get https://scruffaluff.github.io/bootware/install.sh
+        | sh -s -- --global
+    }
 }
 
 # Configure guest filesystem for Windows.
 def setup-guest-windows [] {
     let home = path-home
 
-    let tmp_dir = mktemp --directory --tmpdir
-    let rclone_uri = http get https://raw.githubusercontent.com/ScoopInstaller/Main/refs/heads/master/bucket/rclone.json
-    | get architecture.64bit.url
-    http get $rclone_uri | save --force --progress $"($tmp_dir)/rclone.zip"
-    powershell -command $"
+    if (which rclone | is-empty) {
+        let tmp_dir = mktemp --directory --tmpdir | str replace --all '\' '/'
+        let rclone_uri = http get https://raw.githubusercontent.com/ScoopInstaller/Main/refs/heads/master/bucket/rclone.json
+        | get architecture.64bit.url
+        http get $rclone_uri | save --progress $"($tmp_dir)/rclone.zip"
+        powershell -command $"
 $ProgressPreference = 'SilentlyContinue'
 Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
 "
-    let rclone = glob $"($tmp_dir | str replace --all '\' '/')/**/rclone.exe"
-    | first
-    mv $rclone "C:/Program Files/Bin/rclone.exe"
+        let rclone = glob $"($tmp_dir)/**/rclone.exe" | first
+        mv $rclone "C:/Program Files/Bin/rclone.exe"
+    }
 
     mkdir $"($home)/.config/rclone" $"($home)/AppData/Roaming/rstash"
-    powershell -command "
+    if (which bootware | is-empty) {
+        powershell -command "
 $ProgressPreference = 'SilentlyContinue'
 iex \"& { $(iwr -useb https://scruffaluff.github.io/bootware/install.ps1) } --global\"
 "
+    }
 }
 
 # Configure host machine.
@@ -922,4 +938,10 @@ def setup-host [] {
     }
 
     create-key
+    let programs = ["tscp" "tssh"]
+    | where {|program| which $program | is-empty }
+    if ($programs | is-not-empty) {
+        http get https://scruffaluff.github.io/scripts/install/scripts.nu
+        | nu -c $"($in | decode); main --global ($programs | str join ' ')"
+    }
 }
