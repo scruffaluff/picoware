@@ -141,13 +141,14 @@ def main [
 def update-path [dest: directory global: bool] {
     let target = if $global { "Machine" } else { "User" }
     powershell -command $"
+$Dest = '($dest | path expand)'
 $Path = [Environment]::GetEnvironmentVariable\('Path', '($target)'\)
-if \(-not \($Path -like \"*($dest)*\"\)\) {
-    $PrependedPath = \"($dest);$Path\"
+if \(-not \($Path -like \"*$Dest*\"\)\) {
+    $PrependedPath = \"$Dest;$Path\"
     [System.Environment]::SetEnvironmentVariable\(
         'Path', \"$PrependedPath\", '($target)'
     \)
-    Write-Output \"Added '($dest)' to the system path.\"
+    Write-Output \"Added '$Dest' to the system path.\"
     Write-Output 'Source shell profile or restart shell after installation.'
 }
 "
