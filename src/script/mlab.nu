@@ -1,4 +1,4 @@
-#!/usr/bin/env nu
+#!/usr/bin/env -S nu --no-config-file --stdin
 
 def build-code [setup: string command: string args: list<string>] {
     if ($args | is-empty) {

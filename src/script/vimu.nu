@@ -1,4 +1,4 @@
-#!/usr/bin/env nu
+#!/usr/bin/env -S nu --no-config-file --stdin
 #
 # Convenience script for QEMU and Virsh.
 
@@ -799,13 +799,14 @@ console="comconsole,vidconsole"
             ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
 
             mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-            if (which bootware | is-empty) {
-                http get https://scruffaluff.github.io/bootware/install.sh
-                | sh -s -- --global
-            }
         }
         "linux" => { setup-guest-linux $super }
         "windows" => { setup-guest-windows }
+    }
+
+    if (which bootware | is-empty) {
+        http get https://scruffaluff.github.io/bootware/install.nu
+        | nu -c $"($in); main --global"
     }
 
     let programs = ["clear-cache" "fdi" "rgi" "rstash"]
@@ -902,10 +903,6 @@ def setup-guest-linux [super: string] {
     }
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-    if (which bootware | is-empty) {
-        http get https://scruffaluff.github.io/bootware/install.sh
-        | sh -s -- --global
-    }
 }
 
 # Configure guest filesystem for Windows.
@@ -926,12 +923,6 @@ Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
     }
 
     mkdir $"($home)/.config/rclone" $"($home)/AppData/Roaming/rstash"
-    if (which bootware | is-empty) {
-        powershell -command "
-$ProgressPreference = 'SilentlyContinue'
-iex \"& { $(iwr -useb https://scruffaluff.github.io/bootware/install.ps1) } --global\"
-"
-    }
 }
 
 # Configure host machine.

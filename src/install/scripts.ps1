@@ -123,7 +123,7 @@ deno run --allow-all "%~dnp0.ts" %*
     else {
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dnp0.ps1" %*
+powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*
 "@
     }
 
