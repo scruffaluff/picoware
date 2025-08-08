@@ -173,8 +173,11 @@ def --wrapped install-cdrom [
 ] {
     let home = path-home
     let args = match $nu.os-info.name {
-        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
-        _ => [--graphics vnc ...$args]
+        "linux" => [
+          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+        ]
+        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
+        _ => [--cpu host --graphics spice --video qxl ...$args]
     }
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     cp $cdrom $disk
@@ -183,13 +186,11 @@ def --wrapped install-cdrom [
         virt-install
         --arch $nu.os-info.arch
         --cdrom $disk
-        --cpu host
         --disk bus=virtio,cache=none,format=qcow2,size=64
         --memory 4096
         --name $domain
         --osinfo $osinfo
         --vcpus 2
-        --video qxl
         ...$args
     )
 }
@@ -199,8 +200,11 @@ def --wrapped install-disk [
     domain: string osinfo: string image: path extension: string ...args: string
 ] {
     let args = match $nu.os-info.name {
-        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
-        _ => [--graphics vnc ...$args]
+        "linux" => [
+          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+        ]
+        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
+        _ => [--cpu host --graphics spice --video qxl ...$args]
     }
 
     print "Creating cloud init account for virtual machine."
@@ -216,13 +220,11 @@ def --wrapped install-disk [
         virt-install
         --arch $nu.os-info.arch
         --cloud-init $"user-data=($user_data)"
-        --cpu host
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
         --memory 4096
         --name $domain
         --osinfo $osinfo
         --vcpus 2
-        --video qxl
         ...$args
     )
 }
@@ -233,8 +235,11 @@ def --wrapped install-windows [
 ] {
     let libvirt = path-libvirt
     let args = match $nu.os-info.name {
-        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
-        _ => [--graphics vnc ...$args]
+        "linux" => [
+          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+        ]
+        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
+        _ => [--cpu host --graphics spice --video qxl ...$args]
     }
 
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
@@ -246,7 +251,6 @@ def --wrapped install-windows [
         virt-install
         --arch x86_64
         --cdrom $disk
-        --cpu host
         --disk bus=virtio,cache=none,format=qcow2,size=128
         --disk $"bus=sata,device=cdrom,path=($devices)"
         --memory 8192
@@ -254,7 +258,6 @@ def --wrapped install-windows [
         --osinfo win11
         --tpm model=tpm-tis,backend.type=emulator,backend.version=2.0
         --vcpus 4
-        --video qxl
         ...$args
     )
 }
