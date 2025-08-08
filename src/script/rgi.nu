@@ -1,4 +1,4 @@
-#!/usr/bin/env -S nu --no-config-file --stdin
+#!/usr/bin/env nu
 
 # Interactive Ripgrep searcher.
 def --wrapped main [

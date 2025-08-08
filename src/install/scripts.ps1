@@ -97,7 +97,7 @@ nu "%~dnp0.nu" %*
 
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-uv --no-config run --script "%~dnp0.py" %*
+uv --no-config --quiet run --script "%~dnp0.py" %*
 "@
     }
     elseif ($Script.EndsWith('.ts')) {
@@ -117,7 +117,7 @@ uv --no-config run --script "%~dnp0.py" %*
 
         Set-Content -Path "$DestDir\$Name.cmd" -Value @"
 @echo off
-deno run --allow-all "%~dnp0.ts" %*
+deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*
 "@
     }
     else {

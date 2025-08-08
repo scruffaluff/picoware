@@ -1,4 +1,4 @@
-#!/usr/bin/env -S nu --no-config-file --stdin
+#!/usr/bin/env nu
 
 # Find all installable scripts inside repository.
 def find-scripts [version: string = "main"] {
@@ -155,8 +155,8 @@ def install-wrapper [ext: string dest: path] {
     let wrapper = match $ext {
         "nu" => 'nu "%~dnp0.nu" %*'
         "ps1" => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
-        "py" => 'uv --no-config run --script "%~dnp0.py" %*'
-        "ts" => 'deno run --allow-all "%~dnp0.ts" %*'
+        "py" => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
+        "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
     
     $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"

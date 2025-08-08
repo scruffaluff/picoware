@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-all --no-config --node-modules-dir=none
+#!/usr/bin/env -S deno run --allow-all --no-config --quiet --node-modules-dir=none
 
 import { Command } from "jsr:@cliffy/command@1.0.0-rc.8";
 import * as path from "jsr:@std/path";
