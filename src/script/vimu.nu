@@ -675,7 +675,7 @@ if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
     Invoke-Expression "& { $NushellScript } --global"
 }
 New-Item -Force -ItemType Directory -Path "C:\Program Files\Bin" | Out-Null
-if (-not (($Env:PathExt -Split ';.') -contains "NU") {
+if (-not (($Env:PathExt -Split ";.") -contains "NU")) {
     Set-Content -Path "C:\Program Files\Bin\vimu.cmd" -Value @"
 @echo off
 nu "%~dnp0.nu" %*
