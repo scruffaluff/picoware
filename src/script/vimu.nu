@@ -1,6 +1,9 @@
 #!/usr/bin/env nu
 #
 # Convenience script for QEMU and Virsh.
+#
+# Relevant tutorials:
+#   - https://sureshjoshi.com/development/alpine-kvm-virt-install-linux
 
 use std/log
 
@@ -169,10 +172,9 @@ def --wrapped install-cdrom [
     domain: string osinfo: string cdrom: path ...args: string
 ] {
     let home = path-home
-    let params = match $nu.os-info.name {
-        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
-        "macos" => [--graphics vnc]
-        _ => [--cpu host-passthrough --graphics vnc]
+    let args = match $nu.os-info.name {
+        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
+        _ => [--graphics vnc ...$args]
     }
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     cp $cdrom $disk
@@ -181,32 +183,32 @@ def --wrapped install-cdrom [
         virt-install
         --arch $nu.os-info.arch
         --cdrom $disk
-        --disk bus=virtio,format=qcow2,size=64
-        --memory 8192
+        --cpu host
+        --disk bus=virtio,cache=none,format=qcow2,size=64
+        --memory 4096
         --name $domain
         --osinfo $osinfo
-        --vcpus 4
-        ...$params
+        --vcpus 2
+        --video qxl
         ...$args
     )
 }
 
 # Create a virtual machine from a qcow2 disk.
 def --wrapped install-disk [
-    name: string osinfo: string image: path extension: string ...args: string
+    domain: string osinfo: string image: path extension: string ...args: string
 ] {
-    let params = match $nu.os-info.name {
-        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
-        "macos" => [--graphics vnc]
-        _ => [--cpu host-passthrough --graphics vnc]
+    let args = match $nu.os-info.name {
+        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
+        _ => [--graphics vnc ...$args]
     }
 
-    print "Create user account for virtual machine."
+    print "Creating cloud init account for virtual machine."
     let username = $env.VIMU_USERNAME? | default { input "Username: " }
     let password = $env.VIMU_PASSWORD? | default { ask-password }
-    let user_data = cloud-init $name $username $password
+    let user_data = cloud-init $domain $username $password
 
-    let disk = $"(path-libvirt)/images/($name).qcow2"
+    let disk = $"(path-libvirt)/images/($domain).qcow2"
     qemu-img convert -p -f $extension -O qcow2 $image $disk
     qemu-img resize $disk 64G
 
@@ -214,23 +216,25 @@ def --wrapped install-disk [
         virt-install
         --arch $nu.os-info.arch
         --cloud-init $"user-data=($user_data)"
-        --disk $"($disk),bus=virtio"
-        --memory 8192
-        --name $name
+        --cpu host
+        --disk $"($disk),bus=virtio,cache=none,format=qcow2"
+        --memory 4096
+        --name $domain
         --osinfo $osinfo
-        --vcpus 4
-        ...$params
+        --vcpus 2
+        --video qxl
         ...$args
     )
 }
 
 # Create a Windows virtual machine from an ISO disk.
-def install-windows [domain: string cdrom: path drivers: string] {
+def --wrapped install-windows [
+    domain: string cdrom: path drivers: string ...args: string
+] {
     let libvirt = path-libvirt
-    let params = match $nu.os-info.name {
-        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
-        "macos" => [--graphics vnc]
-        _ => [--cpu host-passthrough --graphics vnc]
+    let args = match $nu.os-info.name {
+        "linux" => [--hvm --graphics spice --virt-type kvm ...$args]
+        _ => [--graphics vnc ...$args]
     }
 
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
@@ -238,20 +242,20 @@ def install-windows [domain: string cdrom: path drivers: string] {
     cp $cdrom $disk
     cp $drivers $devices
 
-    # Disk settings are chosen for speed based on recommendations at
-    # https://unix.stackexchange.com/a/48584.
     (
         virt-install
         --arch x86_64
         --cdrom $disk
-        --disk bus=virtio,cache=none,format=raw,io=native,size=128
+        --cpu host
+        --disk bus=virtio,cache=none,format=qcow2,size=128
         --disk $"bus=sata,device=cdrom,path=($devices)"
         --memory 8192
         --name $domain
         --osinfo win11
         --tpm model=tpm-tis,backend.type=emulator,backend.version=2.0
         --vcpus 4
-        ...$params
+        --video qxl
+        ...$args
     )
 }
 
@@ -944,7 +948,11 @@ def setup-host [] {
     let config = path-config
     let home = path-home
     let libvirt = path-libvirt
-    mkdir $config $"($libvirt)/cdroms" $"($libvirt)/images"
+
+    (
+        mkdir $"($config)/cdrom" $"($config)/image" $"($libvirt)/cdroms"
+        $"($libvirt)/images"
+    )
 
     if not ($"($config)/icon.icns" | path exists) {
         http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.icns
