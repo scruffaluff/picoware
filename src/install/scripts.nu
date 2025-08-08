@@ -1,5 +1,44 @@
 #!/usr/bin/env nu
 
+# Copy and configure file.
+def deploy [
+    --mode (-m): string
+    --super (-s): string
+    source: string
+    dest: string
+] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let folder = $dest | path dirname
+
+    # Download to temporary file to avoid permission restrictions.
+    let file = if ($source | path exists) {
+        $source
+    } else {
+        let temp = mktemp --tmpdir
+        if $quiet {
+            http get $source | save --force $temp
+        } else {
+            http get $source | save --force --progress $temp
+        }
+        $temp
+    }
+
+    # Copy file instead of move to ensure correct ownership.
+    if ($super | is-empty) {
+        mkdir $folder
+        cp $file $dest
+        if ($mode | is-not-empty) and $nu.os-info.name != "windows" {
+            chmod $mode $dest
+        }
+    } else {
+        ^$super mkdir -p $folder
+        ^$super cp $file $dest
+        if ($mode | is-not-empty) and $nu.os-info.name != "windows" {
+            sudo chmod $mode $dest
+        }
+    }
+}
+
 # Find all installable scripts inside repository.
 def find-scripts [version: string = "main"] {
     let exts = if $nu.os-info.name == "windows" {
@@ -88,7 +127,7 @@ def install-script [
 ] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $script | path parse
-    let ext = $parts | get extension
+    let ext = $parts | get extension | str replace --regex "^ts$" "tsx"
     let name = $parts | get stem
 
     mut args = []
@@ -112,35 +151,21 @@ def install-script [
         $"($dest)/($name)"
     }
 
-    log $"Installing script ($script) to '($program)'."
-    let temp = mktemp --tmpdir
+    log $"Installing script ($script) to '($program | path expand)'."
     let uri = $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/script/($script)"
-    if $quiet {
-        http get $uri | save --force $temp
-    } else {
-        http get $uri | save --force --progress $temp
-    }
+    deploy --mode 755 --super $super $uri $program
 
     if $nu.os-info.name == "windows" {
-        install-wrapper $ext $"($dest)/($name)"
-    } else {
-        chmod +rx $temp
-    }
-    if ($super | is-empty) {
-        mkdir $dest
-        mv $temp $program
-    } else {
-        ^$super mkdir -p $dest
-        ^$super cp $temp $program
-    }
-
-    if $nu.os-info.name != "windows" {
-        handle-shebang $super $program $ext
-    }
-    if not $preserve_env and not ($dest in $env.PATH) {
-        if $nu.os-info.name == "windows" {
+        let path_exts = $env.PATHEXT | str downcase | split row ";."
+        if not ($ext in $path_exts) {
+            install-wrapper $ext $"($dest)/($name)"
+        }
+        if not $preserve_env and not ($dest in $env.PATH) {
             update-path $dest $system
-        } else {
+        }
+    } else {
+        handle-shebang $super $program $ext
+        if not $preserve_env and not ($dest in $env.PATH) {
             update-shell $dest
         }
     }

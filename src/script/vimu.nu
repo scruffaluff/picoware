@@ -170,9 +170,9 @@ def --wrapped install-cdrom [
 ] {
     let home = path-home
     let params = match $nu.os-info.name {
-        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
-        _ => [--cpu host-model --graphics vnc]
+        _ => [--cpu host-passthrough --graphics vnc]
     }
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     cp $cdrom $disk
@@ -196,9 +196,9 @@ def --wrapped install-disk [
     name: string osinfo: string image: path extension: string ...args: string
 ] {
     let params = match $nu.os-info.name {
-        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
-        _ => [--cpu host-model --graphics vnc]
+        _ => [--cpu host-passthrough --graphics vnc]
     }
 
     print "Create user account for virtual machine."
@@ -228,9 +228,9 @@ def --wrapped install-disk [
 def install-windows [domain: string cdrom: path drivers: string] {
     let libvirt = path-libvirt
     let params = match $nu.os-info.name {
-        "linux" => [--cpu host-model --graphics spice --virt-type kvm]
+        "linux" => [--cpu host-passthrough --graphics spice --virt-type kvm]
         "macos" => [--graphics vnc]
-        _ => [--cpu host-model --graphics vnc]
+        _ => [--cpu host-passthrough --graphics vnc]
     }
 
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
@@ -238,11 +238,13 @@ def install-windows [domain: string cdrom: path drivers: string] {
     cp $cdrom $disk
     cp $drivers $devices
 
+    # Disk settings are chosen for speed based on recommendations at
+    # https://unix.stackexchange.com/a/48584.
     (
         virt-install
         --arch x86_64
         --cdrom $disk
-        --disk bus=virtio,format=qcow2,size=128
+        --disk bus=virtio,cache=none,format=raw,io=native,size=128
         --disk $"bus=sata,device=cdrom,path=($devices)"
         --memory 8192
         --name $domain
@@ -806,7 +808,7 @@ console="comconsole,vidconsole"
 
     if (which bootware | is-empty) {
         http get https://scruffaluff.github.io/bootware/install.nu
-        | nu -c $"($in); main --global"
+        | nu -c $"($in | decode); main --global"
     }
 
     let programs = ["clear-cache" "fdi" "rgi" "rstash"]
@@ -814,6 +816,15 @@ console="comconsole,vidconsole"
     if ($programs | is-not-empty) {
         http get https://scruffaluff.github.io/scripts/install/scripts.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
+    }
+
+    if $nu.os-info == "windows" {
+        let temp = mktemp --tmpdir --suffix ".msi"
+        http get https://pkgs.tailscale.com/stable/tailscale-setup-1.86.2-amd64.msi
+        | save --force --progress $temp
+        msiexec /quiet /i $temp
+    } else if (which tailscale | is-empty) {
+        http get https://tailscale.com/install.sh | sh
     }
 
     let config = '
