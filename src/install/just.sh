@@ -258,7 +258,8 @@ install_just() {
   fetch --dest "${tmp_dir}/just.tar.gz" \
     "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz"
   tar fx "${tmp_dir}/just.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} mv "${tmp_dir}/just" "${dst_file}"
+  ${super:+"${super}"} cp "${tmp_dir}/just" "${dst_file}"
+  ${super:+"${super}"} chmod 755 "${dst_file}"
 
   # Update shell profile if destination is not in system path.
   #

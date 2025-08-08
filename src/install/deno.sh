@@ -220,7 +220,8 @@ install_deno() {
   fetch --dest "${tmp_dir}/deno.zip" \
     "https://dl.deno.land/release/${version}/deno-${target}.zip"
   unzip -d "${tmp_dir}" "${tmp_dir}/deno.zip"
-  ${super:+"${super}"} mv "${tmp_dir}/deno" "${dst_file}"
+  ${super:+"${super}"} cp "${tmp_dir}/deno" "${dst_file}"
+  ${super:+"${super}"} chmod 755 "${dst_file}"
 
   # Update shell profile if destination is not in system path.
   #

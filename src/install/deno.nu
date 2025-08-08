@@ -67,16 +67,22 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
         $"($temp)/deno.exe"
     } else {
         unzip -qq -d $temp $"($temp)/deno.zip"
-        chmod +rx $"($temp)/deno"
         $"($temp)/deno"
     }
 
+    let dest_file = $"($dest)/($program | path basename)"
     if ($super | is-empty) {
         mkdir $dest
-        mv $program $"($dest)/($program | path basename)"
+        cp $program $dest_file
+        if $nu.os-info.name != "windows" {
+            chmod 755 $dest_file
+        }
     } else {
         ^$super mkdir -p $dest
-        ^$super cp $program $"($dest)/($program | path basename)"
+        ^$super cp $program $dest_file
+        if $nu.os-info.name != "windows" {
+            sudo chmod 755 $dest_file
+        }
     }
 }
 

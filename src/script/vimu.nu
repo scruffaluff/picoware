@@ -287,11 +287,10 @@ Subcommands:
   snapshot-table    List snapshots for all virtual machines
   scp               Copy files between host and virtual machine
   ssh               Connect to virtual machine with SSH
-  upload            Upload Vimu to guest machine
-
-Virsh Options:"
+  upload            Upload Vimu to guest machine"
         )
         if (which virsh | is-not-empty) {
+            print "\nVirsh Options:\n"
             virsh ...$args
         }
     } else {
@@ -676,10 +675,12 @@ if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
     Invoke-Expression "& { $NushellScript } --global"
 }
 New-Item -Force -ItemType Directory -Path "C:\Program Files\Bin" | Out-Null
-Set-Content -Path "C:\Program Files\Bin\vimu.cmd" -Value @"
+if (-not (($Env:PathExt -Split ';.') -contains "NU") {
+    Set-Content -Path "C:\Program Files\Bin\vimu.cmd" -Value @"
 @echo off
 nu "%~dnp0.nu" %*
 "@
+}
 '
         main scp $vimu $"($domain):C:/Program Files/Bin/vimu.nu"
     } else {
@@ -818,7 +819,9 @@ console="comconsole,vidconsole"
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
     }
 
-    if $nu.os-info == "windows" {
+    if $nu.os-info == "windows" and not (
+        "C:/Program Files/Tailscale" | path exists
+    ) {
         let temp = mktemp --tmpdir --suffix ".msi"
         http get https://pkgs.tailscale.com/stable/tailscale-setup-1.86.2-amd64.msi
         | save --force --progress $temp
@@ -930,7 +933,7 @@ $ProgressPreference = 'SilentlyContinue'
 Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
 "
         let rclone = glob $"($tmp_dir)/**/rclone.exe" | first
-        mv $rclone "C:/Program Files/Bin/rclone.exe"
+        cp $rclone "C:/Program Files/Bin/rclone.exe"
     }
 
     mkdir $"($home)/.config/rclone" $"($home)/AppData/Roaming/rstash"

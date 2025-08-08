@@ -15,12 +15,12 @@ Usage: fdi [OPTIONS]
 Options:
       --edit        Open selection in default editor
   -h, --help        Print help information
-  -v, --version     Print version information
-
-Fd Options:
-"
+  -v, --version     Print version information"
         )
-        fd ...$args
+        if (which fd | is-not-empty) {
+            print "\nFd Options:\n"
+            fd ...$args
+        }
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Fdi 0.1.0"

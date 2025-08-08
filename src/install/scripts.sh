@@ -233,7 +233,7 @@ handle_shebang() {
 
   # Move script to new location.
   command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //')"
-  ${super:+"${super}"} mv "${path}" "${script}"
+  ${super:+"${super}"} cp "${path}" "${script}"
   ${super:+"${super}"} chmod -x "${script}"
 
   # Add entrypoint replacement for script.

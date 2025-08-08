@@ -17,12 +17,12 @@ Usage: rgi [OPTIONS]
 Options:
       --edit        Open selection in default editor
   -h, --help        Print help information
-  -v, --version     Print version information
-
-Ripgrep Options:
-"
+  -v, --version     Print version information"
         )
-        rg ...$args
+        if (which fd | is-not-empty) {
+            print "\nRipgrep Options:\n"
+            rg ...$args
+        }
         return
     } else if ("-v" in $args) or ("--version" in $args) {
         print "Rgi 0.2.0"

@@ -47,15 +47,21 @@ def find-scripts [version: string = "main"] {
         [".nu" ".py" ".rs" ".sh" ".ts"]
     }
 
-    http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
-    | get tree | where type == blob | get path
-    | where {|path| ($path | str starts-with "src/script/") and (
-            $exts | reduce --fold false {
-                |ext, acc| $acc or ($path | str ends-with $ext)
-            }
-        )
+    if ($version | path exists) {
+        ls $"($version)/src/script" | get name
+        | where {|name| $".($name | path parse | get extension)" in $exts }
+        | each {|name| $name | path basename }
+    } else {
+        http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
+        | get tree | where type == blob | get path
+        | where {|path| ($path | str starts-with "src/script/") and (
+                $exts | reduce --fold false {
+                    |ext, acc| $acc or ($path | str ends-with $ext)
+                }
+            )
+        }
+        | each {|path| $path | path basename }
     }
-    | each {|path| $path | path basename }
 }
 
 # Find command to elevate as super user.
@@ -106,8 +112,8 @@ exec ($command) '($script)' \"$@\"
 
     # Move script to new location.
     if ($super | is-empty) {
-        mv $path $script
-        mv $temp $path
+        cp $path $script
+        cp $temp $path
         chmod -x $script
     } else {
         ^$super cp $path $script
@@ -129,6 +135,11 @@ def install-script [
     let parts = $script | path parse
     let ext = $parts | get extension | str replace --regex "^ts$" "tsx"
     let name = $parts | get stem
+    let source = if ($version | path exists) {
+        $"($version)/src/script/($script)"
+    } else {
+        $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/script/($script)"
+    }
 
     mut args = []
     if $preserve_env {
@@ -152,8 +163,7 @@ def install-script [
     }
 
     log $"Installing script ($script) to '($program | path expand)'."
-    let uri = $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/script/($script)"
-    deploy --mode 755 --super $super $uri $program
+    deploy --mode 755 --super $super $source $program
 
     if $nu.os-info.name == "windows" {
         let path_exts = $env.PATHEXT | str downcase | split row ";."

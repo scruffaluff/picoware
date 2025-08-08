@@ -58,16 +58,22 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/uv.zip'
         $"($temp)/uv.exe"
     } else {
         tar fx $"($temp)/uv.tar.gz" -C $temp
-        chmod +rx $"($temp)/($target)/uv"
         $"($temp)/($target)/uv"
     }
 
+    let dest_file = $"($dest)/($program | path basename)"
     if ($super | is-empty) {
         mkdir $dest
-        mv $program $"($dest)/($program | path basename)"
+        cp $program $dest_file
+        if $nu.os-info.name != "windows" {
+            chmod 755 $dest_file
+        }
     } else {
         ^$super mkdir -p $dest
-        ^$super cp $program $"($dest)/($program | path basename)"
+        ^$super cp $program $dest_file
+        if $nu.os-info.name != "windows" {
+            sudo chmod 755 $dest_file
+        }
     }
 }
 

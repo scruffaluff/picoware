@@ -164,7 +164,7 @@ fetch_app() {
   for file in ${files}; do
     case "${file##*.}" in
       py | rs | ts)
-        if [ "${file%.*}" = 'index' ]; then
+        if [ "${file%.*}" = 'main' ]; then
           script="${dest}/${file}"
         fi
         fetch --dest "${dest}/${file}" --mode 755 --super "${super}" \
@@ -309,7 +309,7 @@ install_app_linux() {
     dest="${HOME}/.local/app/${name}"
     manifest="${HOME}/.local/share/applications/${name}.desktop"
   fi
-  entry_point="${dest}/index.sh"
+  entry_point="${dest}/main.sh"
   icon="${dest}/icon.svg"
 
   log "Installing application ${title}."
@@ -371,7 +371,7 @@ install_app_macos() {
     icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.icns"
     manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
-  entry_point="${dest}/index.sh"
+  entry_point="${dest}/main.sh"
 
   log "Installing application ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
@@ -390,7 +390,7 @@ install_app_macos() {
   <key>CFBundleDisplayName</key>
   <string>${title}</string>
   <key>CFBundleExecutable</key>
-  <string>index.sh</string>
+  <string>main.sh</string>
   <key>CFBundleIconFile</key>
   <string>icon.icns</string>
   <key>CFBundleIdentifier</key>

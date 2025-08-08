@@ -240,7 +240,8 @@ install_nushell() {
   fetch --dest "${tmp_dir}/${target}.tar.gz" \
     "https://github.com/nushell/nushell/releases/download/${version}/${target}.tar.gz"
   tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} mv "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
+  ${super:+"${super}"} cp "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
+  ${super:+"${super}"} chmod 755 "${dst_dir}/"nu_*
 
   # Update shell profile if destination is not in system path.
   #
