@@ -122,6 +122,54 @@ exec ($command) '($script)' \"$@\"
     }
 }
 
+# Install completion scripts.
+def install-completion [
+    super: string global: bool version: string script: string
+] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let name = $script | path parse | get stem
+    if $nu.os-info.name == "windows" {
+        return
+    }
+
+    let source = if ($version | path exists) {
+        let path = $"($version)/src/completion/($name).fish"
+        if not ($path | path exists) {
+            return
+        }
+        $path
+    } else {
+        let uri = $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/completion/($name).fish"
+        try {
+            http head $uri
+        } catch {
+            return
+        }
+        $uri
+    }
+
+    if $global {
+        let dest = match $nu.os-info.name {
+            "freebsd" => $"/usr/local/etc/fish/completions/($name).fish"
+            "macos" => {
+                let prefix = if $nu.os-info.arch == "aarch64" {
+                    "/opt/homebrew"
+                } else {
+                    "/usr/local"
+                }
+                $"($prefix)/etc/fish/completions/($name).fish"
+            }
+            _ => $"/etc/fish/completions/($name).fish"
+        }
+        deploy --super $super --mode 644 $source $dest
+    } else {
+        (
+            deploy --mode 644 $source
+            $"($env.HOME)/.config/fish/completions/($name).fish"
+        )
+    }
+}
+
 # Install script to destination folder.
 def install-script [
     super: string
@@ -164,6 +212,7 @@ def install-script [
 
     log $"Installing script ($script) to '($program | path expand)'."
     deploy --mode 755 --super $super $source $program
+    install-completion $super $system $version $script
 
     if $nu.os-info.name == "windows" {
         let path_exts = $env.PATHEXT | str downcase | split row ";."
