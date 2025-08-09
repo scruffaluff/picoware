@@ -174,14 +174,21 @@ def --wrapped install-cdrom [
     let home = path-home
     let args = match $nu.os-info.name {
         "linux" => [
-          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
+          "qxl" "--virt-type" "kvm" ...$args
         ]
-        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
-        _ => [--cpu host --graphics spice --video qxl ...$args]
+        "macos" => [
+            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
+        ]
+        _ => [
+            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
+            ...$args
+        ]
     }
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     cp $cdrom $disk
 
+    log info $"Installing $(domain) from a disk image."
     (
         virt-install
         --arch $nu.os-info.arch
@@ -201,10 +208,16 @@ def --wrapped install-disk [
 ] {
     let args = match $nu.os-info.name {
         "linux" => [
-          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
+          "qxl" "--virt-type" "kvm" ...$args
         ]
-        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
-        _ => [--cpu host --graphics spice --video qxl ...$args]
+        "macos" => [
+            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
+        ]
+        _ => [
+            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
+            ...$args
+        ]
     }
 
     print "Creating cloud init account for virtual machine."
@@ -216,6 +229,7 @@ def --wrapped install-disk [
     qemu-img convert -p -f $extension -O qcow2 $image $disk
     qemu-img resize $disk 64G
 
+    log info $"Installing $(domain) from a CD-ROM."
     (
         virt-install
         --arch $nu.os-info.arch
@@ -236,16 +250,42 @@ def --wrapped install-windows [
     let libvirt = path-libvirt
     let args = match $nu.os-info.name {
         "linux" => [
-          --hvm --cpu host --graphics spice --video qxl --virt-type kvm ...$args
+          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
+          "qxl" "--virt-type" "kvm" ...$args
         ]
-        "macos" => [--graphics vnc --video virtio --virt-type hvf ...$args]
-        _ => [--cpu host --graphics spice --video qxl ...$args]
+        "macos" => [
+            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
+        ]
+        _ => [
+            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
+            ...$args
+        ]
     }
 
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     let devices = $"(path-libvirt)/cdroms/($drivers | path basename).iso"
     cp $cdrom $disk
     cp $drivers $devices
+
+    log info $"Installing ($domain) from a CD-ROM."
+    print "Recommended steps for the Windows graphical installer.
+
+- You may encounter a _No bootable option or device was found_ error message. If
+  so press the `Enter` key to open QEMU boot menu. Select the `QEMU DVD-ROM`
+  option to try again. This process may need to repeat a few times.
+- At the _Where do you want to install Windows?_ screen, Windows will be unable
+  to find any hard drives. Select the `Load driver` option and load the _Red Hat
+  VirtIO SCSI controller_ for Windows 11, which can be found by selecting the
+  folder in the _Browse_ option at `E:/amd64/w11`. Do not load any network
+  drivers, since a Windows local account requires a lack of internet during
+  first setup.
+- At the _Unlock your Microsoft experience_ screen, press `Shift+F10` to open a
+  command prompt window as administrator. Type `start ms-cxh:localonly` to open
+  a local account configuration popup window. Enter your account username
+  instead of your full name and skip entering a password to avoid the additional
+  security questions. Once you finish the setup process, press `Ctrl+Alt+Del` to
+  create a password.
+"
 
     (
         virt-install
@@ -256,7 +296,7 @@ def --wrapped install-windows [
         --memory 8192
         --name $domain
         --osinfo win11
-        --tpm model=tpm-tis,backend.type=emulator,backend.version=2.0
+        --tpm backend.type=emulator,backend.version=2.0,model=tpm-tis
         --vcpus 4
         ...$args
     )
@@ -398,7 +438,7 @@ def "main create" [
             let image = $"($config)/image/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
-                http get $"https://cloud.debian.org/images/cloud/trixie/daily/latest/debian-13-generic-($arch)-daily.qcow2"
+                http get $"https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-($arch).qcow2"
                 | save --progress $image
             }
 
@@ -433,6 +473,10 @@ def "main create" [
                 log info "Downloading Windows drivers."
                 http get "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
                 | save --progress $drivers
+            }
+            if (virsh list --all --name | str contains "windows") {
+                print --stderr "error: Domain is already in use"
+                exit 1
             }
 
             create-app "windows"
