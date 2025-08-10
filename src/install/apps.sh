@@ -72,7 +72,7 @@ set -eu
 # Add interpreter to system path.
 export PATH="${folder}:\${PATH}"
 # Resolve symlinks to find script folder.
-folder="\$(dirname "\$(readlink "\${0}")")"
+folder="\$(dirname "\$(realpath "\${0}")")"
 # Use interpeter to avoid env shebang conflicts.
 exec ${command} "\${folder}/$(basename "${script}")" "\$@"
 EOF

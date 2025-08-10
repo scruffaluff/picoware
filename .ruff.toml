@@ -1,0 +1,6 @@
+# Ruff configuration file for linting Python code.
+#
+# For more information, visit https://docs.astral.sh/ruff/configuration.
+
+[lint]
+ignore = ["E402"]
