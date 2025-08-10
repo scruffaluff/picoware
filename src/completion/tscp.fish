@@ -1,10 +1,8 @@
 # Fish completion file for Tscp.
 #
-# For a tutorial on writing Fish completions, visit
-# https://fishshell.com/docs/current/completions.html.
+# For a reference on flags for the Fish complete command,, visit
+# https://fishshell.com/docs/current/cmds/complete.html#description.
 
-complete --command tscp --wraps scp
-complete --command tscp --description 'Print help information' --long-option \
-    help --short-option h
-complete --command tscp --description 'Print version information' \
-    --long-option version --short-option v
+complete -c tscp -w scp
+complete -c tscp -l help -s h -d 'Print help information'
+complete -c tscp -l version -s v -d 'Print version information'

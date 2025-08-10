@@ -1,12 +1,9 @@
 # Fish completion file for Rgi.
 #
-# For a tutorial on writing Fish completions, visit
-# https://fishshell.com/docs/current/completions.html.
+# For a reference on flags for the Fish complete command,, visit
+# https://fishshell.com/docs/current/cmds/complete.html#description.
 
-complete --command rgi --wraps rg
-complete --command rgi --description 'Open selection in default editor' \
-    --long-option edit
-complete --command rgi --description 'Print help information' --long-option \
-    help --short-option h
-complete --command rgi --description 'Print version information' --long-option \
-    version --short-option v
+complete -c rgi -w rg
+complete -c rgi -l edit -d 'Open selection in default editor'
+complete -c rgi -l help -s h -d 'Print help information'
+complete -c rgi -l version -s v -d 'Print version information'

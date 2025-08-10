@@ -39,29 +39,38 @@ def deploy [
     }
 }
 
+# Find all installable completions inside repository.
+def find-completions [version: string = "main"] {
+    let exts = if $nu.os-info.name == "windows" { [] } else { ["fish"] }
+
+    if ($version | path exists) {
+        ls $"($version)/src/completion" | get name
+    } else {
+        http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
+        | get tree | where type == blob | get path
+        | where {|path| ($path | str starts-with "src/completion/") }
+    }
+    | where {|name| ($name | path parse | get extension) in $exts }
+    | each {|name| $name | path basename }
+}
+
 # Find all installable scripts inside repository.
 def find-scripts [version: string = "main"] {
     let exts = if $nu.os-info.name == "windows" {
-        [".nu" ".ps1" ".py" ".rs" ".ts"]
+        ["nu" "ps1" "py" "rs" "ts"]
     } else {
-        [".nu" ".py" ".rs" ".sh" ".ts"]
+        ["nu" "py" "rs" "sh" "ts"]
     }
 
     if ($version | path exists) {
         ls $"($version)/src/script" | get name
-        | where {|name| $".($name | path parse | get extension)" in $exts }
-        | each {|name| $name | path basename }
     } else {
         http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
         | get tree | where type == blob | get path
-        | where {|path| ($path | str starts-with "src/script/") and (
-                $exts | reduce --fold false {
-                    |ext, acc| $acc or ($path | str ends-with $ext)
-                }
-            )
-        }
-        | each {|path| $path | path basename }
+        | where {|path| ($path | str starts-with "src/script/") }
     }
+    | where {|name| ($name | path parse | get extension) in $exts }
+    | each {|name| $name | path basename }
 }
 
 # Find command to elevate as super user.
@@ -128,45 +137,37 @@ def install-completion [
 ] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let name = $script | path parse | get stem
-    if $nu.os-info.name == "windows" {
-        return
-    }
+    let completions = find-completions $version
+    | where {|file| ($file | path parse | get stem) == $name }
 
     let source = if ($version | path exists) {
-        let path = $"($version)/src/completion/($name).fish"
-        if not ($path | path exists) {
-            return
-        }
-        $path
+        $"($version)/src/completion/($name)"
     } else {
-        let uri = $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/completion/($name).fish"
-        try {
-            http head $uri
-        } catch {
-            return
+        $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/completion/($name)"
+    }
+    let dest = match $nu.os-info.name {
+        "freebsd" => {
+            fish: $"/usr/local/etc/fish/completions/($name).fish"
         }
-        $uri
+        "macos" => {
+            let prefix = if $nu.os-info.arch == "aarch64" {
+                "/opt/homebrew"
+            } else {
+                "/usr/local"
+            }
+            {
+                fish: $"($prefix)/etc/fish/completions/($name).fish"
+            }
+        }
+        "windows" => { }
+        _ => {
+            fish: $"/etc/fish/completions/($name).fish"
+        }
     }
 
-    if $global {
-        let dest = match $nu.os-info.name {
-            "freebsd" => $"/usr/local/etc/fish/completions/($name).fish"
-            "macos" => {
-                let prefix = if $nu.os-info.arch == "aarch64" {
-                    "/opt/homebrew"
-                } else {
-                    "/usr/local"
-                }
-                $"($prefix)/etc/fish/completions/($name).fish"
-            }
-            _ => $"/etc/fish/completions/($name).fish"
-        }
-        deploy --super $super --mode 644 $source $dest
-    } else {
-        (
-            deploy --mode 644 $source
-            $"($env.HOME)/.config/fish/completions/($name).fish"
-        )
+    for completion in $completions {
+        let ext = $completion | path parse | get extension
+        deploy --super $super --mode 644 $"($source).($ext)" ($dest | get $ext)
     }
 }
 

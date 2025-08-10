@@ -1,10 +1,8 @@
 # Fish completion file for Tssh.
 #
-# For a tutorial on writing Fish completions, visit
-# https://fishshell.com/docs/current/completions.html.
+# For a reference on flags for the Fish complete command,, visit
+# https://fishshell.com/docs/current/cmds/complete.html#description.
 
-complete --command tssh --wraps ssh
-complete --command tssh --description 'Print help information' --long-option \
-    help --short-option h
-complete --command tssh --description 'Print version information' \
-    --long-option version --short-option v
+complete -c tssh -w ssh
+complete -c tssh -l help -s h -d 'Print help information'
+complete -c tssh -l version -s v -d 'Print version information'

@@ -1,10 +1,8 @@
 # Fish completion file for Trsync.
 #
-# For a tutorial on writing Fish completions, visit
-# https://fishshell.com/docs/current/completions.html.
+# For a reference on flags for the Fish complete command, visit
+# https://fishshell.com/docs/current/cmds/complete.html#description.
 
-complete --command trsync --wraps rsync
-complete --command trsync --description 'Print help information' --long-option \
-    help --short-option h
-complete --command trsync --description 'Print version information' \
-    --long-option version --short-option v
+complete -c trsync -w rsync
+complete -c trsync -l help -s h -d 'Print help information'
+complete -c trsync -l version -s v -d 'Print version information'

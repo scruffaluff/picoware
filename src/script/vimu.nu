@@ -371,7 +371,6 @@ def --wrapped "main bootstrap" [
 
 # Create virutal machine from default options.
 def "main create" [
-    --iso (-i) # Use ISO version of domain
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
