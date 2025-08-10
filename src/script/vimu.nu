@@ -188,7 +188,7 @@ def --wrapped install-cdrom [
     let disk = $"(path-libvirt)/cdroms/($domain).iso"
     cp $cdrom $disk
 
-    log info $"Installing $(domain) from a disk image."
+    log info $"Installing ($domain) from a CD-ROM."
     (
         virt-install
         --arch $nu.os-info.arch
@@ -229,7 +229,7 @@ def --wrapped install-disk [
     qemu-img convert -p -f $extension -O qcow2 $image $disk
     qemu-img resize $disk 64G
 
-    log info $"Installing $(domain) from a CD-ROM."
+    log info $"Installing ($domain) from a disk image."
     (
         virt-install
         --arch $nu.os-info.arch
@@ -268,24 +268,15 @@ def --wrapped install-windows [
     cp $drivers $devices
 
     log info $"Installing ($domain) from a CD-ROM."
-    print "Recommended steps for the Windows graphical installer.
-
-- You may encounter a _No bootable option or device was found_ error message. If
-  so press the `Enter` key to open QEMU boot menu. Select the `QEMU DVD-ROM`
-  option to try again. This process may need to repeat a few times.
-- At the _Where do you want to install Windows?_ screen, Windows will be unable
-  to find any hard drives. Select the `Load driver` option and load the _Red Hat
-  VirtIO SCSI controller_ for Windows 11, which can be found by selecting the
-  folder in the _Browse_ option at `E:/amd64/w11`. Do not load any network
-  drivers, since a Windows local account requires a lack of internet during
-  first setup.
-- At the _Unlock your Microsoft experience_ screen, press `Shift+F10` to open a
-  command prompt window as administrator. Type `start ms-cxh:localonly` to open
-  a local account configuration popup window. Enter your account username
-  instead of your full name and skip entering a password to avoid the additional
-  security questions. Once you finish the setup process, press `Ctrl+Alt+Del` to
-  create a password.
-"
+    log debug "Recommended steps for the Windows graphical installer."
+    log debug "You may encounter a 'No bootable option or device was found' error message. If so press the 'Enter' key to open QEMU boot menu and select the 'QEMU DVD-ROM' option to try again. This process may need to repeat a few times."
+    log debug "At the 'Where do you want to install Windows?' screen, the installer will not be able to find any hard drives. Select the 'Load driver' option and load the 'Red Hat VirtIO SCSI controller' from the path E:/amd64/w11."
+    log debug "At the 'Unlock your Microsoft experience' screen, press 'Shift+F10' and enter `start ms-cxh:localonly` into the command prompt."
+    log debug "In the account creation form, enter your account username instead of your full name and skip entering a password to avoid the additional security questions."
+    log debug "Once the installer completes, press 'Ctrl+Alt+Del' to create a password."
+    log debug "Run the QEMU guest agent installer at E:/guest-agent/qemu-ga-x86_64.msi."
+    log debug "Run the VirtIO installer at E:/virtio-win-gt-x64.msi."
+    log debug "Shutdown the virtual machine and run 'vimu detach-cdroms windows'."
 
     (
         virt-install
