@@ -52,6 +52,12 @@
       "path": "src/script/directory",
       "mode": "040000",
       "type": "tree"
+    },
+    {
+      "path": "src/script/pyscript.py",
+      "mode": "100644",
+      "type": "blob",
+      "size": 720
     }
   ],
   "truncated": false

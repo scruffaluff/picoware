@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# shellcheck disable=SC2155,SC2317
+# shellcheck disable=SC2317,SC2329
 #
 # Tests for Bash scripts installer.
 
@@ -15,13 +15,47 @@ setup() {
     which "${2}"
   }
   curl() {
-    if [ "$*" = '--fail --location --show-error --silent --output - https://api.github.com/repos/scruffaluff/scripts/git/trees/main?recursive=true' ]; then
-      cat data/test/github_trees.json
-    else
-      "${_curl}" "$@"
-    fi
+    case "$*" in
+      *?recursive=true)
+        cat data/test/github_trees.json
+        ;;
+      *)
+        "${_curl}" "$@"
+        ;;
+    esac
   }
   _curl="$(command -v curl)"
+}
+
+create_wrapper_for_incompatible_env() { # @test
+  local temp
+  temp="$(mktemp -d)"
+
+  curl() {
+    case "$*" in
+      *?recursive=true)
+        cat data/test/github_trees.json
+        ;;
+      *src/script/pyscript.py)
+        cp data/test/pyscript.py "${_temp}/pyscript"
+        ;;
+      *)
+        "${_curl}" "$@"
+        ;;
+    esac
+  }
+  env() {
+    return 100
+  }
+  export _curl _temp="${temp}"
+  export -f command curl env
+
+  run bash src/install/scripts.sh --preserve-env --dest "${temp}" pyscript
+  assert_success
+  assert_equal "$(ls -1 "${temp}")" $'pyscript\npyscript.py'
+  assert_equal "$(head -n 1 "${temp}/pyscript")" "#!/usr/bin/env sh"
+  assert_equal "$(head -n 1 "${temp}/pyscript.py")" \
+    "#!/usr/bin/env -S uv --no-config --quiet run --script"
 }
 
 json_parser_finds_all_unix_scripts() { # @test
@@ -30,7 +64,7 @@ json_parser_finds_all_unix_scripts() { # @test
 
   run bash src/install/scripts.sh --list
   assert_success
-  assert_output $'mockscript\nnewscript\notherscript'
+  assert_output $'mockscript\nnewscript\notherscript\npyscript'
 }
 
 installer_uses_sudo_when_destination_is_not_writable() { # @test
@@ -41,7 +75,8 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
       "${_sudo}" "$@"
     fi
   }
-  export _curl _sudo="$(command -v sudo)"
+  _sudo="$(command -v sudo)"
+  export _curl _sudo
   export -f command curl sudo
 
   run bash src/install/scripts.sh --preserve-env --dest /fake/path mockscript

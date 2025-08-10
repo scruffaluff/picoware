@@ -101,7 +101,7 @@ def handle-shebang [super: string path: path extension: string] {
 
     # Exit early if `env` can handle the shebang arguments.
     if ($shebang | str contains $split_env) {
-        let result = /usr/bin/env -S echo test | complete
+        let result = env -S echo test | complete
         if $result.exit_code == 0 { return }
     } else {
         return

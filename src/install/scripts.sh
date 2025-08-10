@@ -222,7 +222,7 @@ handle_shebang() {
   # Exit early if `env` can handle the shebang arguments.
   case "${shebang}" in
     '#!/usr/bin/env -S'*)
-      if /usr/bin/env -S echo test > /dev/null 2>&1; then
+      if env -S echo test > /dev/null 2>&1; then
         return
       fi
       ;;

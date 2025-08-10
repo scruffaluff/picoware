@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 #
 # Tests for Bash installer scripts.
 

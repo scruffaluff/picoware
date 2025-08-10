@@ -38,4 +38,4 @@ vue
   })
   .mount("#app");
 
-window.plot = plot;
+globalThis.plot = plot;

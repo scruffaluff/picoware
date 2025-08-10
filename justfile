@@ -210,13 +210,16 @@ setup:
   }
 
 # Run test suites.
+test: test-shell test-nushell test-python
+
+# Run shell test suites.
 [unix]
-test *args: && test-nushell test-python
+test-shell *args:
   bats --recursive test {{args}}
 
-# Run test suites.
+# Run PowerShell test suite.
 [windows]
-test: && test-nushell test-python
+test-shell *args:
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
 
