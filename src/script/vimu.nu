@@ -149,6 +149,38 @@ def create-key [] {
     $"($config)/key"
 }
 
+# Download Windows 11 ISO file.
+def download_windows_iso [dest: path] {
+    # Based on `download_windows_workstation` function from
+    # https://github.com/quickemu-project/quickemu/blob/master/quickget.
+    let profile = "606624d44113"
+    let session = random uuid
+    let product = (
+        http get https://www.microsoft.com/en-us/software-download/windows11
+        | parse --regex '<option value="(?P<id>[0-9]+)">Windows'
+        | get id | first
+    )
+
+    http get $"https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id=($session)"
+    let sku = http get $"https://www.microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=($profile)&ProductEditionId=($product)&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
+    | from json | get Skus | where Language == "English"
+    | get Id | first
+
+    let response = (
+        http get --headers
+        { Referer: "https://www.microsoft.com/en-us/software-download/windows11" }
+        $"https://www.microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=($profile)&productEditionId=undefined&SKU=($sku)&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
+        | from json
+    )
+    let errors = $response | get --optional Errors
+    if ($errors | is-not-empty) {
+        error make { msg: ($errors | to json --indent 2) }
+    }
+
+    let link = $response | get ProductDownloadOptions | get Uri | first
+    http get $link | save --progress $dest
+}
+
 # Find command to elevate as super user.
 def find-super [] {
     if (is-admin) {
@@ -190,7 +222,7 @@ def --wrapped install-cdrom [
 
     log info $"Installing ($domain) from a CD-ROM."
     (
-        virt-install
+        virt-install --noreboot
         --arch $nu.os-info.arch
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=64
@@ -231,7 +263,7 @@ def --wrapped install-disk [
 
     log info $"Installing ($domain) from a disk image."
     (
-        virt-install
+        virt-install --noreboot
         --arch $nu.os-info.arch
         --cloud-init $"user-data=($user_data)"
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
@@ -279,7 +311,7 @@ def --wrapped install-windows [
     log debug "Shutdown the virtual machine and run 'vimu detach-cdroms windows'."
 
     (
-        virt-install
+        virt-install --noreboot
         --arch x86_64
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=128
@@ -455,9 +487,7 @@ def "main create" [
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {
-                print --stderr $"Windows ISO not found at ($cdrom)."
-                print --stderr $"Download the ISO manually and try again."
-                exit 1
+                download_windows_iso $cdrom
             }
             if not ($drivers | path exists) {
                 log info "Downloading Windows drivers."
@@ -465,7 +495,7 @@ def "main create" [
                 | save --progress $drivers
             }
             if (virsh list --all --name | str contains "windows") {
-                print --stderr "error: Domain is already in use"
+                print --stderr "error: Domain 'windows' is already in use."
                 exit 1
             }
 
@@ -520,7 +550,7 @@ def "main install" [
 
     # Check if domain is already used by libvirt.
     if (virsh list --all --name | str contains $domain) {
-        print --stderr "error: Domain is already in use"
+        print --stderr $"error: Domain '($domain)' is already in use."
         exit 1
     }
 
