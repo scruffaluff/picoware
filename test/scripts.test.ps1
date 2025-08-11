@@ -12,7 +12,9 @@ BeforeAll {
 Describe 'Script' {
     It 'JSON parser finds all unix scripts' {
         $Actual = & $Scripts --list
-        $Actual | Should -Be @('mockscript', 'newscript', 'otherscript')
+        $Actual | Should -Be @(
+            'mockscript', 'newscript', 'otherscript', 'pyscript'
+        )
     }
 
     It 'Installer rejects global destination for local user' {

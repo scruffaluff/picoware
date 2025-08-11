@@ -142,6 +142,23 @@ fetch() {
 }
 
 #######################################
+# Find all installable completions inside repository.
+# Arguments:
+#   Scripts version.
+# Outputs:
+#   Array of completion names.
+#######################################
+find_completions() {
+  local version="${1:-main}"
+  local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/completion/")) | select(endswith(".bash") or endswith(".fish") or endswith(".nu")) | ltrimstr("src/completion/")'
+  local jq_bin='' response=''
+
+  jq_bin="$(find_jq)"
+  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
+  echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
+}
+
+#######################################
 # Find or download Jq JSON parser.
 # Outputs:
 #   Path to Jq binary.
@@ -247,6 +264,41 @@ EOF
 }
 
 #######################################
+# Install completion scripts.
+# Arguments:
+#   Super user command for installation.
+#   Whether installation is global.
+#   Script version.
+#   Script file name.
+#######################################
+install_completion() {
+  local super="${1}" global_="${2}" version="${3}" script="${4}"
+  local completions='' dest='' extension='' name="${script%.*}"
+  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src/completion"
+
+  # Find completions matching script name.
+  #
+  # Since grep exits with error is no matches are found, and empty or statement
+  # is required.
+  completions="$(find_completions "${version}" | { grep "${name}." || :; })"
+
+  for completion in ${completions}; do
+    extension="${completion##*.}"
+    case "${extension}" in
+      fish)
+        dest="$(path_fish_completion "${global_}" "${name}")"
+        ;;
+      *)
+        log --stderr "error: ${extension} shell completion is not supported."
+        exit 1
+        ;;
+    esac
+
+    fetch --dest "${dest}" --super "${super}" "${repo}/${completion}"
+  done
+}
+
+#######################################
 # Download and install script.
 # Arguments:
 #   Super user command for installation.
@@ -273,15 +325,10 @@ install_script() {
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   fi
 
-  # Create installation directory.
-  #
-  # Flags:
-  #   -p: Make parent directories if necessary.
-  ${super:+"${super}"} mkdir -p "${dst_dir}"
-
   log "Installing script ${name} to '${dst_file}'."
   fetch --dest "${dst_file}" --mode 755 --super "${super}" \
     "${repo}/script/${script}"
+  install_completion "${super}" "${global_}" "${version}" "${script}"
   handle_shebang "${super}" "${dst_file}" "${extension}"
 
   # Update shell profile if destination is not in system path.
@@ -338,6 +385,40 @@ log() {
   if [ -z "${SCRIPTS_NOLOG:-}" ] || [ "${file}" = '2' ]; then
     printf "%s${newline}" "${text}" >&"${file}"
   fi
+}
+
+#######################################
+# Parse Fish completion path.
+# Arguments:
+#   Whether installation is global.
+#   Script file name.
+#######################################
+path_fish_completion() {
+  local global_="${1}" name="${2}"
+  local os
+  os="$(uname -s)"
+
+  if [ -n "${global_}" ]; then
+    case "${os}" in
+      Darwin)
+        dest="/etc/fish/completions/${name}.fish"
+        ;;
+      FreeBSD)
+        dest="/usr/local/etc/fish/completions/${name}.fish"
+        ;;
+      Linux)
+        dest="/etc/fish/completions/${name}.fish"
+        ;;
+      *)
+        log --stderr "error: Operating system ${os} is not supported."
+        exit 1
+        ;;
+    esac
+  else
+    dest="${HOME}/.config/fish/completions/${name}.fish"
+  fi
+
+  echo "${dest}"
 }
 
 #######################################
