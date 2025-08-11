@@ -661,6 +661,7 @@ def "main setup" [
             "desktop" => { setup-desktop }
             "guest" => { setup-guest }
             "host" => { setup-host }
+            _ => { error make { msg: $"Invalid setup command '($command)'." } }
         }
     }
 }
@@ -890,13 +891,13 @@ console="comconsole,vidconsole"
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
     }
 
-    if $nu.os-info == "windows" and not (
-        "C:/Program Files/Tailscale" | path exists
-    ) {
-        let temp = mktemp --tmpdir --suffix ".msi"
-        http get https://pkgs.tailscale.com/stable/tailscale-setup-1.86.2-amd64.msi
-        | save --force --progress $temp
-        msiexec /quiet /i $temp
+    if $nu.os-info.name == "windows" {
+        if not ("C:/Program Files/Tailscale" | path exists) {
+            let temp = mktemp --tmpdir --suffix ".msi"
+            http get https://pkgs.tailscale.com/stable/tailscale-setup-1.86.2-amd64.msi
+            | save --force --progress $temp
+            msiexec /quiet /i $temp
+        }
     } else if (which tailscale | is-empty) {
         http get https://tailscale.com/install.sh | sh
     }
@@ -993,6 +994,34 @@ def setup-guest-linux [super: string] {
 # Configure guest filesystem for Windows.
 def setup-guest-windows [] {
     let home = path-home
+
+    powershell -command '
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+'
+
+    powershell -command '
+if (
+    (Get-WindowsCapability -Online -Name OpenSSH.Server).State -ne "Installed"
+) {
+    Add-WindowsCapability -Online -Name OpenSSH.Server
+}
+if (-not (Get-NetFirewallRule -Name sshd -ErrorAction SilentlyContinue)) {
+    New-NetFirewallRule -Action Allow -Direction Inbound -DisplayName SSHD `
+        -Enabled True -LocalPort 22 -Name sshd -Protocol TCP
+}
+if ((Get-ItemProperty -Path HKLM:\SOFTWARE\OpenSSH).DefaultShell -eq $Null) {
+    New-ItemProperty -Name DefaultShell -Path HKLM:\SOFTWARE\OpenSSH `
+        -PropertyType String -Value `
+        C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+}
+$Key = "C:\ProgramData\ssh\administrators_authorized_keys"
+if (-not (Test-Path -Path $Key -PathType Leaf)) {
+    New-Item -ItemType File -Path $Key
+    icacls $Key /Grant Administrators:F /Grant SYSTEM:F /Inheritance:r
+}
+Set-Service -Name sshd -StartupType Automatic
+Start-Service sshd
+'
 
     if (which rclone | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir | str replace --all '\' '/'
