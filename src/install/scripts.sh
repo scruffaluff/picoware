@@ -395,13 +395,21 @@ log() {
 #######################################
 path_fish_completion() {
   local global_="${1}" name="${2}"
-  local os
-  os="$(uname -s)"
+  local arch os prefix
+  arch="$(uname -m)" os="$(uname -s)"
 
   if [ -n "${global_}" ]; then
     case "${os}" in
       Darwin)
-        dest="/etc/fish/completions/${name}.fish"
+        case "${arch}" in
+          arm64 | aarch64)
+            prefix='/opt/homebrew'
+            ;;
+          *)
+            prefix='/usr/local'
+            ;;
+        esac
+        dest="${prefix}/etc/fish/completions/${name}.fish"
         ;;
       FreeBSD)
         dest="/usr/local/etc/fish/completions/${name}.fish"

@@ -316,11 +316,11 @@ def --wrapped install-windows [
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=128
         --disk $"bus=sata,device=cdrom,path=($devices)"
-        --memory 8192
+        --memory 4096
         --name $domain
         --osinfo win11
         --tpm backend.type=emulator,backend.version=2.0,model=tpm-tis
-        --vcpus 4
+        --vcpus 2
         ...$args
     )
 }
