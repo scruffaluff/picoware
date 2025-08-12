@@ -999,7 +999,8 @@ def setup-guest-windows [] {
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 '
 
-    powershell -command '
+    if not ($"($home)/.ssh_server" | path exists) {
+        powershell -command '
 if (
     (Get-WindowsCapability -Online -Name OpenSSH.Server).State -ne "Installed"
 ) {
@@ -1022,6 +1023,18 @@ if (-not (Test-Path -Path $Key -PathType Leaf)) {
 Set-Service -Name sshd -StartupType Automatic
 Start-Service sshd
 '
+        touch $"($home)/.ssh_server"
+    }
+
+    if not ($"($home)/.win_debloat" | path exists) {
+        powershell -command '
+& ([ScriptBlock]::Create((irm "https://debloat.raphi.re/"))) -DisableDVR `
+    -DisableStartPhoneLink -DisableStartRecommended -ExplorerToHome `
+    -RemoveCommApps -RemoveDevApps -RemoveGamingApps -RemoveHPApps `
+    -RunDefaults -ShowHiddenFolders -Silent
+'
+        touch $"($home)/.win_debloat"
+    }
 
     if (which rclone | is-empty) {
         let tmp_dir = mktemp --directory --tmpdir | str replace --all '\' '/'
