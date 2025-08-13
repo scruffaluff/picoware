@@ -483,7 +483,7 @@ def "main create" [
             )
         }
         "windows" => {
-            let cdrom = $"($config)/cdrom/window_amd64.iso"
+            let cdrom = $"($config)/cdrom/windows_amd64.iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {

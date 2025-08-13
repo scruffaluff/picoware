@@ -47,7 +47,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh
 ```
 
 ```powershell [PowerShell]
-iwr -useb https://scruffaluff.github.io/scripts/install/deno.ps1 | iex
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/deno.ps1)))
 ```
 
 ```nushell [Nushell]
@@ -65,7 +65,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- --he
 ```
 
 ```powershell [PowerShell]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/deno.ps1) } --help" }
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/deno.ps1))) --help
 ```
 
 ```nushell [Nushell]
@@ -102,7 +102,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- c
 ```
 
 ```powershell [PowerShell]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } clear-cache rgi" }
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/scripts.ps1))) clear-cache rgi
 ```
 
 ```nushell [Nushell]
@@ -120,7 +120,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- -
 ```
 
 ```powershell [PowerShell]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/install/scripts.ps1) } --help" }
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/scripts.ps1))) --help
 ```
 
 ```nushell [Nushell]
@@ -149,7 +149,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh
 ```
 
 ```powershell [PowerShell]
-iwr -useb https://scruffaluff.github.io/scripts/action/tmate-session.ps1 | iex
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/action/tmate-session.ps1)))
 ```
 
 :::
@@ -163,7 +163,7 @@ curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh -s
 ```
 
 ```powershell [PowerShell]
-powershell { iex "& { $(iwr -useb https://scruffaluff.github.io/scripts/action/tmate-session.ps1) } --help" }
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/action/tmate-session.ps1))) --help
 ```
 
 :::
