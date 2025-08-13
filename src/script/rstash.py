@@ -10,23 +10,28 @@
 
 """Rclone wrapper for interactive and conditional backups."""
 
+from __future__ import annotations
+
 import functools
-from itertools import chain
 import json
 import os
-from pathlib import Path
+import platform
 import subprocess
 import sys
-import platform
-from typing import Annotated, Any, Iterable
+import time
+from itertools import chain
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Any
 
-from loguru import logger
 import typer
-from typer import Option, Typer
 import yaml
+from loguru import logger
+from typer import Option, Typer
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 cli = Typer(
     add_completion=False,
@@ -60,6 +65,7 @@ class Manifest:
         args: list[str] | None = None,
         filters: list[str] | None = None,
     ) -> None:
+        """Create a Manifest instance."""
         self.arguments = args or []
         self.filters = filters or []
 
@@ -74,18 +80,19 @@ class Manifest:
         else:
             self.source = Path(source).expanduser().as_posix()
 
-    @functools.cache
+    # TODO: Refactor into standalone function to fix lint.
+    @functools.cache  # noqa: B019
     def args(self, upload: bool = True) -> list[str]:
         """Create Rclone synchronization arguments."""
-        arguments = (["--filter", filter] for filter in self.filters)
+        arguments = (["--filter", filter_] for filter_ in self.filters)
         if upload:
             return list(chain(*arguments)) + self.arguments + [self.source, self.dest]
-        else:
-            return list(chain(*arguments)) + self.arguments + [self.dest, self.source]
+        return list(chain(*arguments)) + self.arguments + [self.dest, self.source]
 
 
 def compute_changes(
-    manifests: Iterable[Manifest], upload: bool = True
+    manifests: Iterable[Manifest],
+    upload: bool = True,
 ) -> tuple[list[Manifest], str]:
     """Dry run synchronizations to assemble list of changes."""
     records = []
@@ -97,12 +104,21 @@ def compute_changes(
         else:
             source, dest = manifest.dest, manifest.source
 
-        process = subprocess.run(
-            ["rclone", "--dry-run", "--use-json-log", "copy", "--update"]
-            + manifest.args(upload),
-            capture_output=True,
-            text=True,
-        )
+        command = [
+            "rclone",
+            "--dry-run",
+            "--use-json-log",
+            "copy",
+            "--update",
+            *manifest.args(upload),
+        ]
+
+        logger.debug(f"Running command '{' '.join(command)}'.")
+        start = time.time()
+        process = subprocess.run(command, check=False, capture_output=True, text=True)
+        stop = time.time()
+        logger.debug(f"Ran command in {stop - start:.4e} seconds.")
+
         if process.returncode != 0:
             print(process.stderr, file=sys.stderr)
             sys.exit(process.returncode)
@@ -118,18 +134,18 @@ def compute_changes(
 
 def load_config(config: Path) -> list[Manifest]:
     """Load Rstash configuration."""
-    with open(config, "r") as file:
+    with Path.open(config) as file:
         configs = yaml.safe_load(file)
     return [Manifest(**config) for config in configs]
 
 
 def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
     """Parse Rclone logs for synchronization changes."""
-    messages = []
-    for log in logs:
-        if "object" in log:
-            messages.append(f"{source}/{log['object']} -> {dest}/{log['object']}")
-    return messages
+    return [
+        f"{source}/{log['object']} -> {dest}/{log['object']}"
+        for log in logs
+        if "object" in log
+    ]
 
 
 def print_version(value: bool) -> None:
@@ -144,21 +160,31 @@ def select_option(options: dict[str, str]) -> str:
     system = platform.system().lower().replace("darwin", "macos")
     if system in options:
         return options[system]
-    elif "unix" in options and system != "windows":
+    if "unix" in options and system != "windows":
         return options["unix"]
-    else:
-        return options["default"]
+    return options["default"]
 
 
 def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
     """Apply synchronization changes."""
     for manifest in manifests:
-        task = subprocess.run(
-            ["rclone", "--verbose", "copy", "--update"] + manifest.args(upload)
-        )
-        if task.returncode != 0:
-            print(task.stderr, file=sys.stderr)
-            sys.exit(task.returncode)
+        command = [
+            "rclone",
+            "--verbose",
+            "copy",
+            "--update",
+            *manifest.args(upload),
+        ]
+
+        logger.debug(f"Running command '{' '.join(command)}'.")
+        start = time.time()
+        process = subprocess.run(command, check=False, capture_output=True, text=True)
+        stop = time.time()
+        logger.debug(f"Ran command in {stop - start:.4e} seconds.")
+
+        if process.returncode != 0:
+            print(process.stderr, file=sys.stderr)
+            sys.exit(process.returncode)
 
 
 @cli.command()
@@ -172,7 +198,7 @@ def download() -> None:
     if not manifests:
         return
 
-    print("Changes to be synced.\n{}\n".format(changes))
+    print(f"Changes to be synced.\n{changes}\n")
     if state["dry_run"]:
         return
     confirm = typer.confirm("Sync changes?")
@@ -183,13 +209,15 @@ def download() -> None:
 @cli.callback()
 def main(
     config_path: Annotated[
-        Path | None, Option("-c", "--config", help="Configuration file path.")
+        Path | None,
+        Option("-c", "--config", help="Configuration file path."),
     ] = None,
     dry_run: Annotated[
-        bool, Option("-d", "--dry-run", help="Only print actions to be taken.")
+        bool,
+        Option("-d", "--dry-run", help="Only print actions to be taken."),
     ] = False,
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level.")] = "info",
-    version: Annotated[
+    version: Annotated[  # noqa: ARG001
         bool,
         Option(
             "-v",
@@ -235,7 +263,7 @@ def sync() -> None:
     if not manifests:
         return
 
-    print("Changes to be synced.\n{}\n".format(changes))
+    print(f"Changes to be synced.\n{changes}\n")
     if state["dry_run"]:
         return
     confirm = typer.confirm("Sync changes?")
@@ -252,7 +280,7 @@ def upload() -> None:
     if not manifests:
         return
 
-    print("Changes to be synced.\n{}\n".format(changes))
+    print(f"Changes to be synced.\n{changes}\n")
     if state["dry_run"]:
         return
     confirm = typer.confirm("Sync changes?")

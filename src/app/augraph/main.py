@@ -12,17 +12,20 @@
 # requires-python = "~=3.11"
 # ///
 
-from pathlib import Path
+"""Audio plotting example application."""
+
 import sys
-from typing import Annotated
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 
 import audioread
 import numpy
-from numpy.typing import NDArray
 import webview
-from webview.menu import Menu, MenuAction
 from typer import Option, Typer
+from webview.menu import Menu, MenuAction
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 __version__ = "0.0.1"
 
@@ -37,9 +40,11 @@ class App:
     """Application backend logic."""
 
     def __init__(self) -> None:
+        """Create an App instance."""
         self.samples: list[NDArray] = []
 
     def load(self) -> list[list[float]]:
+        """Convert audio samples into JavaScript compatible list."""
         samples = [sample.tolist() for sample in self.samples]
         return samples[0] if samples else []
 
@@ -48,12 +53,14 @@ class App:
         types = ("Audio Files (*.mp3;*.wav)",)
         window = webview.active_window()
         files = window.create_file_dialog(
-            webview.OPEN_DIALOG, directory=str(Path.home()), file_types=types
+            webview.OPEN_DIALOG,
+            directory=str(Path.home()),
+            file_types=types,
         )
         self.samples = [self.read(file) for file in files]
         window.run_js("plot();")
 
-    def read(self, path) -> list[float]:
+    def read(self, path: str) -> list[float]:
         """Read audio file as mono signal."""
         path = Path.home() / path
 
@@ -61,7 +68,7 @@ class App:
         scale = numpy.abs(numpy.iinfo(dtype).min)
         with audioread.audio_open(path) as file:
             arrays = numpy.concatenate(
-                [numpy.frombuffer(buffer, dtype=dtype) for buffer in file]
+                [numpy.frombuffer(buffer, dtype=dtype) for buffer in file],
             )
 
         audio = arrays.reshape((file.channels, -1)) / scale
@@ -80,9 +87,10 @@ def print_version(value: bool) -> None:
 @cli.command()
 def main(
     debug: Annotated[
-        bool, Option("--debug", help="Launch application in debug mode.")
+        bool,
+        Option("--debug", help="Launch application in debug mode."),
     ] = False,
-    version: Annotated[
+    version: Annotated[  # noqa: ARG001
         bool,
         Option(
             "-v",

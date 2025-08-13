@@ -1,18 +1,18 @@
 """Tests for Rstash backup script."""
 
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 repo_path = Path(__file__).parents[1]
 sys.path.append(str(repo_path / "src"))
-from script import rstash  # type: ignore
+from script import rstash  # type: ignore[attr-defined]
 
 
 @pytest.mark.parametrize(
-    "log,expected",
+    ("log", "expected"),
     [
         (
             {
@@ -26,7 +26,7 @@ from script import rstash  # type: ignore
                 "time": "2025-06-19T21:59:28.290906-07:00",
             },
             "/source/file.txt -> dest:/file.txt",
-        )
+        ),
     ],
 )
 def test_parse_logs(log: dict[str, Any], expected: str) -> None:

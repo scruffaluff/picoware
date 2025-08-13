@@ -3,4 +3,6 @@
 # requires-python = "~=3.11"
 # ///
 
+"""Mock script for testing."""
+
 print("Pyscript 0.1.0")
