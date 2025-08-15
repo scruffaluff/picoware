@@ -62,11 +62,9 @@ class App:
 
     def read(self, path: str) -> list[float]:
         """Read audio file as mono signal."""
-        path = Path.home() / path
-
         dtype = numpy.int16
         scale = numpy.abs(numpy.iinfo(dtype).min)
-        with audioread.audio_open(path) as file:
+        with audioread.audio_open(Path.home() / path) as file:
             arrays = numpy.concatenate(
                 [numpy.frombuffer(buffer, dtype=dtype) for buffer in file],
             )

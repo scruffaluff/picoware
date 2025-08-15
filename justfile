@@ -75,6 +75,7 @@ lint:
   done
   uv tool run ruff format --check .
   uv tool run ruff check .
+  uv tool run mypy .
 
 # Run code analyses.
 [windows]
@@ -88,6 +89,7 @@ lint:
     data/config/script_analyzer.psd1
   uv tool run ruff format --check .
   uv tool run ruff check .
+  uv tool run mypy .
 
 # Install development dependencies.
 [unix]
