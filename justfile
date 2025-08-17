@@ -13,6 +13,7 @@ export PSModulePath := if os() == "windows" {
   join(justfile_dir(), ".vendor\\lib\\powershell\\modules;") + 
   env("PSModulePath", "")
 } else { "" }
+export UV_PYTHON := "~=3.11"
 
 # List all commands available in justfile.
 list:
