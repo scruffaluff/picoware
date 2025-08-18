@@ -126,15 +126,18 @@ Version=1.0
 # Create application entrypoint.
 def create-entry [domain: string path: path] {
     const folder = path self | path dirname
-    $"
+
+    if $nu.os-info.name != "windows" {
+        $"
 #!/usr/bin/env sh
 set -eu
 
 export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
 "
-    | str trim --left | save --force $path
-    chmod +rx $path
+        | str trim --left | save --force $path
+        chmod +rx $path
+    }
 }
 
 # Create SSH key.

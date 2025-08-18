@@ -30,8 +30,8 @@ Options:
 }
 
 # Capitalize app name.
-Function Capitalize($Name) {
-    $Words = $Name -Replace '_',' '
+function Capitalize($Name) {
+    $Words = $Name -replace '_', ' '
     $(Get-Culture).TextInfo.ToTitleCase($Words)
 }
 
@@ -109,7 +109,7 @@ function InstallApp($Target, $Version, $Name) {
 
     # Based on guide at
     # https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh.
-    $WshShell = New-Object -COMObject WScript.Shell
+    $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("$MenuDir\$Title.lnk")
     $Shortcut.Arguments = "run --allow-all index.ts"
     $Shortcut.IconLocation = "$DestDir\icon.ico"
@@ -214,6 +214,6 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.
-If ($MyInvocation.InvocationName -NE '.') {
+if ($MyInvocation.InvocationName -ne '.') {
     Main $Args
 }
