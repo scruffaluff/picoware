@@ -48,7 +48,7 @@ function FetchApp($Version, $Name, $Dest) {
     foreach ($File in $Files) {
         if (
             $File.EndsWith('.nu') -or $File.EndsWith('.ps1') -or
-            $File.EndsWith('.py') -or $File.EndsWith('.ts')
+            $File.EndsWith('.py') -or $File.EndsWith('.rs') -or $File.EndsWith('.ts')
         ) {
             $DestFile = "$Dest\$File"
             $Script = $DestFile
@@ -102,6 +102,7 @@ function InstallApp($Target, $Version, $Name) {
         $DestDir = "C:\Program Files\App\$Name"
         $MenuDir = 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\App'
     }
+    New-Item -Force -ItemType Directory -Path $CliDir | Out-Null
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
     New-Item -Force -ItemType Directory -Path $MenuDir | Out-Null
 
@@ -109,7 +110,7 @@ function InstallApp($Target, $Version, $Name) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\icon.ico" -Uri `
         "$Url/data/public/favicon.ico"
     $Script = FetchApp $Version $Name $DestDir
-    SetupRunner $Script $DestDir $CliDir
+    SetupRunner $Name $Script $DestDir $CliDir
 
     # TODO: Document why this is needed.
     $Acl = Get-Acl $DestDir
@@ -132,7 +133,7 @@ function InstallApp($Target, $Version, $Name) {
         Log 'Source shell profile or restart shell after installation.'
     }
 
-    $Env:Path = "$DestDir;$Env:Path"
+    $Env:Path = "$CliDir;$Env:Path"
     Log "Installed $(& $Name --version)."
 }
 
@@ -151,10 +152,7 @@ function Log($Text) {
 }
 
 # Find application runner.
-function SetupRunner($Script, $DestDir, $CliDir) {
-    $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
-    $Runner = "$DestDir\$Name.cmd"
-
+function SetupRunner($Name, $Script, $DestDir, $CliDir) {
     if ($Script.EndsWith('.nu')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
             $NushellArgs = ''
@@ -303,7 +301,7 @@ Restart this script from an administrator console or install to a user directory
     }
     else {
         Log 'error: App argument required.'
-        Log "Run 'install-scripts --help' for usage."
+        Log "Run 'install-apps --help' for usage."
         exit 2
     }
 }

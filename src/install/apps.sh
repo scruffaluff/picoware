@@ -209,7 +209,7 @@ fetch_app() {
   ${super:+"${super}"} mkdir -p "${dest}"
   for file in ${files}; do
     case "${file##*.}" in
-      py | rs | ts)
+      nu | py | rs | sh | ts)
         if [ "${file%.*}" = 'main' ]; then
           script="${dest}/${file}"
         fi
