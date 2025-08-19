@@ -93,15 +93,16 @@ function InstallApp($Target, $Version, $Name) {
     $Title = Capitalize $Name
 
     if ($Target -eq 'User') {
-        $Cli = "$Env:LocalAppData\Programs\Bin\$Name.cmd"
+        $CliDir = "$Env:LocalAppData\Programs\Bin"
         $DestDir = "$Env:LocalAppData\Programs\App\$Name"
         $MenuDir = "$Env:AppData\Microsoft\Windows\Start Menu\Programs\App"
     }
     else {
-        $Cli = "C:\Program Files\Bin\$Name.cmd"
+        $CliDir = 'C:\Program Files\Bin'
         $DestDir = "C:\Program Files\App\$Name"
         $MenuDir = 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\App'
     }
+    $Cli = "$CliDir\$Name.cmd"
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
     New-Item -Force -ItemType Directory -Path $MenuDir | Out-Null
 
@@ -109,8 +110,7 @@ function InstallApp($Target, $Version, $Name) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\icon.ico" -Uri `
         "$Url/data/public/favicon.ico"
     $Script = FetchApp $Version $Name $DestDir
-    $Runner = SetupRunner $DestDir $Script
-    New-Item -Force -ItemType SymbolicLink -Path $Cli -Value $Runner | Out-Null
+    SetupRunner $Script $DestDir $CliDir
 
     # TODO: Document why this is needed.
     $Acl = Get-Acl $DestDir
@@ -122,17 +122,7 @@ function InstallApp($Target, $Version, $Name) {
     $Acl.AddAccessRule($AccessRule)
     Set-Acl $DestDir $Acl
 
-    # Based on guide at
-    # https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh.
-    $WshShell = New-Object -ComObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut("$MenuDir\$Title.lnk")
-    $Shortcut.IconLocation = "$DestDir\icon.ico"
-    $Shortcut.TargetPath = $Runner
-    $Shortcut.WindowStyle = 7 # Minimize initial terminal flash.
-    $Shortcut.Save()
-
     # Update path variable if CLI is not in system path.
-    $CliDir = Split-Path -Parent $Cli
     $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
     if (-not ($Path -like "*$CliDir*")) {
         $PrependedPath = "$CliDir;$Path"
@@ -162,7 +152,7 @@ function Log($Text) {
 }
 
 # Find application runner.
-function SetupRunner($DestDir, $Script) {
+function SetupRunner($Script, $DestDir, $CliDir) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
     $Runner = "$DestDir\$Name.cmd"
 
@@ -181,12 +171,8 @@ function SetupRunner($DestDir, $Script) {
             Invoke-Expression "& { $NushellScript } $NushellArgs"
         }
 
-        $Folder = Split-Path -Parent $(Get-Command nu).Source
-        Set-Content -Path $Runner -Value @"
-@echo off
-set PATH=$Folder`;%PATH%
-nu "$Script" %*
-"@
+        $Arguments = "`"$Script`""
+        $Runner = $(Get-Command nu).Source
     }
     elseif ($Script.EndsWith('.py')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
@@ -203,12 +189,8 @@ nu "$Script" %*
             Invoke-Expression "& { $UvScript } $UvArgs"
         }
 
-        $Folder = Split-Path -Parent $(Get-Command uv).Source
-        Set-Content -Path $Runner -Value @"
-@echo off
-set PATH=$Folder`;%PATH%
-uv --no-config --quiet run --script "$Script" %*
-"@
+        $Arguments = "--no-config --quiet run --script `"$Script`""
+        $Runner = $(Get-Command uv).Source
     }
     elseif ($Script.EndsWith('.ts')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
@@ -225,21 +207,28 @@ uv --no-config --quiet run --script "$Script" %*
             Invoke-Expression "& { $DenoScript } $DenoArgs"
         }
 
-        $Folder = Split-Path -Parent $(Get-Command deno).Source
-        Set-Content -Path $Runner -Value @"
-@echo off
-set PATH=$Folder`;%PATH%
-deno run --allow-all --no-config --quiet --node-modules-dir=none "$Script" %*
-"@
+        $Arguments = "run --allow-all --no-config --quiet --node-modules-dir=none `"$Script`""
+        $Runner = $(Get-Command deno).Source
     }
     else {
-        Set-Content -Path $Runner -Value @"
-@echo off
-powershell -NoProfile -ExecutionPolicy RemoteSigned -File "$Script" %*
-"@
+        $Arguments = "-NoProfile -ExecutionPolicy RemoteSigned -File `"$Script`""
+        $Runner = $(Get-Command powershell).Source
     }
 
-    $Runner
+    Set-Content -Path "$CliDir\$Name.cmd" -Value @"
+@echo off
+"$Runner" $Arguments %*
+"@
+
+    # Based on guide at
+    # https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh.
+    $WshShell = New-Object -ComObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut("$MenuDir\$Title.lnk")
+    $Shortcut.Arguments = $Arguments
+    $Shortcut.IconLocation = "$DestDir\icon.ico"
+    $Shortcut.TargetPath = $Runner
+    $Shortcut.WindowStyle = 7 # Minimize initial terminal flash.
+    $Shortcut.Save()
 }
 
 # Script entrypoint.
