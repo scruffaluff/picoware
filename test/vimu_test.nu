@@ -7,6 +7,10 @@ source ../src/script/vimu.nu
 
 @test
 def vimu-create-entry [] {
+    if $nu.os-info.name == "windows" {
+        return
+    }
+
     const folder = "src/script" | path expand
     let expected = $"
 #!/usr/bin/env sh

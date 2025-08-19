@@ -181,7 +181,7 @@ setup:
   }
   uv --version
   if (-not (Test-Path -Path .vendor/lib/nutest -PathType Container)) {
-    git clone -c advice.detachedHead=false --branch v1.1.0 --depth 1 `
+    git clone -c advice.detachedHead=false --branch main --depth 1 `
       https://github.com/vyadh/nutest.git .vendor/lib/nutest
   }
   # If executing task from PowerShell Core, error such as "'Install-Module'
