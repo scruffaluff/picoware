@@ -102,7 +102,6 @@ function InstallApp($Target, $Version, $Name) {
         $DestDir = "C:\Program Files\App\$Name"
         $MenuDir = 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\App'
     }
-    $Cli = "$CliDir\$Name.cmd"
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
     New-Item -Force -ItemType Directory -Path $MenuDir | Out-Null
 
