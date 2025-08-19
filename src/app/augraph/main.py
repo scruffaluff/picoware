@@ -16,16 +16,14 @@
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 import audioread
 import numpy
 import webview
+from numpy.typing import NDArray
 from typer import Option, Typer
 from webview.menu import Menu, MenuAction
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
 __version__ = "0.0.1"
 
@@ -60,7 +58,7 @@ class App:
         self.samples = [self.read(file) for file in files]
         window.run_js("plot();")
 
-    def read(self, path: str) -> list[float]:
+    def read(self, path: str) -> list[NDArray]:
         """Read audio file as mono signal."""
         dtype = numpy.int16
         scale = numpy.abs(numpy.iinfo(dtype).min)
@@ -111,4 +109,4 @@ def main(
 
 
 if __name__ == "__main__":
-    cli()
+    cli(prog_name="augraph")

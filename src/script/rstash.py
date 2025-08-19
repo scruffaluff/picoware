@@ -289,4 +289,4 @@ def upload() -> None:
 
 
 if __name__ == "__main__":
-    cli()
+    cli(prog_name="rstash")
