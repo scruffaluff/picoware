@@ -37,7 +37,7 @@ function Capitalize($Name) {
 
 # Download application from repository.
 function FetchApp($Version, $Name, $Dest) {
-    $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/app/$Name\")) | ltrimstr(\"src/app/$Name\")'
+    $Filter = ".tree[] | select(.type == \`"blob\`") | .path | select(startswith(\`"src/app/$Name/\`")) | ltrimstr(\`"src/app/$Name/\`")"
     $Url = "https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version/src/app/$Name"
 
     $JqBin = FindJq
@@ -46,9 +46,21 @@ function FetchApp($Version, $Name, $Dest) {
     $Files = "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 
     foreach ($File in $Files) {
-        Invoke-WebRequest -UseBasicParsing -OutFile "$Dest\$File" -Uri `
-            "$Url/$File"
+        if (
+            $File.EndsWith('.nu') -or $File.EndsWith('.ps1') -or
+            $File.EndsWith('.py') -or $File.EndsWith('.ts')
+        ) {
+            $DestFile = "$Dest\$File"
+            $Script = $DestFile
+        }
+        else {
+            $DestFile = "$Dest\$File"
+        }
+
+        Invoke-WebRequest -UseBasicParsing -OutFile $DestFile -Uri "$Url/$File"
     }
+
+    $Script
 }
 
 # Find all apps inside repository.
@@ -75,25 +87,32 @@ function FindJq() {
     }
 }
 
-function FindRunner() {
-}
-
 # Install application.
 function InstallApp($Target, $Version, $Name) {
-    $Url = url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version"
+    $Url = "https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version"
     $Title = Capitalize $Name
 
     if ($Target -eq 'User') {
+        $Cli = "$Env:LocalAppData\Programs\Bin\$Name.cmd"
         $DestDir = "$Env:LocalAppData\Programs\App\$Name"
         $MenuDir = "$Env:AppData\Microsoft\Windows\Start Menu\Programs\App"
     }
     else {
+        $Cli = "C:\Program Files\Bin\$Name.cmd"
         $DestDir = "C:\Program Files\App\$Name"
         $MenuDir = 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\App'
     }
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
     New-Item -Force -ItemType Directory -Path $MenuDir | Out-Null
 
+    Log "Installing app $Title."
+    Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\icon.ico" -Uri `
+        "$Url/data/public/favicon.ico"
+    $Script = FetchApp $Version $Name $DestDir
+    $Runner = SetupRunner $DestDir $Script
+    New-Item -Force -ItemType SymbolicLink -Path $Cli -Value $Runner | Out-Null
+
+    # TODO: Document why this is needed.
     $Acl = Get-Acl $DestDir
     $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
         $Env:USER,
@@ -103,21 +122,29 @@ function InstallApp($Target, $Version, $Name) {
     $Acl.AddAccessRule($AccessRule)
     Set-Acl $DestDir $Acl
 
-    Log "Installing app $Title."
-    Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir/icon.ico" -Uri `
-        "$Url/data/public/favicon.ico"
-
     # Based on guide at
     # https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh.
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("$MenuDir\$Title.lnk")
-    $Shortcut.Arguments = "run --allow-all index.ts"
     $Shortcut.IconLocation = "$DestDir\icon.ico"
-    $Shortcut.TargetPath = 'C:\Program Files\Deno\bin\deno.exe'
+    $Shortcut.TargetPath = $Runner
     $Shortcut.WindowStyle = 7 # Minimize initial terminal flash.
-    $Shortcut.WorkingDirectory = $DestDir
     $Shortcut.Save()
-    Log "Installed $Title."
+
+    # Update path variable if CLI is not in system path.
+    $CliDir = Split-Path -Parent $Cli
+    $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
+    if (-not ($Path -like "*$CliDir*")) {
+        $PrependedPath = "$CliDir;$Path"
+        [System.Environment]::SetEnvironmentVariable(
+            'Path', "$PrependedPath", "$TargetEnv"
+        )
+        Log "Added '$CliDir' to the system path."
+        Log 'Source shell profile or restart shell after installation.'
+    }
+
+    $Env:Path = "$DestDir;$Env:Path"
+    Log "Installed $(& $Name --version)."
 }
 
 # Check if script is run from an admin console.
@@ -132,6 +159,87 @@ function Log($Text) {
     if (!"$Env:SCRIPTS_NOLOG") {
         Write-Output $Text
     }
+}
+
+# Find application runner.
+function SetupRunner($DestDir, $Script) {
+    $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
+    $Runner = "$DestDir\$Name.cmd"
+
+    if ($Script.EndsWith('.nu')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
+            $NushellArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $NushellArgs = "$NushellArgs --global"
+            }
+            if ($PreserveEnv) {
+                $NushellArgs = "$NushellArgs --preserve-env"
+            }
+
+            $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/nushell.ps1"
+            Invoke-Expression "& { $NushellScript } $NushellArgs"
+        }
+
+        $Folder = Split-Path -Parent $(Get-Command nu).Source
+        Set-Content -Path $Runner -Value @"
+@echo off
+set PATH=$Folder`;%PATH%
+nu "$Script" %*
+"@
+    }
+    elseif ($Script.EndsWith('.py')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
+            $UvArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $UvArgs = "$UvArgs --global"
+            }
+            if ($PreserveEnv) {
+                $UvArgs = "$UvArgs --preserve-env"
+            }
+
+            $UvScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/uv.ps1"
+            Invoke-Expression "& { $UvScript } $UvArgs"
+        }
+
+        $Folder = Split-Path -Parent $(Get-Command uv).Source
+        Set-Content -Path $Runner -Value @"
+@echo off
+set PATH=$Folder`;%PATH%
+uv --no-config --quiet run --script "$Script" %*
+"@
+    }
+    elseif ($Script.EndsWith('.ts')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
+            $DenoArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $DenoArgs = "$DenoArgs --global"
+            }
+            if ($PreserveEnv) {
+                $DenoArgs = "$DenoArgs --preserve-env"
+            }
+
+            $DenoScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/deno.ps1"
+            Invoke-Expression "& { $DenoScript } $DenoArgs"
+        }
+
+        $Folder = Split-Path -Parent $(Get-Command deno).Source
+        Set-Content -Path $Runner -Value @"
+@echo off
+set PATH=$Folder`;%PATH%
+deno run --allow-all --no-config --quiet --node-modules-dir=none "$Script" %*
+"@
+    }
+    else {
+        Set-Content -Path $Runner -Value @"
+@echo off
+powershell -NoProfile -ExecutionPolicy RemoteSigned -File "$Script" %*
+"@
+    }
+
+    $Runner
 }
 
 # Script entrypoint.
@@ -189,7 +297,6 @@ Restart this script from an administrator console or install to a user directory
 '@
             exit 1
         }
-        New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
 
         foreach ($Name in $Names) {
             $MatchFound = $False
@@ -197,7 +304,7 @@ Restart this script from an administrator console or install to a user directory
                 $AppName = [IO.Path]::GetFileNameWithoutExtension($App)
                 if ($AppName -eq $Name) {
                     $MatchFound = $True
-                    InstallApp $TargetEnv $Version $DestDir $App
+                    InstallApp $TargetEnv $Version $App
                 }
             }
 

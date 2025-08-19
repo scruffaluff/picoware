@@ -52,6 +52,52 @@ capitalize() {
 }
 
 #######################################
+# Add script to system path in shell profile.
+# Arguments:
+#   Parent directory of Scripts script.
+# Globals:
+#   SHELL
+#######################################
+configure_shell() {
+  local dst_dir="${1}"
+  export_cmd="export PATH=\"${dst_dir}:\${PATH}\""
+  shell_name="$(basename "${SHELL:-}")"
+
+  case "${shell_name}" in
+    bash)
+      profile="${HOME}/.bashrc"
+      ;;
+    fish)
+      export_cmd="set --export PATH \"${dst_dir}\" \$PATH"
+      profile="${HOME}/.config/fish/config.fish"
+      ;;
+    nu)
+      export_cmd="\$env.PATH = [\"${dst_dir}\" ...\$env.PATH]"
+      if [ "$(uname -s)" = 'Darwin' ]; then
+        profile="${HOME}/Library/Application Support/nushell/config.nu"
+      else
+        profile="${HOME}/.config/nushell/config.nu"
+      fi
+      ;;
+    zsh)
+      profile="${HOME}/.zshrc"
+      ;;
+    *)
+      profile="${HOME}/.profile"
+      ;;
+  esac
+
+  # Create profile parent directory and add export command to profile
+  #
+  # Flags:
+  #   -p: Make parent directories if necessary.
+  mkdir -p "$(dirname "${profile}")"
+  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
+  log "Added '${export_cmd}' to the '${profile}' shell profile."
+  log 'Source shell profile or restart shell after installation.'
+}
+
+#######################################
 # Create application entrypoint script.
 # Arguments:
 #   Super user command for installation.
@@ -341,6 +387,15 @@ StartupWMClass=${wmclass}
 Terminal=false
 Type=Application
 EOF
+
+  # Update shell profile if CLI is not in system path.
+  case ":${PATH:-}:" in
+    *:${cli_dir}:*) ;;
+    *)
+      configure_shell "${cli_dir}"
+      ;;
+  esac
+
   export PATH="${cli_dir}:${PATH}"
   log "Installed $("${name}" --version)."
 }
