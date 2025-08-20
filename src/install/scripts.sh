@@ -436,6 +436,9 @@ main() {
   local dst_dir='' global_='' preserve_env='' names='' super='' version='main'
 
   # Parse command line arguments.
+  #
+  # Flags:
+  #   -n: Check if string has nonzero length.
   while [ "${#}" -gt 0 ]; do
     case "${1}" in
       --debug)
@@ -482,8 +485,6 @@ main() {
     esac
   done
 
-  # Flags:
-  #   -n: Check if string has nonzero length.
   if [ -n "${list_scripts:-}" ]; then
     scripts="$(find_scripts "${version}")"
     for script in ${scripts}; do

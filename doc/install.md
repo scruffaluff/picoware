@@ -129,6 +129,60 @@ http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in
 
 :::
 
+## Apps
+
+The programs, from the following table, can be installed with the
+https://scruffaluff.github.io/scripts/install/apps.sh for Unix systems and
+https://scruffaluff.github.io/scripts/install/apps.ps1 for Windows.
+
+::: warning
+
+The following apps are demos with little functionality.
+
+:::
+
+| Name    | Description                         |
+| ------- | ----------------------------------- |
+| augraph | Audio plotting example application. |
+| greeter | Greeter example application.        |
+
+The following command will install the augraph and greeter apps. Other apps can
+be installed by replacing the program names.
+
+::: code-group
+
+```sh [Bash]
+curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- augraph greeter
+```
+
+```powershell [PowerShell]
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) augraph greeter
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main augraph greeter"
+```
+
+:::
+
+To view usage options, run the following command.
+
+::: code-group
+
+```sh [Bash]
+curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- --help
+```
+
+```powershell [PowerShell]
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) --help
+```
+
+```nushell [Nushell]
+http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main --help"
+```
+
+:::
+
 ## Actions
 
 The one-time usage programs, from the following table, can be executed by piping

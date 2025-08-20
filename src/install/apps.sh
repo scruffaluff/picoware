@@ -471,6 +471,15 @@ install_app_macos() {
 </dict>
 </plist>
 EOF
+
+  # Update shell profile if CLI is not in system path.
+  case ":${PATH:-}:" in
+    *:${cli_dir}:*) ;;
+    *)
+      configure_shell "${cli_dir}"
+      ;;
+  esac
+
   export PATH="${cli_dir}:${PATH}"
   log "Installed $("${name}" --version)."
 }
@@ -521,6 +530,9 @@ main() {
   local global_='' names='' super='' version='main'
 
   # Parse command line arguments.
+  #
+  # Flags:
+  #   -n: Check if string has nonzero length.
   while [ "${#}" -gt 0 ]; do
     case "${1}" in
       --debug)
@@ -558,52 +570,56 @@ main() {
     esac
   done
 
-  apps="$(find_apps "${version}")"
-
-  # Flags:
-  #   -n: Check if string has nonzero length.
-  #   -z: Check if string has zero length.
   if [ -n "${list_apps:-}" ]; then
+    apps="$(find_apps "${version}")"
     for app in ${apps}; do
       echo "${app%.*}"
     done
     return
-  fi
-  if [ -n "${global_}" ]; then
-    super="$(find_super)"
-  elif [ "$(id -u)" -eq 0 ]; then
-    global_='true'
-  fi
+  elif [ -n "${names}" ]; then
+    apps="$(find_apps "${version}")"
 
-  # Do not use long form flags for uname. They are not supported on some
-  # systems.
-  os="$(uname -s)"
-  case "${os}" in
-    Darwin)
-      installer='install_app_macos'
-      ;;
-    Linux)
-      installer='install_app_linux'
-      ;;
-    *)
-      log --stderr "error: Operating system ${os} is not supported"
-      exit 1
-      ;;
-  esac
+    # Find super user command if global installation.
+    if [ -n "${global_}" ]; then
+      super="$(find_super)"
+    elif [ "$(id -u)" -eq 0 ]; then
+      global_='true'
+    fi
 
-  for name in ${names}; do
-    match_found=''
-    for app in ${apps}; do
-      if [ "${app%.*}" = "${name}" ]; then
-        match_found='true'
-        "${installer}" "${super}" "${version}" "${app}"
+    # Do not use long form flags for uname. They are not supported on some
+    # systems.
+    os="$(uname -s)"
+    case "${os}" in
+      Darwin)
+        installer='install_app_macos'
+        ;;
+      Linux)
+        installer='install_app_linux'
+        ;;
+      *)
+        log --stderr "error: Operating system ${os} is not supported"
+        exit 1
+        ;;
+    esac
+
+    for name in ${names}; do
+      match_found=''
+      for app in ${apps}; do
+        if [ "${app%.*}" = "${name}" ]; then
+          match_found='true'
+          "${installer}" "${super}" "${version}" "${app}"
+        fi
+      done
+
+      if [ -z "${match_found:-}" ]; then
+        log --stderr "error: No app found for '${names}'."
       fi
     done
-
-    if [ -z "${match_found:-}" ]; then
-      log --stderr "error: No app found for '${names}'."
-    fi
-  done
+  else
+    log --stderr 'error: App argument required.'
+    log --stderr "Run 'install-apps --help' for usage."
+    exit 2
+  fi
 }
 
 # Add ability to selectively skip main function during test suite.

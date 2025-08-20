@@ -45,10 +45,12 @@ function FetchApp($Version, $Name, $Dest) {
         "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
     $Files = "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 
+    New-Item -Force -ItemType Directory -Path $Dest | Out-Null
     foreach ($File in $Files) {
         if (
             $File.EndsWith('.nu') -or $File.EndsWith('.ps1') -or
-            $File.EndsWith('.py') -or $File.EndsWith('.rs') -or $File.EndsWith('.ts')
+            $File.EndsWith('.py') -or $File.EndsWith('.rs')
+            -or $File.EndsWith('.ts')
         ) {
             $DestFile = "$Dest\$File"
             $Script = $DestFile
@@ -295,7 +297,7 @@ Restart this script from an administrator console or install to a user directory
             }
 
             if (-not $MatchFound) {
-                throw "error: No script name match found for '$Name'"
+                Log "error: No script name match found for '$Name'"
             }
         }
     }
