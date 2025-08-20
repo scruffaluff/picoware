@@ -836,11 +836,15 @@ def setup-desktop [] {
             if (which apk | is-not-empty) {
                 ^$super apk update
                 ^$super setup-desktop gnome
-            } else if (which apt | is-not-empty) {
+            } else if (which apt-get | is-not-empty) {
                 # Avoid APT interactive configuration requests.
                 $env.DEBIAN_FRONTEND = "noninteractive"
                 ^$super -E apt-get update
                 ^$super -E apt-get install --yes task-gnome-desktop
+            } else if (which dnf | is-not-empty) {
+                ^$super dnf makecache
+                ^$super dnf group install gnome-desktop
+                ^$super systemctl set-default graphical.target
             } else if (which pacman | is-not-empty) {
                 ^$super pacman --noconfirm --refresh --sync --sysupgrade
                 ^$super pacman --noconfirm --sync gnome
