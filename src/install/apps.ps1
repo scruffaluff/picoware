@@ -49,8 +49,8 @@ function FetchApp($Version, $Name, $Dest) {
     foreach ($File in $Files) {
         if (
             $File.EndsWith('.nu') -or $File.EndsWith('.ps1') -or
-            $File.EndsWith('.py') -or $File.EndsWith('.rs')
-            -or $File.EndsWith('.ts')
+            $File.EndsWith('.py') -or $File.EndsWith('.rs') -or
+            $File.EndsWith('.ts')
         ) {
             $DestFile = "$Dest\$File"
             $Script = $DestFile
