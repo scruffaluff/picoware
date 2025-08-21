@@ -10,6 +10,7 @@ async function plot() {
     series: [
       {
         data: audio,
+        name: "amplitude",
         showSymbol: false,
         type: "line",
       },
@@ -32,6 +33,37 @@ vue
       const element = vue.useTemplateRef("chart");
       vue.onMounted(() => {
         chart = echarts.init(element.value);
+        chart.setOption({
+          animation: false,
+          dataZoom: [
+            { type: "inside", xAxisIndex: [0] },
+            { type: "inside", yAxisIndex: [0] },
+          ],
+          grid: { right: "12%" },
+          legend: {
+            data: [{ icon: "circle", name: "amplitude" }],
+            orient: "vertical",
+            right: "1%",
+            top: "12%",
+          },
+          series: [],
+          title: { text: "Audio Signal" },
+          toolbox: {
+            feature: {
+              dataZoom: {},
+              restore: {},
+              saveAsImage: {},
+            },
+          },
+          xAxis: { name: "Time", nameLocation: "middle", type: "value" },
+          yAxis: {
+            max: 1.0,
+            min: -1.0,
+            name: "Amplitude",
+            nameLocation: "middle",
+            type: "value",
+          },
+        });
       });
       return { element, path };
     },

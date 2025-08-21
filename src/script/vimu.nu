@@ -227,6 +227,7 @@ def --wrapped install-cdrom [
     (
         virt-install --noreboot
         --arch $nu.os-info.arch
+        --boot uefi
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=64
         --memory 4096
@@ -261,13 +262,16 @@ def --wrapped install-disk [
     let user_data = cloud-init $domain $username $password
 
     let disk = $"(path-libvirt)/image/($domain).qcow2"
+    let size = "64G"
+    log info $"Resizing disk image to ($size)."
     qemu-img convert -p -f $extension -O qcow2 $image $disk
-    qemu-img resize $disk 64G
+    qemu-img resize $disk $size
 
     log info $"Installing ($domain) from a disk image."
     (
         virt-install --noreboot
         --arch $nu.os-info.arch
+        --boot uefi
         --cloud-init $"user-data=($user_data)"
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
         --memory 4096
@@ -316,6 +320,7 @@ def --wrapped install-windows [
     (
         virt-install --noreboot
         --arch x86_64
+        --boot uefi
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=128
         --disk $"bus=sata,device=cdrom,path=($devices)"
@@ -476,7 +481,7 @@ def "main create" [
             let image = $"($config)/image/fedora_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Fedora image."
-                http get "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+                http get $"https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.($nu.os-info.arch).qcow2"
                 | save --progress $image
             }
 
