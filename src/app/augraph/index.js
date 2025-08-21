@@ -1,5 +1,5 @@
-import * as echarts from "https://unpkg.com/echarts@5.6.0/dist/echarts.esm.min.js";
-import * as vue from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
+import * as echarts from "https://cdn.jsdelivr.net/npm/echarts@6/dist/echarts.esm.min.js";
+import * as vue from "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js";
 
 let audio;
 let chart;

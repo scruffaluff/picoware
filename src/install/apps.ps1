@@ -114,16 +114,6 @@ function InstallApp($Target, $Version, $Name) {
     $Script = FetchApp $Version $Name $DestDir
     SetupRunner $Name $Script $DestDir $CliDir
 
-    # TODO: Document why this is needed.
-    $Acl = Get-Acl $DestDir
-    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $Env:USER,
-        "FullControl",
-        "Allow"
-    )
-    $Acl.AddAccessRule($AccessRule)
-    Set-Acl $DestDir $Acl
-
     # Update path variable if CLI is not in system path.
     $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
     if (-not ($Path -like "*$CliDir*")) {

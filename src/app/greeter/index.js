@@ -1,4 +1,4 @@
-import * as vue from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
+import * as vue from "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js";
 
 vue
   .createApp({

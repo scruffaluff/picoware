@@ -220,7 +220,7 @@ def --wrapped install-cdrom [
             ...$args
         ]
     }
-    let disk = $"(path-libvirt)/cdroms/($domain).iso"
+    let disk = $"(path-libvirt)/cdrom/($domain).iso"
     cp $cdrom $disk
 
     log info $"Installing ($domain) from a CD-ROM."
@@ -260,7 +260,7 @@ def --wrapped install-disk [
     let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $domain $username $password
 
-    let disk = $"(path-libvirt)/images/($domain).qcow2"
+    let disk = $"(path-libvirt)/image/($domain).qcow2"
     qemu-img convert -p -f $extension -O qcow2 $image $disk
     qemu-img resize $disk 64G
 
@@ -297,8 +297,8 @@ def --wrapped install-windows [
         ]
     }
 
-    let disk = $"(path-libvirt)/cdroms/($domain).iso"
-    let devices = $"(path-libvirt)/cdroms/($drivers | path basename).iso"
+    let disk = $"($libvirt)/cdrom/($domain).iso"
+    let devices = $"($libvirt)/cdrom/($drivers | path basename).iso"
     cp $cdrom $disk
     cp $drivers $devices
 
@@ -469,7 +469,20 @@ def "main create" [
 
             (
                 main install --domain debian --log-level $log_level
-                --osinfo debian12 $image
+                --osinfo debian13 $image
+            )
+        }
+        "fedora" => {
+            let image = $"($config)/image/fedora_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Fedora image."
+                http get "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+                | save --progress $image
+            }
+
+            (
+                main install --domain fedora --log-level $log_level
+                --osinfo fedora41 $image
             )
         }
         "freebsd" => {
@@ -639,14 +652,14 @@ def "main remove" [
             (
                 rm --force --recursive
                 $"($home)/.local/share/applications/($domain).desktop"
-                $"($libvirt)/cdroms/($domain).iso"
+                $"($libvirt)/cdrom/($domain).iso"
             )
         }
         "macos" => {
             (
                 rm --force --recursive
                 $"($home)/Applications/($title).app"
-                $"($libvirt)/cdroms/($domain).iso"
+                $"($libvirt)/cdrom/($domain).iso"
             )
         }
     }
@@ -809,7 +822,7 @@ def path-home [] {
 
 # Get Libvirt folder.
 def path-libvirt [] {
-    $"(path-home)/.local/share/libvirt"
+    $"(path-home)/.config/libvirt"
 }
 
 # Configure desktop environment on guest filesystem.
@@ -1066,8 +1079,8 @@ def setup-host [] {
     let libvirt = path-libvirt
 
     (
-        mkdir $"($config)/cdrom" $"($config)/image" $"($libvirt)/cdroms"
-        $"($libvirt)/images"
+        mkdir $"($config)/cdrom" $"($config)/image" $"($libvirt)/cdrom"
+        $"($libvirt)/image"
     )
 
     if not ($"($config)/icon.icns" | path exists) {
