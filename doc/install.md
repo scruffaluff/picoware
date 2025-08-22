@@ -144,23 +144,23 @@ The following apps are demos with little functionality.
 | Name    | Description                         |
 | ------- | ----------------------------------- |
 | augraph | Audio plotting example application. |
-| greeter | Greeter example application.        |
+| denoui  | Example GUI application with Deno.  |
 
-The following command will install the augraph and greeter apps. Other apps can
+The following command will install the augraph and denoui apps. Other apps can
 be installed by replacing the program names.
 
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- augraph greeter
+curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- augraph denoui
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) augraph greeter
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) augraph denoui
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main augraph greeter"
+http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main augraph denoui"
 ```
 
 :::

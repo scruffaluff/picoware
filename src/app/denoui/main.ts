@@ -6,8 +6,8 @@ import { Webview } from "jsr:@webview/webview@0.9.0";
 
 async function main(): Promise<void> {
   await new Command()
-    .name("Greeter")
-    .description("Greeter example application.")
+    .name("Denoui")
+    .description("Example GUI application with Deno.")
     .version("0.0.1")
     .action(async () => {
       await run();
@@ -27,7 +27,7 @@ async function run(): Promise<void> {
   );
 
   const webview = new Webview();
-  webview.title = "Greeter";
+  webview.title = "Denoui";
   webview.bind("getGreeting", (name: string) => `Hello ${name}!`);
   webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
   webview.run();
