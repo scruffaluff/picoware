@@ -8,9 +8,9 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
-  base: "/scripts/",
+  base: "/picoware/",
   description: "Personal collection of utility apps, installers, and scripts.",
-  head: [["link", { rel: "icon", href: "/scripts/favicon.ico" }]],
+  head: [["link", { rel: "icon", href: "/picoware/favicon.ico" }]],
   lastUpdated: true,
   outDir: "build/site",
   srcDir: "doc",
@@ -26,9 +26,9 @@ export default defineConfig({
     ],
     search: { provider: "local" },
     socialLinks: [
-      { icon: "github", link: "https://github.com/scruffaluff/scripts" },
+      { icon: "github", link: "https://github.com/scruffaluff/picoware" },
     ],
   },
-  title: "Scripts",
+  title: "Picoware",
   vite: { publicDir: "../data/public" },
 });

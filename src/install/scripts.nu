@@ -46,7 +46,7 @@ def find-completions [version: string = "main"] {
     if ($version | path exists) {
         ls $"($version)/src/completion" | get name
     } else {
-        http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
+        http get $"https://api.github.com/repos/scruffaluff/picoware/git/trees/($version)?recursive=true"
         | get tree | where type == blob | get path
         | where {|path| ($path | str starts-with "src/completion/") }
     }
@@ -65,7 +65,7 @@ def find-scripts [version: string = "main"] {
     if ($version | path exists) {
         ls $"($version)/src/script" | get name
     } else {
-        http get $"https://api.github.com/repos/scruffaluff/scripts/git/trees/($version)?recursive=true"
+        http get $"https://api.github.com/repos/scruffaluff/picoware/git/trees/($version)?recursive=true"
         | get tree | where type == blob | get path
         | where {|path| ($path | str starts-with "src/script/") }
     }
@@ -143,7 +143,7 @@ def install-completion [
     let source = if ($version | path exists) {
         $"($version)/src/completion/($name)"
     } else {
-        $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/completion/($name)"
+        $"https://raw.githubusercontent.com/scruffaluff/picoware/($version)/src/completion/($name)"
     }
     let dest = match $nu.os-info.name {
         "freebsd" => {
@@ -187,7 +187,7 @@ def install-script [
     let source = if ($version | path exists) {
         $"($version)/src/script/($script)"
     } else {
-        $"https://raw.githubusercontent.com/scruffaluff/scripts/($version)/src/script/($script)"
+        $"https://raw.githubusercontent.com/scruffaluff/picoware/($version)/src/script/($script)"
     }
 
     mut args = []
@@ -198,10 +198,10 @@ def install-script [
         $args = [...$args "--global"]
     }
     if $ext == "py" and (which uv | is-empty) {
-        http get https://scruffaluff.github.io/scripts/install/uv.nu
+        http get https://scruffaluff.github.io/picoware/install/uv.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     } else if $ext == "ts" and (which deno | is-empty) {
-        http get https://scruffaluff.github.io/scripts/install/deno.nu
+        http get https://scruffaluff.github.io/picoware/install/deno.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     }
 
@@ -268,7 +268,7 @@ def need-super [dest: directory global: bool] {
     false
 }
 
-# Installer script for Scripts.
+# Installer script for Picoware scripts.
 def main [
     --dest (-d): directory # Directory to install scripts
     --global (-g) # Install scripts for all users
@@ -367,7 +367,7 @@ def update-shell [dest: directory] {
 
     # Create profile parent directory and add export command to profile
     mkdir ($profile | path dirname)
-    $"\n# Added by Scripts installer.\n($command)\n" | save --append $profile
+    $"\n# Added by Picoware installer.\n($command)\n" | save --append $profile
     log $"Added '($command)' to the '($profile)' shell profile."
     log "Source shell profile or restart shell after installation."
 }

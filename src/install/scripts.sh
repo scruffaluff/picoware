@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install scripts for FreeBSD, MacOS, and Linux systems.
+# Installs Picoware scripts for Unix systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,7 +16,7 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Scripts.
+Installer script for Picoware scripts.
 
 Usage: install-scripts [OPTIONS] <SCRIPTS>...
 
@@ -35,7 +35,7 @@ EOF
 #######################################
 # Add script to system path in shell profile.
 # Arguments:
-#   Parent directory of Scripts script.
+#   Parent directory of Picoware script.
 # Globals:
 #   SHELL
 #######################################
@@ -73,7 +73,7 @@ configure_shell() {
   # Flags:
   #   -p: Make parent directories if necessary.
   mkdir -p "$(dirname "${profile}")"
-  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
+  printf '\n# Added by Picoware installer.\n%s\n' "${export_cmd}" >> "${profile}"
   log "Added '${export_cmd}' to the '${profile}' shell profile."
   log 'Source shell profile or restart shell after installation.'
 }
@@ -154,7 +154,7 @@ find_completions() {
   local jq_bin='' response=''
 
   jq_bin="$(find_jq)"
-  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
+  response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
 }
 
@@ -177,7 +177,7 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
-    response="$(fetch 'https://scruffaluff.github.io/scripts/install/jq.sh')"
+    response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
     tmp_dir="$(mktemp -d)"
     echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
@@ -197,7 +197,7 @@ find_scripts() {
   local jq_bin='' response=''
 
   jq_bin="$(find_jq)"
-  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
+  response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
 }
 
@@ -274,7 +274,7 @@ EOF
 install_completion() {
   local super="${1}" global_="${2}" version="${3}" script="${4}"
   local completions='' dest='' extension='' name="${script%.*}"
-  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src/completion"
+  local repo="https://raw.githubusercontent.com/scruffaluff/picoware/${version}/src/completion"
 
   # Find completions matching script name.
   #
@@ -312,16 +312,16 @@ install_script() {
   local super="${1}" global_="${2}" version="${3}" dst_dir="${4}" script="${5}"
   local preserve_env="${6}" extension="${script##*.}" name="${script%.*}"
   local dst_file="${dst_dir}/${name}"
-  local repo="https://raw.githubusercontent.com/scruffaluff/scripts/${version}/src"
+  local repo="https://raw.githubusercontent.com/scruffaluff/picoware/${version}/src"
 
   if [ "${extension}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
-    fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s -- \
+    fetch https://scruffaluff.github.io/picoware/install/nushell.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   elif [ "${extension}" = 'py' ] && [ ! -x "$(command -v uv)" ]; then
-    fetch https://scruffaluff.github.io/scripts/install/uv.sh | sh -s -- \
+    fetch https://scruffaluff.github.io/picoware/install/uv.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   elif [ "${extension}" = 'ts' ] && [ ! -x "$(command -v deno)" ]; then
-    fetch https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- \
+    fetch https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   fi
 

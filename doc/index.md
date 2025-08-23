@@ -4,11 +4,11 @@ next:
   link: /install
 ---
 
-# Scripts
+# Picoware
 
-Scripts is my personal collection of utility applications, installers, and
+Picoware is my personal collection of utility applications, installers, and
 scripts. For instructions on using these programs, see the
-[Install](https://scruffaluff.github.io/scripts/install) section of the
+[Install](https://scruffaluff.github.io/picoware/install) section of the
 documentation.
 
 ## Installers

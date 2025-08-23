@@ -35,7 +35,7 @@ EOF
 #######################################
 # Add script to system path in shell profile.
 # Arguments:
-#   Parent directory of Scripts script.
+#   Parent directory of Picoware script.
 # Globals:
 #   SHELL
 #######################################
@@ -73,7 +73,7 @@ configure_shell() {
   # Flags:
   #   -p: Make parent directories if necessary.
   mkdir -p "$(dirname "${profile}")"
-  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
+  printf '\n# Added by Picoware installer.\n%s\n' "${export_cmd}" >> "${profile}"
   log "Added '${export_cmd}' to the '${profile}' shell profile."
   log 'Source shell profile or restart shell after installation.'
 }

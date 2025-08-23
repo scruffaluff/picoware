@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Installs scripts for Windows systems.
+    Installs Picoware scripts for Windows systems.
 #>
 
 # If unable to execute due to policy rules, run
@@ -16,7 +16,7 @@ $PSNativeCommandUseErrorActionPreference = $True
 # Show CLI help information.
 function Usage() {
     Write-Output @'
-Installer script for Scripts.
+Installer script for Picoware scripts.
 
 Usage: install-scripts [OPTIONS] <SCRIPTS>...
 
@@ -51,14 +51,14 @@ function FindScripts($Version) {
     $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\") or endswith(\".py\") or endswith(\".rs\") or endswith(\".ts\")) | ltrimstr(\"src/script/\")'
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
-        "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
+        "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 }
 
 # Install script and update path.
 function InstallScript($TargetEnv, $Version, $DestDir, $Script, $PreserveEnv) {
     $Name = [IO.Path]::GetFileNameWithoutExtension($Script)
-    $URL = "https://raw.githubusercontent.com/scruffaluff/scripts/$Version"
+    $URL = "https://raw.githubusercontent.com/scruffaluff/picoware/$Version"
 
     if ($Script.EndsWith('.nu')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {

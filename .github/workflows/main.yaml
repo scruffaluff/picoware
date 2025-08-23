@@ -134,9 +134,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body: >-
-            See the [changelog](https://github.com/scruffaluff/scripts/blob/${{
+            See the [changelog](https://github.com/scruffaluff/picoware/blob/${{
             github.ref_name }}/CHANGELOG.md) for more information.
-          name: Scripts ${{ github.ref_name }}
+          name: Picoware ${{ github.ref_name }}
           tag_name: ${{ github.ref }}
       - if: ${{ always() && inputs.debug }}
         name: Launch Tmate session if debug enabled
