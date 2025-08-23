@@ -764,7 +764,7 @@ def "main upload" [
         main ssh $domain '
 if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
     $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
-        https://scruffaluff.github.io/scripts/install/nushell.ps1
+        https://scruffaluff.github.io/picoware/install/nushell.ps1
     Invoke-Expression "& { $NushellScript } --global"
 }
 New-Item -Force -ItemType Directory -Path "C:\Program Files\Bin" | Out-Null
@@ -779,7 +779,7 @@ nu "%~dnp0.nu" %*
     } else {
         let check = main ssh $domain command -v nu | complete
         if $check.exit_code != 0 {
-            http get https://scruffaluff.github.io/scripts/install/nushell.sh
+            http get https://scruffaluff.github.io/picoware/install/nushell.sh
             | main ssh $domain sh -s -- --global
         }
 
@@ -912,7 +912,7 @@ console="comconsole,vidconsole"
     let programs = ["clear-cache" "fdi" "rgi" "rstash"]
     | where {|program| which $program | is-empty }
     if ($programs | is-not-empty) {
-        http get https://scruffaluff.github.io/scripts/install/scripts.nu
+        http get https://scruffaluff.github.io/picoware/install/scripts.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
     }
 
@@ -1089,19 +1089,19 @@ def setup-host [] {
     )
 
     if not ($"($config)/icon.icns" | path exists) {
-        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.icns
+        http get https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/main/data/image/icon.icns
         | save $"($config)/icon.icns"
     }
     if not ($"($config)/icon.ico" | path exists) {
-        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.ico
+        http get https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/main/data/image/icon.ico
         | save $"($config)/icon.ico"
     }
     if not ($"($config)/icon.png" | path exists) {
-        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.png
+        http get https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/main/data/image/icon.png
         | save $"($config)/icon.png"
     }
     if not ($"($config)/icon.svg" | path exists) {
-        http get https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/main/data/image/icon.svg
+        http get https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/main/data/image/icon.svg
         | save $"($config)/icon.svg"
     }
 
@@ -1109,7 +1109,7 @@ def setup-host [] {
     let programs = ["tscp" "tssh"]
     | where {|program| which $program | is-empty }
     if ($programs | is-not-empty) {
-        http get https://scruffaluff.github.io/scripts/install/scripts.nu
+        http get https://scruffaluff.github.io/picoware/install/scripts.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
     }
 }

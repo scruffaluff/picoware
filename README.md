@@ -1,11 +1,11 @@
-# Scripts
+# Picoware
 
-![](https://img.shields.io/github/license/scruffaluff/scripts)
-![](https://img.shields.io/github/repo-size/scruffaluff/scripts)
+![](https://img.shields.io/github/license/scruffaluff/picoware)
+![](https://img.shields.io/github/repo-size/scruffaluff/picoware)
 
-Scripts is my personal collection of utility applications, installers, and
+Picoware is my personal collection of utility applications, installers, and
 scripts. For instructions on using these programs, see the
-[Install](https://scruffaluff.github.io/scripts/install) section of the
+[Install](https://scruffaluff.github.io/picoware/install) section of the
 documentation.
 
 ## Installers
@@ -56,9 +56,9 @@ settings or run a temporary program.
 
 For guidance on setting up a development environment and how to make a
 contribution, see the
-[Contributing Guide](https://github.com/scruffaluff/scripts/blob/main/CONTRIBUTING.md).
+[Contributing Guide](https://github.com/scruffaluff/picoware/blob/main/CONTRIBUTING.md).
 
 ## License
 
-Scripts is distributed under a
-[MIT license](https://github.com/scruffaluff/scripts/blob/main/LICENSE.md).
+Picoware is distributed under a
+[MIT license](https://github.com/scruffaluff/picoware/blob/main/LICENSE.md).

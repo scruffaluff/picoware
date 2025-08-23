@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Installs Scripts apps for Windows systems.
+    Installs Picoware apps for Windows systems.
 #>
 
 # If unable to execute due to policy rules, run
@@ -16,7 +16,7 @@ $PSNativeCommandUseErrorActionPreference = $True
 # Show CLI help information.
 function Usage() {
     Write-Output @'
-Installer script for Scripts apps.
+Installer script for Picoware apps.
 
 Usage: install-apps [OPTIONS] <APPS>...
 
@@ -38,11 +38,11 @@ function Capitalize($Name) {
 # Download application from repository.
 function FetchApp($Version, $Name, $Dest) {
     $Filter = ".tree[] | select(.type == \`"blob\`") | .path | select(startswith(\`"src/app/$Name/\`")) | ltrimstr(\`"src/app/$Name/\`")"
-    $Url = "https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version/src/app/$Name"
+    $Url = "https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/$Version/src/app/$Name"
 
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
-        "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
+        "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     $Files = "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 
     New-Item -Force -ItemType Directory -Path $Dest | Out-Null
@@ -70,7 +70,7 @@ function FindApps($Version) {
     $Filter = '.tree[] | select(.type == \"tree\") | .path | select(startswith(\"src/app/\")) | ltrimstr(\"src/app/\")'
     $JqBin = FindJq
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
-        "https://api.github.com/repos/scruffaluff/scripts/git/trees/$Version`?recursive=true"
+        "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     "$Response" | & $JqBin --exit-status --raw-output "$Filter"
 }
 
@@ -91,7 +91,7 @@ function FindJq() {
 
 # Install application.
 function InstallApp($Target, $Version, $Name) {
-    $Url = "https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/$Version"
+    $Url = "https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/$Version"
     $Title = Capitalize $Name
 
     if ($Target -eq 'User') {

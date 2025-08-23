@@ -6,7 +6,7 @@ prev:
 
 # Installation
 
-Scripts provides Bash and PowerShell installer scripts to download any
+Picoware provides Bash and PowerShell installer scripts to download any
 collection of scripts from the repository.
 
 ::: warning
@@ -43,15 +43,15 @@ The following command installs Deno. To execute the other installers, replace
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh
+curl -LSfs https://scruffaluff.github.io/picoware/install/deno.sh | sh
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/deno.ps1)))
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/deno.ps1)))
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in | decode); main"
+http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $"($in | decode); main"
 ```
 
 :::
@@ -61,15 +61,15 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/deno.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/deno.ps1))) --help
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::
@@ -77,8 +77,8 @@ http get https://scruffaluff.github.io/scripts/install/deno.nu | nu -c $"($in | 
 ## Scripts
 
 The programs, from the following table, can be installed with the
-https://scruffaluff.github.io/scripts/install/scripts.sh for Unix systems and
-https://scruffaluff.github.io/scripts/install/scripts.ps1 for Windows.
+https://scruffaluff.github.io/picoware/install/scripts.sh for Unix systems and
+https://scruffaluff.github.io/picoware/install/scripts.ps1 for Windows.
 
 | Name        | Description                                    |
 | ----------- | ---------------------------------------------- |
@@ -98,15 +98,15 @@ scripts can be installed by replacing the program names.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- clear-cache rgi
+curl -LSfs https://scruffaluff.github.io/picoware/install/scripts.sh | sh -s -- clear-cache rgi
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/scripts.ps1))) clear-cache rgi
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/scripts.ps1))) clear-cache rgi
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main clear-cache rgi"
+http get https://scruffaluff.github.io/picoware/install/scripts.nu | nu -c $"($in | decode); main clear-cache rgi"
 ```
 
 :::
@@ -116,15 +116,15 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/scripts.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/install/scripts.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/scripts.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/scripts.ps1))) --help
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/scripts.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::
@@ -132,8 +132,8 @@ http get https://scruffaluff.github.io/scripts/install/scripts.nu | nu -c $"($in
 ## Apps
 
 The programs, from the following table, can be installed with the
-https://scruffaluff.github.io/scripts/install/apps.sh for Unix systems and
-https://scruffaluff.github.io/scripts/install/apps.ps1 for Windows.
+https://scruffaluff.github.io/picoware/install/apps.sh for Unix systems and
+https://scruffaluff.github.io/picoware/install/apps.ps1 for Windows.
 
 ::: warning
 
@@ -152,15 +152,15 @@ be installed by replacing the program names.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- augraph denoui
+curl -LSfs https://scruffaluff.github.io/picoware/install/apps.sh | sh -s -- augraph denoui
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) augraph denoui
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/apps.ps1))) augraph denoui
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main augraph denoui"
+http get https://scruffaluff.github.io/picoware/install/apps.nu | nu -c $"($in | decode); main augraph denoui"
 ```
 
 :::
@@ -170,15 +170,15 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/install/apps.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/install/apps.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/install/apps.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/apps.ps1))) --help
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/scripts/install/apps.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/apps.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::
@@ -199,11 +199,11 @@ actions, replace `tmate-session` with the installer name.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh
+curl -LSfs https://scruffaluff.github.io/picoware/action/tmate-session.sh | sh
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/action/tmate-session.ps1)))
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/action/tmate-session.ps1)))
 ```
 
 :::
@@ -213,11 +213,11 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/scripts/action/tmate-session.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/action/tmate-session.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/scripts/action/tmate-session.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/action/tmate-session.ps1))) --help
 ```
 
 :::

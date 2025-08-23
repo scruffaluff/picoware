@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install Scripts apps for MacOS and Linux systems.
+# Installs Picoware apps for Unix systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,7 +16,7 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Scripts application.
+Installer script for Picoware apps.
 
 Usage: install-apps [OPTIONS] <APPS>...
 
@@ -54,7 +54,7 @@ capitalize() {
 #######################################
 # Add script to system path in shell profile.
 # Arguments:
-#   Parent directory of Scripts script.
+#   Parent directory of Picoware script.
 # Globals:
 #   SHELL
 #######################################
@@ -92,7 +92,7 @@ configure_shell() {
   # Flags:
   #   -p: Make parent directories if necessary.
   mkdir -p "$(dirname "${profile}")"
-  printf '\n# Added by Scripts installer.\n%s\n' "${export_cmd}" >> "${profile}"
+  printf '\n# Added by Picoware installer.\n%s\n' "${export_cmd}" >> "${profile}"
   log "Added '${export_cmd}' to the '${profile}' shell profile."
   log 'Source shell profile or restart shell after installation.'
 }
@@ -192,7 +192,7 @@ fetch() {
 # Download application from repository.
 # Arguments:
 #   Super user command.
-#   Scripts version.
+#   Picoware version.
 #   App name.
 #   Destination path.
 #######################################
@@ -200,10 +200,10 @@ fetch_app() {
   local dest="${4}" name="${3}" super="${1}" version="${2}"
   local filter=".tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/app/${name}\")) | ltrimstr(\"src/app/${name}/\")"
   local jq_bin='' response='' script=''
-  local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}/src/app/${name}"
+  local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}/src/app/${name}"
 
   jq_bin="$(find_jq)"
-  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
+  response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   files="$(echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}")"
 
   ${super:+"${super}"} mkdir -p "${dest}"
@@ -228,7 +228,7 @@ fetch_app() {
 #######################################
 # Find all apps inside repository.
 # Arguments:
-#   Scripts version.
+#   Picoware version.
 # Outputs:
 #   Array of app names.
 #######################################
@@ -238,7 +238,7 @@ find_apps() {
   local jq_bin='' response=''
 
   jq_bin="$(find_jq)"
-  response="$(fetch "https://api.github.com/repos/scruffaluff/scripts/git/trees/${version}?recursive=true")"
+  response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
 }
 
@@ -261,7 +261,7 @@ find_jq() {
   if [ -x "${jq_bin}" ]; then
     echo "${jq_bin}"
   else
-    response="$(fetch 'https://scruffaluff.github.io/scripts/install/jq.sh')"
+    response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
     tmp_dir="$(mktemp -d)"
     echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
@@ -272,7 +272,7 @@ find_jq() {
 # Find application runner.
 # Arguments:
 #   Super user command.
-#   Scripts filename.
+#   Picoware filename.
 # Outputs:
 #   Application runner path.
 #######################################
@@ -283,21 +283,21 @@ find_runner() {
   if [ "${script##*.}" = 'nu' ]; then
     runner="$(command -v nu)"
     if [ ! -x "${runner}" ]; then
-      fetch https://scruffaluff.github.io/scripts/install/nushell.sh | sh -s \
+      fetch https://scruffaluff.github.io/picoware/install/nushell.sh | sh -s \
         -- ${super:+--global} --preserve-env --quiet
       runner="$(command -v nu)"
     fi
   elif [ "${script##*.}" = 'py' ]; then
     runner="$(command -v uv)"
     if [ ! -x "${runner}" ]; then
-      fetch https://scruffaluff.github.io/scripts/install/uv.sh | sh -s -- \
+      fetch https://scruffaluff.github.io/picoware/install/uv.sh | sh -s -- \
         ${super:+--global} --preserve-env --quiet
       runner="$(command -v uv)"
     fi
   elif [ "${script##*.}" = 'ts' ]; then
     runner="$(command -v deno)"
     if [ ! -x "${runner}" ]; then
-      fetch https://scruffaluff.github.io/scripts/install/deno.sh | sh -s -- \
+      fetch https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- \
         ${super:+--global} --preserve-env --quiet
       runner="$(command -v deno)"
     fi
@@ -342,7 +342,7 @@ find_super() {
 install_app_linux() {
   local name="${3}" super="${1}" version="${2}"
   local runner='' script='' title=''
-  local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
+  local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}"
   local icon_url="${url}/data/image/icon.svg"
   title="$(capitalize "${name}")"
 
@@ -410,7 +410,7 @@ EOF
 install_app_macos() {
   local name="${3}" super="${1}" version="${2}"
   local identifier='' title=''
-  local url="https://raw.githubusercontent.com/scruffaluff/scripts/refs/heads/${version}"
+  local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}"
   local icon_url="${url}/data/image/icon.icns"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
   title="$(capitalize "${name}")"

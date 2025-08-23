@@ -60,8 +60,8 @@ format:
   uv tool run ruff format .
 
 # Install project programs.
-install *args:
-  nu src/install/scripts.nu --version {{justfile_directory()}} {{args}}
+install workflow *args:
+  nu src/install/{{workflow}}.nu --version {{justfile_directory()}} {{args}}
 
 # Run code analyses.
 [unix]
@@ -125,8 +125,8 @@ setup:
   done
   bats --version
   if [ ! -d .vendor/lib/nutest ]; then
-    git clone -c advice.detachedHead=false --branch migrate-ignore-errors \
-      --depth 1 https://github.com/scruffaluff/nutest.git .vendor/lib/nutest
+    git clone -c advice.detachedHead=false --branch main \
+      --depth 1 https://github.com/vyadh/nutest.git .vendor/lib/nutest
   fi
   if [ ! -x "$(command -v shellcheck)" ]; then
     shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
