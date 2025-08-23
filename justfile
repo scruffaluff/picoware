@@ -60,8 +60,8 @@ format:
   uv tool run ruff format .
 
 # Install project programs.
-install *args:
-  nu src/install/scripts.nu --version {{justfile_directory()}} {{args}}
+install workflow *args:
+  nu src/install/{{workflow}}.nu --version {{justfile_directory()}} {{args}}
 
 # Run code analyses.
 [unix]
