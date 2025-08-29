@@ -20,13 +20,15 @@ deno_prints_version() { # @test
 
 deno_shows_error_if_zip_missing() { # @test
   # Ensure that local unzip binary is not found.
+  _command="$(which command)"
   command() {
     if [ "$*" = '-v unzip' ]; then
       echo ""
     else
-      which "${2}"
+      "${_command}" "$@"
     fi
   }
+  export _command
   export -f command
 
   run bash src/install/deno.sh --preserve-env --dest "$(mktemp -d)"
@@ -79,13 +81,15 @@ just_prints_version() { # @test
 
 just_downloads_jq_if_missing() { # @test
   # Ensure that local jq binary is not found.
+  _command="$(which command)"
   command() {
     if [ "$*" = '-v jq' ]; then
       echo ""
     else
-      which "${2}"
+      "${_command}" "$@"
     fi
   }
+  export _command
   export -f command
 
   run bash src/install/just.sh --preserve-env --dest "$(mktemp -d)"
@@ -101,13 +105,15 @@ nushell_prints_version() { # @test
 
 nushell_shows_error_if_tar_missing() { # @test
   # Ensure that local tar binary is not found.
+  _command="$(which command)"
   command() {
     if [ "$*" = '-v tar' ]; then
       echo ""
     else
-      which "${2}"
+      "${_command}" "$@"
     fi
   }
+  export _command
   export -f command
 
   run bash src/install/nushell.sh --preserve-env --dest "$(mktemp -d)"

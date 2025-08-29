@@ -223,6 +223,7 @@ install_nushell() {
   #
   # Flags:
   #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
   if [ ! -x "$(command -v tar)" ]; then
     log --stderr 'error: Unable to find tar file archiver.'
     log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
@@ -240,8 +241,7 @@ install_nushell() {
   fetch --dest "${tmp_dir}/${target}.tar.gz" \
     "https://github.com/nushell/nushell/releases/download/${version}/${target}.tar.gz"
   tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} cp "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
-  ${super:+"${super}"} chmod 755 "${dst_dir}/"nu_*
+  ${super:+"${super}"} install "${tmp_dir}/${target}/nu" "${tmp_dir}/${target}/"nu_* "${dst_dir}/"
 
   # Update shell profile if destination is not in system path.
   #

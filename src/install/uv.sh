@@ -224,6 +224,7 @@ install_uv() {
   #
   # Flags:
   #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
   if [ ! -x "$(command -v tar)" ]; then
     log --stderr 'error: Unable to find tar file archiver.'
     log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'

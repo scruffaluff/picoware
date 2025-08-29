@@ -17,7 +17,7 @@ export UV_PYTHON := "~=3.11"
 
 # List all commands available in justfile.
 list:
-  just --list
+  @just --list
 
 # Execute CI workflow commands.
 ci: setup lint doc test

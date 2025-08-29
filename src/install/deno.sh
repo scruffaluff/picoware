@@ -203,6 +203,7 @@ install_deno() {
   #
   # Flags:
   #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
   if [ ! -x "$(command -v unzip)" ]; then
     log --stderr 'error: Unable to find zip file archiver.'
     log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
@@ -220,8 +221,7 @@ install_deno() {
   fetch --dest "${tmp_dir}/deno.zip" \
     "https://dl.deno.land/release/${version}/deno-${target}.zip"
   unzip -d "${tmp_dir}" "${tmp_dir}/deno.zip"
-  ${super:+"${super}"} cp "${tmp_dir}/deno" "${dst_file}"
-  ${super:+"${super}"} chmod 755 "${dst_file}"
+  ${super:+"${super}"} install "${tmp_dir}/deno" "${dst_file}"
 
   # Update shell profile if destination is not in system path.
   #
@@ -241,16 +241,30 @@ install_deno() {
 }
 
 #######################################
+# Download and install Deno for Alpine.
+#######################################
+install_deno_alpine() {
+  local super
+  super="$(find_super)"
+
+  log 'Alpine Deno installation requires system package manager.'
+  log "Ignoring arguments and installing Deno to '/usr/bin/deno'."
+  ${super:+"${super}"} apk update
+  ${super:+"${super}"} apk add deno
+  log "Installed $(deno --version)."
+}
+
+#######################################
 # Download and install Deno for FreeBSD.
 #######################################
 install_deno_freebsd() {
-  local super=
+  local super
   super="$(find_super)"
 
   log 'FreeBSD Deno installation requires system package manager.'
   log "Ignoring arguments and installing Deno to '/local/usr/bin/deno'."
-  ${super} pkg update
-  ${super} pkg install --yes deno
+  ${super:+"${super}"} pkg update
+  ${super:+"${super}"} pkg install --yes deno
   log "Installed $(deno --version)."
 }
 
@@ -339,8 +353,15 @@ main() {
     esac
   done
 
-  # Handle special FreeBSD case.
-  if [ "$(uname -s)" = 'FreeBSD' ]; then
+  # Handle special installation cases.
+  #
+  # Flags:
+  #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
+  if [ -x "$(command -v apk)" ]; then
+    install_deno_alpine
+    return
+  elif [ "$(uname -s)" = 'FreeBSD' ]; then
     install_deno_freebsd
     return
   fi
