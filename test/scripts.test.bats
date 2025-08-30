@@ -11,6 +11,7 @@ setup() {
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
 
+  # TODO: Figure out why command needs to be mocked.
   command() {
     which "${2}"
   }
@@ -24,7 +25,7 @@ setup() {
         ;;
     esac
   }
-  _curl="$(command -v curl)"
+  _curl="$(type -p curl)"
 }
 
 create_wrapper_for_incompatible_env() { # @test
@@ -75,7 +76,7 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
       "${_sudo}" "$@"
     fi
   }
-  _sudo="$(command -v sudo)"
+  _sudo="$(type -p sudo)"
   export _curl _sudo
   export -f command curl sudo
 

@@ -233,7 +233,7 @@ find_super() {
 #######################################
 handle_shebang() {
   local extension="${3}" path="${2}" super="${1}"
-  local command='' script="${path}.${extension}" shebang=''
+  local cmd='' script="${path}.${extension}" shebang=''
   shebang="$(head -n 1 "${path}")"
 
   # Exit early if `env` can handle the shebang arguments.
@@ -249,7 +249,7 @@ handle_shebang() {
   esac
 
   # Move script to new location.
-  command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //')"
+  cmd="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //')"
   ${super:+"${super}"} cp "${path}" "${script}"
   ${super:+"${super}"} chmod -x "${script}"
 
@@ -258,7 +258,7 @@ handle_shebang() {
 #!/usr/bin/env sh
 set -eu
 
-exec ${command} '${script}' "\$@"
+exec ${cmd} '${script}' "\$@"
 EOF
   ${super:+"${super}"} chmod +rx "${path}"
 }
