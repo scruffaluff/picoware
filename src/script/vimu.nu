@@ -785,7 +785,7 @@ nu "%~dnp0.nu" %*
 
         main scp $vimu $"($domain):/tmp/vimu"
         main ssh $domain "
-if [ -x \"$(command -v doas)\" ]; then
+if command -v doas > /dev/null 2>&1; then
     doas install /tmp/vimu /usr/local/bin/vimu
 else
     sudo install /tmp/vimu /usr/local/bin/vimu

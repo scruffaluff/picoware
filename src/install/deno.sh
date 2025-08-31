@@ -121,10 +121,10 @@ fetch() {
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
+  if command -v curl > /dev/null 2>&1; then
     ${super:+"${super}"} curl --fail --location --show-error --silent --output \
       "${dst_file}" "${url}"
-  elif [ -x "$(command -v wget)" ]; then
+  elif command -v wget > /dev/null 2>&1; then
     ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
     log --stderr 'error: Unable to find a network file downloader.'
@@ -154,9 +154,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'
@@ -204,7 +204,7 @@ install_deno() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v unzip)" ]; then
+  if ! command -v unzip > /dev/null 2>&1; then
     log --stderr 'error: Unable to find zip file archiver.'
     log --stderr 'Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.'
     exit 1
@@ -358,7 +358,7 @@ main() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v apk)" ]; then
+  if command -v apk > /dev/null 2>&1; then
     install_deno_alpine
     return
   elif [ "$(uname -s)" = 'FreeBSD' ]; then

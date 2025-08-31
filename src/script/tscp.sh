@@ -25,7 +25,7 @@ Options:
   -h, --help      Print help information
   -v, --version   Print version information
 EOF
-  if [ -x "$(command -v scp)" ]; then
+  if command -v scp > /dev/null 2>&1; then
     printf '\nSCP Options:\n'
     scp
   fi

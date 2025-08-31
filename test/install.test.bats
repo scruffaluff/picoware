@@ -22,7 +22,7 @@ deno_shows_error_if_zip_missing() { # @test
   # Ensure that local unzip binary is not found.
   command() {
     if [ "$*" = '-v unzip' ]; then
-      echo ""
+      return 1
     else
       type -p "${2}"
     fi
@@ -81,7 +81,7 @@ just_downloads_jq_if_missing() { # @test
   # Ensure that local jq binary is not found.
   command() {
     if [ "$*" = '-v jq' ]; then
-      echo ""
+      return 1
     else
       type -p "${2}"
     fi
@@ -103,7 +103,7 @@ nushell_shows_error_if_tar_missing() { # @test
   # Ensure that local tar binary is not found.
   command() {
     if [ "$*" = '-v tar' ]; then
-      echo ""
+      return 1
     else
       type -p "${2}"
     fi

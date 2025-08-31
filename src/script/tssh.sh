@@ -25,7 +25,7 @@ Options:
   -h, --help      Print help information
   -v, --version   Print version information
 EOF
-  if [ -x "$(command -v ssh)" ]; then
+  if command -v ssh > /dev/null 2>&1; then
     printf '\nSSH Options:\n'
     ssh
   fi
