@@ -98,19 +98,19 @@ setup:
   #!/usr/bin/env sh
   set -eu
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  if [ ! -x "$(command -v jq)" ]; then
+  if ! command -v jq > /dev/null 2>&1; then
     src/install/jq.sh --preserve-env --dest .vendor/bin
   fi
   jq --version
-  if [ ! -x "$(command -v nu)" ]; then
+  if ! command -v nu > /dev/null 2>&1; then
     src/install/nushell.sh --preserve-env --dest .vendor/bin
   fi
   echo "Nushell $(nu --version)"
-  if [ ! -x "$(command -v deno)" ]; then
+  if ! command -v deno > /dev/null 2>&1; then
     src/install/deno.sh --preserve-env --dest .vendor/bin
   fi
   deno --version
-  if [ ! -x "$(command -v uv)" ]; then
+  if ! command -v uv > /dev/null 2>&1; then
     src/install/uv.sh --preserve-env --dest .vendor/bin
   fi
   uv --version
@@ -128,7 +128,7 @@ setup:
     git clone -c advice.detachedHead=false --branch main \
       --depth 1 https://github.com/vyadh/nutest.git .vendor/lib/nutest
   fi
-  if [ ! -x "$(command -v shellcheck)" ]; then
+  if ! command -v shellcheck > /dev/null 2>&1; then
     shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
     shellcheck_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shellcheck.json |
@@ -139,7 +139,7 @@ setup:
     install "/tmp/shellcheck-v${shellcheck_version}/shellcheck" .vendor/bin/
   fi
   shellcheck --version
-  if [ ! -x "$(command -v shfmt)" ]; then
+  if ! command -v shfmt > /dev/null 2>&1; then
     shfmt_arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
     shfmt_version="$(curl  --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shfmt.json |

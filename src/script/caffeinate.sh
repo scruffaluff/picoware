@@ -103,7 +103,7 @@ main() {
 
   # Flags:
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v systemd-inhibit)" ]; then
+  if command -v systemd-inhibit > /dev/null 2>&1; then
     if [ "${#}" -eq 0 ]; then
       # Sleep infinity is not supported on all platforms.
       #

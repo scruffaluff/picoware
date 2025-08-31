@@ -121,10 +121,10 @@ fetch() {
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
+  if command -v curl > /dev/null 2>&1; then
     ${super:+"${super}"} curl --fail --location --show-error --silent --output \
       "${dst_file}" "${url}"
-  elif [ -x "$(command -v wget)" ]; then
+  elif command -v wget > /dev/null 2>&1; then
     ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
     log --stderr 'error: Unable to find a network file downloader.'
@@ -214,9 +214,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'
@@ -314,13 +314,13 @@ install_script() {
   local dst_file="${dst_dir}/${name}"
   local repo="https://raw.githubusercontent.com/scruffaluff/picoware/${version}/src"
 
-  if [ "${extension}" = 'nu' ] && [ ! -x "$(command -v nu)" ]; then
+  if [ "${extension}" = 'nu' ] && ! command -v nu > /dev/null 2>&1; then
     fetch https://scruffaluff.github.io/picoware/install/nushell.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
-  elif [ "${extension}" = 'py' ] && [ ! -x "$(command -v uv)" ]; then
+  elif [ "${extension}" = 'py' ] && ! command -v uv > /dev/null 2>&1; then
     fetch https://scruffaluff.github.io/picoware/install/uv.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
-  elif [ "${extension}" = 'ts' ] && [ ! -x "$(command -v deno)" ]; then
+  elif [ "${extension}" = 'ts' ] && ! command -v deno > /dev/null 2>&1; then
     fetch https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   fi

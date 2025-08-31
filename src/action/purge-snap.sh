@@ -52,9 +52,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'
@@ -178,7 +178,7 @@ main() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v snap)" ]; then
+  if command -v snap > /dev/null 2>&1; then
     purge_snaps
   fi
 }

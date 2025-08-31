@@ -25,7 +25,7 @@ Options:
   -h, --help      Print help information
   -v, --version   Print version information
 EOF
-  if [ -x "$(command -v rsync)" ]; then
+  if command -v rsync > /dev/null 2>&1; then
     printf '\nRsync Options:\n'
     rsync --help
   fi
