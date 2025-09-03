@@ -166,7 +166,7 @@ def main [
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
     let version = $version
-    | default (http get https://dl.deno.land/release-latest.txt)
+    | default (http get https://dl.deno.land/release-latest.txt | str trim)
 
     log $"Installing Deno to '($dest)'."
     install $super $dest $version
