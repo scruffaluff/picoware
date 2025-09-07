@@ -2,11 +2,11 @@
 #
 # /// script
 # dependencies = [
-#   "audioread~=3.0",
 #   "cryptography~=44.0",
 #   "numpy~=2.3",
 #   "pywebview~=6.0",
 #   "pywebview[qt]~=6.0; sys_platform == 'linux'",
+#   "soundfile~=0.13.1",
 #   "tsdownsample~=0.1.4",
 #   "typer~=0.16.0",
 # ]
@@ -21,8 +21,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
-import audioread
 import numpy
+import soundfile
 import webview
 from tsdownsample import LTTBDownsampler
 from typer import Argument, Option, Typer
@@ -68,16 +68,9 @@ class App:
 
     def read(self, path: Path) -> list[NDArray]:
         """Read audio file as mono signal."""
-        dtype = numpy.int16
-        scale = numpy.abs(numpy.iinfo(dtype).min)
-        with audioread.audio_open(path) as file:
-            arrays = numpy.concatenate(
-                [numpy.frombuffer(buffer, dtype=dtype) for buffer in file],
-            )
-
-        audio = arrays.reshape((file.channels, -1)) / scale
-        samples = numpy.mean(audio, axis=0)
-        times = numpy.arange(len(samples)) / file.samplerate
+        audio, rate = soundfile.read(path, always_2d=True)
+        samples = numpy.mean(audio, axis=1)
+        times = numpy.arange(len(samples)) / rate
         return numpy.stack((times, samples)).T
 
 
