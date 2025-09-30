@@ -31,7 +31,7 @@ from typer import Option, Typer
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 cli = Typer(
     add_completion=False,
@@ -45,6 +45,8 @@ os.environ["RCLONE_COPY_LINKS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
 os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
+os.environ["RCLONE_PROGRESS"] = "false"
+os.environ["RCLONE_STATS_ONE_LINE"] = "false"
 
 # Shared state to hold global application flags.
 state: dict[str, Any] = {"config": None, "dry_run": False}
