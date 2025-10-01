@@ -42,6 +42,7 @@ cli = Typer(
 
 # Use Rclone environment variables to avoid unsupported flags on specific versions.
 os.environ["RCLONE_COPY_LINKS"] = "true"
+os.environ["RCLONE_CREATE_EMPTY_SRC_DIRS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
 os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
