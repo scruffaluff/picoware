@@ -46,8 +46,6 @@ os.environ["RCLONE_CREATE_EMPTY_SRC_DIRS"] = "true"
 os.environ["RCLONE_HUMAN_READABLE"] = "true"
 os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
 os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
-os.environ["RCLONE_PROGRESS"] = "false"
-os.environ["RCLONE_STATS_ONE_LINE"] = "false"
 
 # Shared state to hold global application flags.
 state: dict[str, Any] = {"config": None, "dry_run": False}
@@ -118,7 +116,13 @@ def compute_changes(
 
         logger.debug(f"Running command '{' '.join(command)}'.")
         start = time.time()
-        process = subprocess.run(command, check=False, capture_output=True, text=True)
+        process = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            env={**os.environ, "RCLONE_PROGRESS": "false"},
+            text=True,
+        )
         stop = time.time()
         logger.debug(f"Ran command in {stop - start:.4e} seconds.")
 

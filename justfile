@@ -15,10 +15,6 @@ export PSModulePath := if os() == "windows" {
 } else { "" }
 export UV_PYTHON := "~=3.11"
 
-# List all commands available in justfile.
-list:
-  @just --list
-
 # Execute CI workflow commands.
 ci: setup lint doc test
 
@@ -91,6 +87,11 @@ lint:
   uv tool run ruff format --check .
   uv tool run ruff check .
   uv tool run mypy .
+
+# List all commands available in justfile.
+[default]
+list:
+  @just --list
 
 # Install development dependencies.
 [unix]

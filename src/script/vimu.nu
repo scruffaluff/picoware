@@ -357,6 +357,7 @@ Subcommands:
   bootstrap         Bootstrap virtual machine with Bootware
   create            Create virutal machine from default options
   detach-cdroms     Remove all cdrom disks from virtual machine
+  forget            Clear history files
   gui               Connect to virtual machine as desktop
   install           Create a virtual machine from a cdrom or disk file
   port              Get host port mapping to domain
@@ -554,6 +555,33 @@ def "main gui" [
     }
 
     virt-viewer $domain ...$args
+}
+
+# Clear history files.
+def "main forget" [
+    --dry-run (-d) # Only print actions to be taken
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    for file in [
+        ".bash_history"
+        ".config/nushell/history.txt"
+        ".lesshst"
+        ".local/share/fish/fish_history"
+        ".python_history"
+        ".viminfo"
+        ".zsh_history"
+        "AppData/Roaming/nushell/history.txt"
+        "Library/Application Support/nushell/history.txt"
+    ] {
+        let path = $"($env.HOME)/($file)"
+        if ($path | path exists) {
+            log info $"Deleting file ($path)."
+            if not $dry_run {
+                rm $path
+            }
+        }
+    }
 }
 
 # Create a virtual machine from a cdrom or disk file.
