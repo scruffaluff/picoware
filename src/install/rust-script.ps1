@@ -61,7 +61,7 @@ function IsAdministrator {
 }
 
 # Download and install Rust Script.
-function InstallRust Script($TargetEnv, $Version, $DestDir, $PreserveEnv) {
+function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     $Arch = $Env:PROCESSOR_ARCHITECTURE -replace 'AMD64', 'x86_64' `
         -replace 'ARM64', 'aarch64'
 
