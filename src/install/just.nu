@@ -33,7 +33,7 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Install program to destination folder.
-def install [super: string dest: directory version: string] {
+def install-just [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
     let target = match $nu.os-info.name {
@@ -130,7 +130,7 @@ def main [
     )
 
     log $"Installing Just to '($dest)'."
-    install $super $dest $version
+    install-just $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system

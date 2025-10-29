@@ -209,7 +209,7 @@ Restart this script from an administrator console or install to a user directory
     if (-not $Version) {
         $Version = FindLatest
     }
-    InstallRust Script $TargetEnv $Version $DestDir $PreserveEnv
+    InstallRustScript $TargetEnv $Version $DestDir $PreserveEnv
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

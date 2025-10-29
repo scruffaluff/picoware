@@ -153,7 +153,7 @@ def create-key [] {
 }
 
 # Download Windows 11 ISO file.
-def download_windows_iso [dest: path] {
+def download-windows-iso [dest: path] {
     # Based on `download_windows_workstation` function from
     # https://github.com/quickemu-project/quickemu/blob/master/quickget.
     let profile = "606624d44113"
@@ -509,7 +509,7 @@ def "main create" [
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {
-                download_windows_iso $cdrom
+                download-windows-iso $cdrom
             }
             if not ($drivers | path exists) {
                 log info "Downloading Windows drivers."

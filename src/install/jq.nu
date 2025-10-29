@@ -31,7 +31,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder.
-def install [super: string dest: directory subpath: string] {
+def install-jq [super: string dest: directory subpath: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let arch = match $nu.os-info.arch {
         "x86_64" => "amd64"
@@ -109,7 +109,7 @@ def main [
     }
 
     log $"Installing Jq to '($dest)'."
-    install $super $dest $subpath
+    install-jq $super $dest $subpath
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system
