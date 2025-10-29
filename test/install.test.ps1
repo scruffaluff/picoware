@@ -45,6 +45,12 @@ Describe 'Install' {
         $($Actual -join "`n") | Should -Match 'Installed Nushell 0.'
     }
 
+    It 'Rust Script prints version' {
+        $Actual = & src\install\rust-script.ps1 --preserve-env --dest `
+            $(MkTempDir)
+        $($Actual -join "`n") | Should -Match 'Installed rust-script 0.'
+    }
+
     It 'Uv prints version' {
         $Actual = & src\install\uv.ps1 --preserve-env --dest $(MkTempDir)
         $($Actual -join "`n") | Should -Match 'Installed uv 0.'

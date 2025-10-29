@@ -320,6 +320,10 @@ install_script() {
   elif [ "${extension}" = 'py' ] && ! command -v uv > /dev/null 2>&1; then
     fetch https://scruffaluff.github.io/picoware/install/uv.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
+  elif [ "${extension}" = 'rs' ] &&
+    ! command -v rust-script > /dev/null 2>&1; then
+    fetch https://scruffaluff.github.io/picoware/install/rust-script.sh | sh \
+      -s -- ${global_:+--global} ${preserve_env:+--preserve-env} --quiet
   elif [ "${extension}" = 'ts' ] && ! command -v deno > /dev/null 2>&1; then
     fetch https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- \
       ${global_:+--global} ${preserve_env:+--preserve-env} --quiet

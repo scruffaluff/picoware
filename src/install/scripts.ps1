@@ -100,6 +100,26 @@ nu "%~dnp0.nu" %*
 uv --no-config --quiet run --script "%~dnp0.py" %*
 "@
     }
+    elseif ($Script.EndsWith('.rs')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue rust-script)) {
+            $RustArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $RustArgs = "$RustArgs --global"
+            }
+            if ($PreserveEnv) {
+                $RustArgs = "$RustArgs --preserve-env"
+            }
+
+            $RustScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/rust-script.ps1"
+            Invoke-Expression "& { $RustScript } $RustArgs"
+        }
+
+        Set-Content -Path "$DestDir\$Name.cmd" -Value @"
+@echo off
+rust-script "%~dnp0.rs" %*
+"@
+    }
     elseif ($Script.EndsWith('.ts')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
             $DenoArgs = ''

@@ -58,6 +58,26 @@ def just-quiet-is-silent [] {
 }
 
 @test
+def rust-script-prints=version [] {
+    let tmp_dir = mktemp --directory --tmpdir
+    let result = nu src/install/rust-script.nu --preserve-env --dest $tmp_dir
+    | complete
+    assert equal $result.exit_code 0 $result.stderr
+    assert str contains $result.stdout "Installed rust-script 0."
+}
+
+@test
+def rust-script-quiet-is-silent [] {
+    let tmp_dir = mktemp --directory --tmpdir
+    let result = (
+        nu src/install/rust-script.nu --quiet --preserve-env --dest $tmp_dir
+        | complete
+    )
+    assert equal $result.exit_code 0 $result.stderr
+    assert equal $result.stdout ""
+}
+
+@test
 def uv-prints-version [] {
     let tmp_dir = mktemp --directory --tmpdir
     let result = nu src/install/uv.nu --preserve-env --dest $tmp_dir
