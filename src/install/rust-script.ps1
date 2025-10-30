@@ -74,7 +74,7 @@ function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     Invoke-WebRequest -UseBasicParsing -OutFile "$TmpDir\$Target.zip" -Uri `
         "https://github.com/fornwall/rust-script/releases/download/$Version/$Target.zip"
 
-    Expand-Archive -DestinationPath "$TmpDir\$Target" -Path "$TmpDir\$Target.zip"
+    Expand-Archive -DestinationPath $TmpDir -Path "$TmpDir\$Target.zip"
     Copy-Item -Destination $DestDir -Path "$TmpDir\rust-script.exe"
 
     if (-not $PreserveEnv) {

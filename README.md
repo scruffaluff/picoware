@@ -14,14 +14,16 @@ The following table shows the available installer programs. These are Bash, and
 PowerShell scripts that download dependencies, configure system settings, and
 install each program for immediate use.
 
-| Name    | Description                                         |
-| ------- | --------------------------------------------------- |
-| deno    | Installs Deno JavaScript runtime.                   |
-| jq      | Installs Jq JSON parser.                            |
-| just    | Installs Just command runner.                       |
-| nushell | Installs Nushell structured data shell.             |
-| scripts | Installs programs from the following scripts table. |
-| uv      | Installs Uv Python package manager.                 |
+| Name        | Description                                         |
+| ----------- | --------------------------------------------------- |
+| cargo       | Installs Cargo Rust package manager.                |
+| deno        | Installs Deno JavaScript runtime.                   |
+| jq          | Installs Jq JSON parser.                            |
+| just        | Installs Just command runner.                       |
+| nushell     | Installs Nushell structured data shell.             |
+| rust-script | Installs Rust Script Rust script executor.          |
+| scripts     | Installs programs from the following scripts table. |
+| uv          | Installs Uv Python package manager.                 |
 
 ## Scripts
 

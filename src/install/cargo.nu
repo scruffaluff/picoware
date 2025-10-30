@@ -31,7 +31,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder for Unix
-def install-rust-unix [super: string dest: directory version: string] {
+def install-cargo-unix [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $dest | path parse
     let rustup_home = if ($parts | get stem | str starts-with ".") {
@@ -63,7 +63,7 @@ def install-rust-unix [super: string dest: directory version: string] {
 }
 
 # Install program to destination folder for Windows.
-def install-rust-windows [dest: directory version: string] {
+def install-cargo-windows [dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $dest | path parse
     let rustup_home = if ($parts | get stem | str starts-with ".") {
@@ -109,13 +109,13 @@ def need-super [dest: directory global: bool] {
     false
 }
 
-# Install Rust for MacOS, Linux, and Windows systems.
+# Install Cargo for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): directory # Directory to install Rust
-    --global (-g) # Install Rust for all users
+    --dest (-d): directory # Directory to install Cargo
+    --global (-g) # Install Cargo for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Rust to install
+    --version (-v): string # Version of Cargo to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     # Force global if root on Unix.
@@ -136,14 +136,14 @@ def main [
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
 
-    log $"Installing Rust to '($dest)'."
+    log $"Installing Cargo to '($dest)'."
     if $nu.os-info.name == "windows" {
-        install-rust-windows $dest $version
+        install-cargo-windows $dest $version
         if not $preserve_env and not ($bin in $env.PATH) {
             update-path $bin $system
         }
     } else {
-        install-rust-unix $super $dest $version
+        install-cargo-unix $super $dest $version
         if not $preserve_env and not ($bin in $env.PATH) {
             update-shell $bin
         }

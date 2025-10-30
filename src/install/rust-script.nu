@@ -55,7 +55,7 @@ def install-rust-script [super: string dest: directory version: string] {
 $ProgressPreference = 'SilentlyContinue'
 Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rust-script.zip'
 "
-        glob $"($temp)/**/rust-script.exe" | first
+        $"($temp)/rust-script.exe"
     } else {
         tar fx $"($temp)/rust-script.tar.gz" -C $temp
         $"($temp)/rust-script"
