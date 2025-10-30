@@ -1028,7 +1028,7 @@ def setup-guest-linux [super: string] {
     }
 
     if (which topgrade | is-empty) {
-        let tmp_dir = mktemp --directory --tmpdir
+        let temp = mktemp --directory --tmpdir
         let version = http get https://formulae.brew.sh/api/formula/topgrade.json
         | get versions.stable
         let file_name = (
@@ -1036,9 +1036,9 @@ def setup-guest-linux [super: string] {
         )
 
         http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
-        | save --progress $"($tmp_dir)/topgrade.tar.gz"
-        tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
-        ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+        | save --progress $"($temp)/topgrade.tar.gz"
+        tar xf $"($temp)/topgrade.tar.gz" -C $temp
+        ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
     }
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
@@ -1090,15 +1090,15 @@ Start-Service sshd
     }
 
     if (which rclone | is-empty) {
-        let tmp_dir = mktemp --directory --tmpdir | str replace --all '\' '/'
+        let temp = mktemp --directory --tmpdir | str replace --all '\' '/'
         let rclone_uri = http get https://raw.githubusercontent.com/ScoopInstaller/Main/refs/heads/master/bucket/rclone.json
         | get architecture.64bit.url
-        http get $rclone_uri | save --progress $"($tmp_dir)/rclone.zip"
+        http get $rclone_uri | save --progress $"($temp)/rclone.zip"
         powershell -command $"
 $ProgressPreference = 'SilentlyContinue'
-Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
+Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rclone.zip'
 "
-        let rclone = glob $"($tmp_dir)/**/rclone.exe" | first
+        let rclone = glob $"($temp)/**/rclone.exe" | first
         cp $rclone "C:/Program Files/Bin/rclone.exe"
     }
 

@@ -1,17 +1,5 @@
 #!/usr/bin/env nu
 
-# Ensure script dependencies are available.
-def check-deps [] {
-    if $nu.os-info.name != "windows" and (which unzip | is-empty) {
-        error make { msg: ("
-error: Unable to find zip file archiver.
-Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
-"
-            | str trim)
-        }
-    }
-}
-
 # Find command to elevate as super user.
 def find-super [] {
     if (is-admin) {
@@ -42,81 +30,72 @@ def --wrapped log [...args: string] {
     }
 }
 
-# Install program to destination folder.
-def install-deno [super: string dest: directory version: string] {
+# Install program to destination folder for Unix
+def install-rust-unix [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
-    let target = match $nu.os-info.name {
-        "linux" => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
-        "macos" => $"deno-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"deno-($nu.os-info.arch)-pc-windows-msvc"
-    }
-
-    let temp = mktemp --directory --tmpdir
-    let uri = $"https://dl.deno.land/release/($version)/($target).zip"
-    if $quiet {
-        http get $uri | save $"($temp)/deno.zip"
+    let parts = $dest | path parse
+    let rustup_home = if ($parts | get stem | str starts-with ".") {
+        $"($parts.parent)/.rustup"
     } else {
-        http get $uri | save --progress $"($temp)/deno.zip"
+        $"($parts.parent)/rustup"
     }
     
-    let program = if $nu.os-info.name == "windows" {
-        powershell -command $"
-$ProgressPreference = 'SilentlyContinue'
-Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
-"
-        $"($temp)/deno.exe"
-    } else {
-        unzip -qq -d $temp $"($temp)/deno.zip"
-        $"($temp)/deno"
+    mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
+    if $quiet {
+        $args = [...$args "--quiet"]
     }
+    if ($version | is-not-empty) {
+        $args = [...$args "--default-toolchain" $version]
+    }
+    let args = $args
 
-    let dest_file = $"($dest)/($program | path basename)"
-    if ($super | is-empty) {
-        mkdir $dest
-        cp $program $dest_file
-        if $nu.os-info.name != "windows" {
-            chmod 755 $dest_file
-        }
-    } else {
-        ^$super mkdir -p $dest
-        ^$super cp $program $dest_file
-        if $nu.os-info.name != "windows" {
-            sudo chmod 755 $dest_file
+    with-env {
+        CARGO_HOME: $dest
+        PATH: [$"($dest)/bin" ...$env.PATH]
+        RUSTUP_HOME: $rustup_home
+    } {
+        if ($super | is-empty) {
+            http get https://sh.rustup.rs | sh -s -- ...$args
+        } else {
+            http get https://sh.rustup.rs | ^$super -E sh -s -- ...$args
         }
     }
 }
 
-
-# Download and install Deno for Alpine.
-def install-deno-alpine [] {
-    let super = find-super
-    log "Alpine Deno installation requires system package manager."
-    log "Ignoring arguments and installing Deno to '/usr/bin/deno'."
-
-    if ($super | is-empty) {
-        apk update
-        apk add deno
+# Install program to destination folder for Windows.
+def install-rust-windows [dest: directory version: string] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let parts = $dest | path parse
+    let rustup_home = if ($parts | get stem | str starts-with ".") {
+        $"($parts.parent)\\.rustup"
     } else {
-        ^$super apk update
-        ^$super apk add deno
+        $"($parts.parent)\\rustup"
     }
-    log $"Installed (deno --version)."
-}
+    
+    mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
+    if $quiet {
+        $args = [...$args "--quiet"]
+    }
+    if ($version | is-not-empty) {
+        $args = [...$args "--default-toolchain" $version]
+    }
+    let args = $args
 
-# Download and install Deno for FreeBSD.
-def install-deno-freebsd [] {
-    let super = find-super
-    log "FreeBSD Deno installation requires system package manager."
-    log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
-
-    if ($super | is-empty) {
-        pkg update
-        pkg install --yes deno
+    let temp = mktemp --directory --tmpdir
+    let uri = "https://static.rust-lang.org/rustup/dist/($nu.os-info.arch)-pc-windows-msvc/rustup-init.exe"
+    if $quiet {
+        http get $uri | save $"($temp)\\rustup-init.exe"
     } else {
-        ^$super pkg update
-        ^$super pkg install --yes deno
+        http get $uri | save --progress $"($temp)\\rustup-init.exe"
     }
-    log $"Installed (deno --version)."
+
+    with-env {
+        CARGO_HOME: $dest
+        PATH: [$"($dest)\\bin" ...$env.PATH]
+        RUSTUP_HOME: $rustup_home
+    } {
+        ^$"($temp)\\rustup-init.exe" ...$args
+    }
 }
 
 # Check if super user elevation is required.
@@ -130,56 +109,48 @@ def need-super [dest: directory global: bool] {
     false
 }
 
-# Install Deno for MacOS, Linux, and Windows systems.
+# Install Rust for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): directory # Directory to install Deno
-    --global (-g) # Install Deno for all users
+    --dest (-d): directory # Directory to install Rust
+    --global (-g) # Install Rust for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Deno to install
+    --version (-v): string # Version of Rust to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
-
-    # Handle special installation cases.
-    if (which apk | is-not-empty) {
-        install-deno-alpine
-        return
-    } else if $nu.os-info.name == "freebsd" {
-        install-deno-freebsd
-        return
-    }
-
     # Force global if root on Unix.
     let global = $global or ((is-admin) and $nu.os-info.name != "windows")
+
     let dest_default = if $nu.os-info.name == "windows" {
         if $global {
-            "C:\\Program Files\\Bin"
+            "C:\\Program Files\\cargo"
         } else {
-            $"($env.LOCALAPPDATA)\\Programs\\Bin"
+            $"($env.LOCALAPPDATA)\\cargo"
         }
     } else {
-        if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
+        if $global { "/usr/local/cargo" } else { $"($env.HOME)/.cargo" }
     }
     let dest = $dest | default $dest_default | path expand
+    let bin = $dest | path join "bin"
 
-    check-deps
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
-    let version = $version
-    | default (http get https://dl.deno.land/release-latest.txt | str trim)
 
-    log $"Installing Deno to '($dest)'."
-    install-deno $super $dest $version
-    if not $preserve_env and not ($dest in $env.PATH) {
-        if $nu.os-info.name == "windows" {
-            update-path $dest $system
-        } else {
-            update-shell $dest
+    log $"Installing Rust to '($dest)'."
+    if $nu.os-info.name == "windows" {
+        install-rust-windows $dest $version
+        if not $preserve_env and not ($bin in $env.PATH) {
+            update-path $bin $system
+        }
+    } else {
+        install-rust-unix $super $dest $version
+        if not $preserve_env and not ($bin in $env.PATH) {
+            update-shell $bin
         }
     }
 
-    $env.PATH = $env.PATH | prepend $dest
-    log $"Installed (deno --version)."
+    $env.PATH = $env.PATH | prepend $bin
+    log $"Installed (cargo --version)."
 }
 
 # Add destination path to Windows environment path.
