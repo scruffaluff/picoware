@@ -33,32 +33,32 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Install program to destination folder.
-def install-just [super: string dest: directory version: string] {
+def install-rust-script [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
     let target = match $nu.os-info.name {
-        "linux" => $"just-($version)-($nu.os-info.arch)-unknown-linux-musl"
-        "macos" => $"just-($version)-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"just-($version)-($nu.os-info.arch)-pc-windows-msvc"
+        "linux" => $"rust-script-($nu.os-info.arch)-unknown-linux-musl"
+        "macos" => $"rust-script-($nu.os-info.arch)-apple-darwin"
+        "windows" => $"rust-script-($nu.os-info.arch)-pc-windows-msvc"
     }
 
     let temp = mktemp --directory --tmpdir
-    let uri = $"https://github.com/casey/just/releases/download/($version)/($target)($archive)"
+    let uri = $"https://github.com/fornwall/rust-script/releases/download/($version)/($target)($archive)"
     if $quiet {
-        http get $uri | save $"($temp)/just($archive)"
+        http get $uri | save $"($temp)/rust-script($archive)"
     } else {
-        http get $uri | save --progress $"($temp)/just($archive)"
+        http get $uri | save --progress $"($temp)/rust-script($archive)"
     }
 
     let program = if $nu.os-info.name == "windows" {
         powershell -command $"
 $ProgressPreference = 'SilentlyContinue'
-Expand-Archive -DestinationPath '($temp)' -Path '($temp)/just.zip'
+Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rust-script.zip'
 "
-        $"($temp)/just.exe"
+        $"($temp)/rust-script.exe"
     } else {
-        tar fx $"($temp)/just.tar.gz" -C $temp
-        $"($temp)/just"
+        tar fx $"($temp)/rust-script.tar.gz" -C $temp
+        $"($temp)/rust-script"
     }
 
     let dest_file = $"($dest)/($program | path basename)"
@@ -98,13 +98,13 @@ def need-super [dest: directory global: bool] {
     false
 }
 
-# Install Just for MacOS, Linux, and Windows systems.
+# Install Rust for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): directory # Directory to install Just
-    --global (-g) # Install Just for all users
+    --dest (-d): directory # Directory to install Rust
+    --global (-g) # Install Rust for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Just to install
+    --version (-v): string # Version of Rust install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     # Force global if root on Unix.
@@ -125,12 +125,12 @@ def main [
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
     let version = $version | default (
-        http get "https://formulae.brew.sh/api/formula/just.json"
+        http get "https://formulae.brew.sh/api/formula/rust-script.json"
         | get versions.stable
     )
 
-    log $"Installing Just to '($dest)'."
-    install-just $super $dest $version
+    log $"Installing Rust Script to '($dest)'."
+    install-rust-script $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system
@@ -140,7 +140,7 @@ def main [
     }
 
     $env.PATH = $env.PATH | prepend $dest
-    log $"Installed (just --version)."
+    log $"Installed (rust-script --version)."
 }
 
 # Add destination path to Windows environment path.

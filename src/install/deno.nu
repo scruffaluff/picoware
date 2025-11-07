@@ -43,7 +43,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder.
-def install [super: string dest: directory version: string] {
+def install-deno [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let target = match $nu.os-info.name {
         "linux" => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
@@ -97,14 +97,14 @@ def install-deno-alpine [] {
         apk update
         apk add deno
     } else {
-        ^super apk update
-        ^super apk add deno
+        ^$super apk update
+        ^$super apk add deno
     }
     log $"Installed (deno --version)."
 }
 
 # Download and install Deno for FreeBSD.
-def install_deno_freebsd [] {
+def install-deno-freebsd [] {
     let super = find-super
     log "FreeBSD Deno installation requires system package manager."
     log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
@@ -113,8 +113,8 @@ def install_deno_freebsd [] {
         pkg update
         pkg install --yes deno
     } else {
-        ^super pkg update
-        ^super pkg install --yes deno
+        ^$super pkg update
+        ^$super pkg install --yes deno
     }
     log $"Installed (deno --version)."
 }
@@ -169,7 +169,7 @@ def main [
     | default (http get https://dl.deno.land/release-latest.txt | str trim)
 
     log $"Installing Deno to '($dest)'."
-    install $super $dest $version
+    install-deno $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system

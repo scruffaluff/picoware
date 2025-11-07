@@ -120,6 +120,12 @@ EOF
   )"
 }
 
+rust_script_prints_version() { # @test
+  run bash src/install/rust-script.sh --preserve-env --dest "$(mktemp -d)"
+  assert_success
+  assert_output --partial 'Installed rust-script 0.'
+}
+
 uv_prints_version() { # @test
   run bash src/install/uv.sh --preserve-env --dest "$(mktemp -d)"
   assert_success

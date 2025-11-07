@@ -181,6 +181,24 @@ function SetupRunner($Name, $Script, $DestDir, $CliDir) {
         $Arguments = "--no-config --quiet run --script `"$Script`""
         $Runner = $(Get-Command uv).Source
     }
+    elseif ($Script.EndsWith('.rs')) {
+        if (-not (Get-Command -ErrorAction SilentlyContinue rust-script)) {
+            $RustArgs = ''
+            if ($TargetEnv -eq 'Machine') {
+                $RustArgs = "$RustArgs --global"
+            }
+            if ($PreserveEnv) {
+                $RustArgs = "$RustArgs --preserve-env"
+            }
+
+            $RustScript = Invoke-WebRequest -UseBasicParsing -Uri `
+                "$URL/src/install/rust-script.ps1"
+            Invoke-Expression "& { $RustScript } $RustArgs"
+        }
+
+        $Arguments = "`"$Script`""
+        $Runner = $(Get-Command rust-script).Source
+    }
     elseif ($Script.EndsWith('.ts')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
             $DenoArgs = ''

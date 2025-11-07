@@ -294,6 +294,13 @@ find_runner() {
         ${super:+--global} --preserve-env --quiet
       runner="$(command -v uv)"
     fi
+  elif [ "${script##*.}" = 'rs' ]; then
+    runner="$(command -v rust-script)"
+    if [ ! -x "${runner}" ]; then
+      fetch https://scruffaluff.github.io/picoware/install/rust-script.sh | sh \
+        -s -- ${super:+--global} --preserve-env --quiet
+      runner="$(command -v rust-script)"
+    fi
   elif [ "${script##*.}" = 'ts' ]; then
     runner="$(command -v deno)"
     if [ ! -x "${runner}" ]; then
@@ -368,6 +375,9 @@ install_app_linux() {
   # Parse window class to ensure correct dock icon.
   case "$(basename "${runner}")" in
     deno)
+      wmclass='GTK Application'
+      ;;
+    rust-script)
       wmclass='GTK Application'
       ;;
     uv)
