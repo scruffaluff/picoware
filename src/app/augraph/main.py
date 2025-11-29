@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from subprocess import Popen
 from typing import TYPE_CHECKING, Annotated
 
 import numpy
@@ -84,9 +85,9 @@ def print_version(value: bool) -> None:
 @cli.command()
 def main(
     files: Annotated[list[Path] | None, Argument(help="Audio input files")] = None,
-    debug: Annotated[
+    dev: Annotated[
         bool,
-        Option("--debug", help="Launch application in debug mode."),
+        Option("--dev", help="Launch application in developer mode."),
     ] = False,
     version: Annotated[  # noqa: ARG001
         bool,
@@ -108,9 +109,25 @@ def main(
     for file in files or []:
         app.read(file)
 
-    html = Path(__file__).parent / "index.html"
-    webview.create_window("Augraph", url=str(html), js_api=app)
-    webview.start(debug=debug, gui=gui, menu=menu)
+    folder = Path(__file__).parent
+    if dev:
+        Popen(
+            [
+                "deno",
+                "run",
+                "--allow-all",
+                "npm:vite",
+                "dev",
+                "--port",
+                "5173",
+                str(folder),
+            ],
+        )
+        url = "http://localhost:5173"
+    else:
+        url = str(folder / "index.html")
+    webview.create_window("Augraph", url=url, js_api=app)
+    webview.start(debug=dev, gui=gui, menu=menu)
 
 
 if __name__ == "__main__":
