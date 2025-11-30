@@ -27,13 +27,13 @@
             <div class="flex flex-row mb-4">
               <input
                 class="input mr-2"
+                id="input"
                 placeholder="Your name"
                 type="text"
-                v-model="name"
               />
-              <button class="btn btn-primary" @click="greet">Greet</button>
+              <button class="btn btn-primary" id="button">Greet</button>
             </div>
-            <p>{{ message }}</p>
+            <p id="output"></p>
           </div>
         </div>
       </div>

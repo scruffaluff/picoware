@@ -4,7 +4,7 @@
 //! clap = "^4.5.45"
 //! eyre = "^0.6.0"
 //! tao = "^0.34.2"
-//! wry = { features = ["devtools"], version = "^0.53.0" }
+//! wry = { features = ["devtools", "protocol"], version = "^0.53.0" }
 //! [target.'cfg(target_os = "linux")'.dependencies]
 //! gtk = "^0.18.2"
 //! ```
@@ -19,7 +19,7 @@ use tao::{
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
-use wry::{http::Request, WebView, WebViewBuilder};
+use wry::{http::header, http::Request, http::Response, WebView, WebViewBuilder, WebViewId};
 
 fn build_webview(window: &Window, dev: bool) -> eyre::Result<WebView> {
     let builder = if dev {
@@ -30,10 +30,19 @@ fn build_webview(window: &Window, dev: bool) -> eyre::Result<WebView> {
         let html = load_html()?;
         WebViewBuilder::new().with_html(&html)
     }
-    .with_ipc_handler(|request: Request<String>| {
-        let response = format!("Hello {}!", request.body());
-        println!("{}", response);
-    });
+    .with_custom_protocol(
+        "wry".into(),
+        |_webview: WebViewId<'_>, request: Request<Vec<u8>>| {
+            let body = String::from_utf8(request.body().to_vec()).unwrap();
+            let message = format!("Hello {}!", body).as_bytes().to_owned();
+
+            Response::builder()
+                .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "null")
+                .header(header::CONTENT_TYPE, "text/plain")
+                .body(message.into())
+                .unwrap()
+        },
+    );
 
     #[cfg(not(target_os = "linux"))]
     let webview = builder.build(&window)?;

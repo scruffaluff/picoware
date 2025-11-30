@@ -1,15 +1,15 @@
-import * as vue from "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js";
+const button = document.getElementById("button");
+const input = document.getElementById("input");
+const output = document.getElementById("output");
 
-vue
-  .createApp({
-    setup() {
-      async function greet(_) {
-        window.ipc.postMessage(name.value);
-      }
-
-      const message = vue.ref("");
-      const name = vue.ref("");
-      return { greet, message, name };
-    },
-  })
-  .mount("#app");
+button.addEventListener("click", async (event) => {
+  const response = await fetch("wry://localhost", {
+    body: input.value,
+    method: "POST",
+  });
+  console.log(response);
+  output.textContent = await response.text();
+});
+window.addEventListener("message", (event) => {
+  console.log(event);
+});
