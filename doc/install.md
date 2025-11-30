@@ -28,14 +28,16 @@ The installer programs, from the following table, can be executed by piping them
 into Bash and PowerShell for Unix systems and Windows respectively.
 Additionally, the Nushell installer programs work on any platform.
 
-| Name    | Description                                         |
-| ------- | --------------------------------------------------- |
-| deno    | Installs Deno JavaScript runtime.                   |
-| jq      | Installs Jq JSON parser.                            |
-| just    | Installs Just command runner.                       |
-| nushell | Installs Nushell structured data shell.             |
-| scripts | Installs programs from the following scripts table. |
-| uv      | Installs Uv Python package manager.                 |
+| Name        | Description                                         |
+| ----------- | --------------------------------------------------- |
+| cargo       | Installs Cargo Rust package manager.                |
+| deno        | Installs Deno JavaScript runtime.                   |
+| jq          | Installs Jq JSON parser.                            |
+| just        | Installs Just command runner.                       |
+| nushell     | Installs Nushell structured data shell.             |
+| rust-script | Installs Rust Script Rust script executor.          |
+| scripts     | Installs programs from the following scripts table. |
+| uv          | Installs Uv Python package manager.                 |
 
 The following command installs Deno. To execute the other installers, replace
 `deno` with the installer name.

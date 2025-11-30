@@ -122,10 +122,10 @@ fetch() {
   #   -q: Hide log output.
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ -x "$(command -v curl)" ]; then
+  if command -v curl > /dev/null 2>&1; then
     ${super:+"${super}"} curl --fail --location --show-error --silent --output \
       "${dst_file}" "${url}"
-  elif [ -x "$(command -v wget)" ]; then
+  elif command -v wget > /dev/null 2>&1; then
     ${super:+"${super}"} wget -q -O "${dst_file}" "${url}"
   else
     log --stderr 'error: Unable to find a network file downloader.'
@@ -192,9 +192,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'
@@ -241,7 +241,8 @@ install_just() {
   #
   # Flags:
   #   -v: Only show file path of command.
-  if [ ! -x "$(command -v tar)" ]; then
+  #   -x: Check if file exists and execute permission is granted.
+  if ! command -v tar > /dev/null 2>&1; then
     log --stderr 'error: Unable to find tar file archiver.'
     log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
     exit 1
@@ -258,8 +259,7 @@ install_just() {
   fetch --dest "${tmp_dir}/just.tar.gz" \
     "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz"
   tar fx "${tmp_dir}/just.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} cp "${tmp_dir}/just" "${dst_file}"
-  ${super:+"${super}"} chmod 755 "${dst_file}"
+  ${super:+"${super}"} install "${tmp_dir}/just" "${dst_file}"
 
   # Update shell profile if destination is not in system path.
   #

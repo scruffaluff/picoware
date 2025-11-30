@@ -9,27 +9,37 @@ async function main(): Promise<void> {
     .name("Denoui")
     .description("Example GUI application with Deno.")
     .version("0.0.1")
-    .action(async () => {
-      await run();
+    .option("--dev", "Launch application in developer mode.")
+    .action(async (options) => {
+      await run(options.dev);
     })
-    .parse();
+    .parse(Deno.args);
 }
 
-async function run(): Promise<void> {
-  const js = await Deno.readTextFile(
-    path.join(import.meta.dirname!, "index.js")
-  );
-  const html = (
-    await Deno.readTextFile(path.join(import.meta.dirname!, "index.html"))
-  ).replace(
-    '<script type="module"></script>',
-    `<script type="module">${js}</script>`
-  );
+async function run(dev: boolean): Promise<void> {
+  const folder = import.meta.dirname!;
+  let url: string;
+  if (dev) {
+    const command = new Deno.Command("deno", {
+      args: ["run", "--allow-all", "npm:vite", "dev", "--port", "5173", folder],
+    });
+    command.spawn();
+    url = "http://localhost:5173";
+  } else {
+    const js = await Deno.readTextFile(path.join(folder, "index.js"));
+    const html = (
+      await Deno.readTextFile(path.join(folder, "index.html"))
+    ).replace(
+      '<script src="/index.js" type="module"></script>',
+      `<script type="module">${js}</script>`
+    );
+    url = `data:text/html,${encodeURIComponent(html)}`;
+  }
 
   const webview = new Webview();
   webview.title = "Denoui";
   webview.bind("getGreeting", (name: string) => `Hello ${name}!`);
-  webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
+  webview.navigate(url);
   webview.run();
 }
 

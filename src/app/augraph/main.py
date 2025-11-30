@@ -2,11 +2,11 @@
 #
 # /// script
 # dependencies = [
-#   "audioread~=3.0",
 #   "cryptography~=44.0",
 #   "numpy~=2.3",
 #   "pywebview~=6.0",
 #   "pywebview[qt]~=6.0; sys_platform == 'linux'",
+#   "soundfile~=0.13.1",
 #   "tsdownsample~=0.1.4",
 #   "typer~=0.16.0",
 # ]
@@ -19,10 +19,11 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from subprocess import Popen
 from typing import TYPE_CHECKING, Annotated
 
-import audioread
 import numpy
+import soundfile
 import webview
 from tsdownsample import LTTBDownsampler
 from typer import Argument, Option, Typer
@@ -68,16 +69,9 @@ class App:
 
     def read(self, path: Path) -> list[NDArray]:
         """Read audio file as mono signal."""
-        dtype = numpy.int16
-        scale = numpy.abs(numpy.iinfo(dtype).min)
-        with audioread.audio_open(path) as file:
-            arrays = numpy.concatenate(
-                [numpy.frombuffer(buffer, dtype=dtype) for buffer in file],
-            )
-
-        audio = arrays.reshape((file.channels, -1)) / scale
-        samples = numpy.mean(audio, axis=0)
-        times = numpy.arange(len(samples)) / file.samplerate
+        audio, rate = soundfile.read(path, always_2d=True)
+        samples = numpy.mean(audio, axis=1)
+        times = numpy.arange(len(samples)) / rate
         return numpy.stack((times, samples)).T
 
 
@@ -91,9 +85,9 @@ def print_version(value: bool) -> None:
 @cli.command()
 def main(
     files: Annotated[list[Path] | None, Argument(help="Audio input files")] = None,
-    debug: Annotated[
+    dev: Annotated[
         bool,
-        Option("--debug", help="Launch application in debug mode."),
+        Option("--dev", help="Launch application in developer mode."),
     ] = False,
     version: Annotated[  # noqa: ARG001
         bool,
@@ -115,9 +109,25 @@ def main(
     for file in files or []:
         app.read(file)
 
-    html = Path(__file__).parent / "index.html"
-    webview.create_window("Augraph", url=str(html), js_api=app)
-    webview.start(debug=debug, gui=gui, menu=menu)
+    folder = Path(__file__).parent
+    if dev:
+        Popen(
+            [
+                "deno",
+                "run",
+                "--allow-all",
+                "npm:vite",
+                "dev",
+                "--port",
+                "5173",
+                str(folder),
+            ],
+        )
+        url = "http://localhost:5173"
+    else:
+        url = str(folder / "index.html")
+    webview.create_window("Augraph", url=url, js_api=app)
+    webview.start(debug=dev, gui=gui, menu=menu)
 
 
 if __name__ == "__main__":

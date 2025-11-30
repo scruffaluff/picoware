@@ -11,9 +11,6 @@ setup() {
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
 
-  command() {
-    which "${2}"
-  }
   curl() {
     case "$*" in
       *?recursive=true)
@@ -24,7 +21,7 @@ setup() {
         ;;
     esac
   }
-  _curl="$(command -v curl)"
+  _curl="$(type -p curl)"
 }
 
 create_wrapper_for_incompatible_env() { # @test
@@ -48,7 +45,7 @@ create_wrapper_for_incompatible_env() { # @test
     return 100
   }
   export _curl _temp="${temp}"
-  export -f command curl env
+  export -f curl env
 
   run bash src/install/scripts.sh --preserve-env --dest "${temp}" pyscript
   assert_success
@@ -60,7 +57,7 @@ create_wrapper_for_incompatible_env() { # @test
 
 json_parser_finds_all_unix_scripts() { # @test
   export _curl
-  export -f command curl
+  export -f curl
 
   run bash src/install/scripts.sh --list
   assert_success
@@ -75,9 +72,9 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
       "${_sudo}" "$@"
     fi
   }
-  _sudo="$(command -v sudo)"
+  _sudo="$(type -p sudo)"
   export _curl _sudo
-  export -f command curl sudo
+  export -f curl sudo
 
   run bash src/install/scripts.sh --preserve-env --dest /fake/path mockscript
   assert_failure 100

@@ -22,9 +22,9 @@ deno_shows_error_if_zip_missing() { # @test
   # Ensure that local unzip binary is not found.
   command() {
     if [ "$*" = '-v unzip' ]; then
-      echo ""
+      return 1
     else
-      which "${2}"
+      type -p "${2}"
     fi
   }
   export -f command
@@ -81,9 +81,9 @@ just_downloads_jq_if_missing() { # @test
   # Ensure that local jq binary is not found.
   command() {
     if [ "$*" = '-v jq' ]; then
-      echo ""
+      return 1
     else
-      which "${2}"
+      type -p "${2}"
     fi
   }
   export -f command
@@ -103,9 +103,9 @@ nushell_shows_error_if_tar_missing() { # @test
   # Ensure that local tar binary is not found.
   command() {
     if [ "$*" = '-v tar' ]; then
-      echo ""
+      return 1
     else
-      which "${2}"
+      type -p "${2}"
     fi
   }
   export -f command
@@ -118,6 +118,12 @@ error: Unable to find tar file archiver.
 Install tar, https://www.gnu.org/software/tar, manually before continuing.
 EOF
   )"
+}
+
+rust_script_prints_version() { # @test
+  run bash src/install/rust-script.sh --preserve-env --dest "$(mktemp -d)"
+  assert_success
+  assert_output --partial 'Installed rust-script 0.'
 }
 
 uv_prints_version() { # @test

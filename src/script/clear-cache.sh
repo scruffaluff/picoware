@@ -36,66 +36,66 @@ clear_cache() {
 
   # Do not quote the outer super parameter expansion. Shell will error due to be
   # being unable to find the "" command.
-  if [ -x "$(command -v apk)" ]; then
+  if command -v apk > /dev/null 2>&1; then
     ${super:+"${super}"} apk cache clean
   fi
 
-  if [ -x "$(command -v apt-get)" ]; then
+  if command -v apt-get > /dev/null 2>&1; then
     # Avoid APT interactive configuration requests.
     export DEBIAN_FRONTEND='noninteractive'
     ${super:+"${super}" -E} apt-get clean --yes
   fi
 
-  if [ -x "$(command -v brew)" ]; then
+  if command -v brew > /dev/null 2>&1; then
     brew cleanup --prune all
   fi
 
-  if [ -x "$(command -v dnf)" ]; then
+  if command -v dnf > /dev/null 2>&1; then
     ${super:+"${super}"} dnf clean --assumeyes all
   fi
 
-  if [ -x "$(command -v flatpak)" ]; then
+  if command -v flatpak > /dev/null 2>&1; then
     ${super:+"${super}"} flatpak uninstall --assumeyes --unused
   fi
 
-  if [ -x "$(command -v pacman)" ]; then
+  if command -v pacman > /dev/null 2>&1; then
     ${super:+"${super}"} pacman --clean --sync
   fi
 
-  if [ -x "$(command -v pkg)" ]; then
+  if command -v pkg > /dev/null 2>&1; then
     ${super:+"${super}"} pkg clean --all --yes
   fi
 
-  if [ -x "$(command -v zypper)" ]; then
+  if command -v zypper > /dev/null 2>&1; then
     ${super:+"${super}"} zypper clean --all
   fi
 
-  if [ -x "$(command -v cargo-cache)" ]; then
+  if command -v cargo-cache > /dev/null 2>&1; then
     cargo-cache --autoclean
   fi
 
   # Check if Docker client is install and Docker daemon is up and running.
-  if [ -x "$(command -v docker)" ] && docker ps > /dev/null 2>&1; then
+  if command -v docker > /dev/null 2>&1 && docker ps > /dev/null 2>&1; then
     ${super:+"${super}"} docker system prune --force --volumes
   fi
 
-  if [ -x "$(command -v npm)" ]; then
+  if command -v npm > /dev/null 2>&1; then
     npm cache clean --force --loglevel error
   fi
 
-  if [ -x "$(command -v nvm)" ]; then
+  if command -v nvm > /dev/null 2>&1; then
     nvm cache clear
   fi
 
-  if [ -x "$(command -v pip)" ]; then
+  if command -v pip > /dev/null 2>&1; then
     pip cache purge
   fi
 
-  if [ -x "$(command -v playwright)" ]; then
+  if command -v playwright > /dev/null 2>&1; then
     clear_playwright
   fi
 
-  if [ -x "$(command -v poetry)" ]; then
+  if command -v poetry > /dev/null 2>&1; then
     for cache in $(poetry cache list); do
       poetry cache clear --all --no-interaction "${cache}"
     done
@@ -134,9 +134,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'

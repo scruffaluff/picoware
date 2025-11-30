@@ -41,9 +41,9 @@ find_super() {
   #   -x: Check if file exists and execute permission is granted.
   if [ "$(id -u)" -eq 0 ]; then
     echo ''
-  elif [ -x "$(command -v doas)" ]; then
+  elif command -v doas > /dev/null 2>&1; then
     echo 'doas'
-  elif [ -x "$(command -v sudo)" ]; then
+  elif command -v sudo > /dev/null 2>&1; then
     echo 'sudo'
   else
     log --stderr 'error: Unable to find a command for super user elevation.'
@@ -113,21 +113,21 @@ install_tmate_linux() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v curl)" ] || [ ! -x "$(command -v ssh)" ] ||
-    [ ! -x "$(command -v tar)" ] || [ ! -x "$(command -v xz)" ]; then
-    if [ -x "$(command -v apk)" ]; then
+  if ! command -v curl > /dev/null 2>&1 || ! command -v ssh > /dev/null 2>&1 ||
+    ! command -v tar > /dev/null 2>&1 || ! command -v xz > /dev/null 2>&1; then
+    if command -v apk > /dev/null 2>&1; then
       ${1:+"${1}"} apk add curl openssh-client tar xz
-    elif [ -x "$(command -v apt-get)" ]; then
+    elif command -v apt-get > /dev/null 2>&1; then
       # Avoid APT interactive configuration requests.
       export DEBIAN_FRONTEND='noninteractive'
       ${1:+"${1}" -E} apt-get update
       ${1:+"${1}" -E} apt-get install --yes curl openssh-client tar xz-utils
-    elif [ -x "$(command -v dnf)" ]; then
+    elif command -v dnf > /dev/null 2>&1; then
       ${1:+"${1}"} dnf install --assumeyes curl openssh tar xz
-    elif [ -x "$(command -v pacman)" ]; then
+    elif command -v pacman > /dev/null 2>&1; then
       ${1:+"${1}"} pacman --noconfirm --refresh --sync --sysupgrade
       ${1:+"${1}"} pacman --noconfirm --sync curl openssh tar xz
-    elif [ -x "$(command -v zypper)" ]; then
+    elif command -v zypper > /dev/null 2>&1; then
       ${1:+"${1}"} zypper install --no-confirm curl openssh tar xz
     fi
   fi
@@ -152,7 +152,7 @@ setup_tmate() {
   # Flags:
   #   -v: Only show file path of command.
   #   -x: Check if file exists and execute permission is granted.
-  if [ ! -x "$(command -v tmate)" ]; then
+  if ! command -v tmate > /dev/null 2>&1; then
     install_tmate "${super}"
   fi
 

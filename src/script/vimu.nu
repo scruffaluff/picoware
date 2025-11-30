@@ -153,7 +153,7 @@ def create-key [] {
 }
 
 # Download Windows 11 ISO file.
-def download_windows_iso [dest: path] {
+def download-windows-iso [dest: path] {
     # Based on `download_windows_workstation` function from
     # https://github.com/quickemu-project/quickemu/blob/master/quickget.
     let profile = "606624d44113"
@@ -357,6 +357,7 @@ Subcommands:
   bootstrap         Bootstrap virtual machine with Bootware
   create            Create virutal machine from default options
   detach-cdroms     Remove all cdrom disks from virtual machine
+  forget            Clear history files
   gui               Connect to virtual machine as desktop
   install           Create a virtual machine from a cdrom or disk file
   port              Get host port mapping to domain
@@ -508,7 +509,7 @@ def "main create" [
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
 
             if not ($cdrom | path exists) {
-                download_windows_iso $cdrom
+                download-windows-iso $cdrom
             }
             if not ($drivers | path exists) {
                 log info "Downloading Windows drivers."
@@ -554,6 +555,33 @@ def "main gui" [
     }
 
     virt-viewer $domain ...$args
+}
+
+# Clear history files.
+def "main forget" [
+    --dry-run (-d) # Only print actions to be taken
+    --log-level (-l): string = "debug" # Log level
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    for file in [
+        ".bash_history"
+        ".config/nushell/history.txt"
+        ".lesshst"
+        ".local/share/fish/fish_history"
+        ".python_history"
+        ".viminfo"
+        ".zsh_history"
+        "AppData/Roaming/nushell/history.txt"
+        "Library/Application Support/nushell/history.txt"
+    ] {
+        let path = $"($env.HOME)/($file)"
+        if ($path | path exists) {
+            log info $"Deleting file ($path)."
+            if not $dry_run {
+                rm $path
+            }
+        }
+    }
 }
 
 # Create a virtual machine from a cdrom or disk file.
@@ -785,7 +813,7 @@ nu "%~dnp0.nu" %*
 
         main scp $vimu $"($domain):/tmp/vimu"
         main ssh $domain "
-if [ -x \"$(command -v doas)\" ]; then
+if command -v doas > /dev/null 2>&1; then
     doas install /tmp/vimu /usr/local/bin/vimu
 else
     sudo install /tmp/vimu /usr/local/bin/vimu
@@ -1000,7 +1028,7 @@ def setup-guest-linux [super: string] {
     }
 
     if (which topgrade | is-empty) {
-        let tmp_dir = mktemp --directory --tmpdir
+        let temp = mktemp --directory --tmpdir
         let version = http get https://formulae.brew.sh/api/formula/topgrade.json
         | get versions.stable
         let file_name = (
@@ -1008,9 +1036,9 @@ def setup-guest-linux [super: string] {
         )
 
         http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
-        | save --progress $"($tmp_dir)/topgrade.tar.gz"
-        tar xf $"($tmp_dir)/topgrade.tar.gz" -C $tmp_dir
-        ^$super install $"($tmp_dir)/topgrade" /usr/local/bin/topgrade
+        | save --progress $"($temp)/topgrade.tar.gz"
+        tar xf $"($temp)/topgrade.tar.gz" -C $temp
+        ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
     }
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
@@ -1062,15 +1090,15 @@ Start-Service sshd
     }
 
     if (which rclone | is-empty) {
-        let tmp_dir = mktemp --directory --tmpdir | str replace --all '\' '/'
+        let temp = mktemp --directory --tmpdir | str replace --all '\' '/'
         let rclone_uri = http get https://raw.githubusercontent.com/ScoopInstaller/Main/refs/heads/master/bucket/rclone.json
         | get architecture.64bit.url
-        http get $rclone_uri | save --progress $"($tmp_dir)/rclone.zip"
+        http get $rclone_uri | save --progress $"($temp)/rclone.zip"
         powershell -command $"
 $ProgressPreference = 'SilentlyContinue'
-Expand-Archive -DestinationPath '($tmp_dir)' -Path '($tmp_dir)/rclone.zip'
+Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rclone.zip'
 "
-        let rclone = glob $"($tmp_dir)/**/rclone.exe" | first
+        let rclone = glob $"($temp)/**/rclone.exe" | first
         cp $rclone "C:/Program Files/Bin/rclone.exe"
     }
 

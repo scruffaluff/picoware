@@ -1,17 +1,5 @@
 #!/usr/bin/env nu
 
-# Ensure script dependencies are available.
-def check-deps [] {
-    if $nu.os-info.name != "windows" and (which tar | is-empty) {
-        error make { msg: ("
-error: Unable to find tar file archiver.
-Install tar, https://www.gnu.org/software/tar, manually before continuing.
-"
-            | str trim)
-        }
-    }
-}
-
 # Find command to elevate as super user.
 def find-super [] {
     if (is-admin) {
@@ -32,51 +20,6 @@ Restart this script from an administrator console or install to a user directory
     }
 }
 
-# Install program to destination folder.
-def install-just [super: string dest: directory version: string] {
-    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
-    let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
-    let target = match $nu.os-info.name {
-        "linux" => $"just-($version)-($nu.os-info.arch)-unknown-linux-musl"
-        "macos" => $"just-($version)-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"just-($version)-($nu.os-info.arch)-pc-windows-msvc"
-    }
-
-    let temp = mktemp --directory --tmpdir
-    let uri = $"https://github.com/casey/just/releases/download/($version)/($target)($archive)"
-    if $quiet {
-        http get $uri | save $"($temp)/just($archive)"
-    } else {
-        http get $uri | save --progress $"($temp)/just($archive)"
-    }
-
-    let program = if $nu.os-info.name == "windows" {
-        powershell -command $"
-$ProgressPreference = 'SilentlyContinue'
-Expand-Archive -DestinationPath '($temp)' -Path '($temp)/just.zip'
-"
-        $"($temp)/just.exe"
-    } else {
-        tar fx $"($temp)/just.tar.gz" -C $temp
-        $"($temp)/just"
-    }
-
-    let dest_file = $"($dest)/($program | path basename)"
-    if ($super | is-empty) {
-        mkdir $dest
-        cp $program $dest_file
-        if $nu.os-info.name != "windows" {
-            chmod 755 $dest_file
-        }
-    } else {
-        ^$super mkdir -p $dest
-        ^$super cp $program $dest_file
-        if $nu.os-info.name != "windows" {
-            sudo chmod 755 $dest_file
-        }
-    }
-}
-
 # Print message if error or logging is enabled.
 def --wrapped log [...args: string] {
     if (
@@ -84,6 +27,74 @@ def --wrapped log [...args: string] {
         or ("-e" in $args) or ("--stderr" in $args)
     ) {
         print ...$args
+    }
+}
+
+# Install program to destination folder for Unix
+def install-cargo-unix [super: string dest: directory version: string] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let parts = $dest | path parse
+    let rustup_home = if ($parts | get stem | str starts-with ".") {
+        $"($parts.parent)/.rustup"
+    } else {
+        $"($parts.parent)/rustup"
+    }
+    
+    mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
+    if $quiet {
+        $args = [...$args "--quiet"]
+    }
+    if ($version | is-not-empty) {
+        $args = [...$args "--default-toolchain" $version]
+    }
+    let args = $args
+
+    with-env {
+        CARGO_HOME: $dest
+        PATH: [$"($dest)/bin" ...$env.PATH]
+        RUSTUP_HOME: $rustup_home
+    } {
+        if ($super | is-empty) {
+            http get https://sh.rustup.rs | sh -s -- ...$args
+        } else {
+            http get https://sh.rustup.rs | ^$super -E sh -s -- ...$args
+        }
+    }
+}
+
+# Install program to destination folder for Windows.
+def install-cargo-windows [dest: directory version: string] {
+    let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let parts = $dest | path parse
+    let rustup_home = if ($parts | get stem | str starts-with ".") {
+        $"($parts.parent)\\.rustup"
+    } else {
+        $"($parts.parent)\\rustup"
+    }
+    
+    mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
+    if $quiet {
+        $args = [...$args "--quiet"]
+    }
+    if ($version | is-not-empty) {
+        $args = [...$args "--default-toolchain" $version]
+    }
+    let args = $args
+
+    let temp = mktemp --directory --tmpdir
+    let uri = "https://static.rust-lang.org/rustup/dist/($nu.os-info.arch)-pc-windows-msvc/rustup-init.exe"
+    if $quiet {
+        http get $uri | save $"($temp)\\rustup-init.exe"
+    } else {
+        http get $uri | save --progress $"($temp)\\rustup-init.exe"
+    }
+
+    with-env {
+        CARGO_HOME: $dest
+        PATH: [$"($dest)\\bin" ...$env.PATH]
+        RUSTUP_HOME: $rustup_home
+    } {
+        ^$"($temp)\\rustup-init.exe" ...$args
     }
 }
 
@@ -98,13 +109,13 @@ def need-super [dest: directory global: bool] {
     false
 }
 
-# Install Just for MacOS, Linux, and Windows systems.
+# Install Cargo for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): directory # Directory to install Just
-    --global (-g) # Install Just for all users
+    --dest (-d): directory # Directory to install Cargo
+    --global (-g) # Install Cargo for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Just to install
+    --version (-v): string # Version of Cargo to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     # Force global if root on Unix.
@@ -112,35 +123,34 @@ def main [
 
     let dest_default = if $nu.os-info.name == "windows" {
         if $global {
-            "C:\\Program Files\\Bin"
+            "C:\\Program Files\\cargo"
         } else {
-            $"($env.LOCALAPPDATA)\\Programs\\Bin"
+            $"($env.LOCALAPPDATA)\\cargo"
         }
     } else {
-        if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
+        if $global { "/usr/local/cargo" } else { $"($env.HOME)/.cargo" }
     }
     let dest = $dest | default $dest_default | path expand
+    let bin = $dest | path join "bin"
 
-    check-deps
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
-    let version = $version | default (
-        http get "https://formulae.brew.sh/api/formula/just.json"
-        | get versions.stable
-    )
 
-    log $"Installing Just to '($dest)'."
-    install-just $super $dest $version
-    if not $preserve_env and not ($dest in $env.PATH) {
-        if $nu.os-info.name == "windows" {
-            update-path $dest $system
-        } else {
-            update-shell $dest
+    log $"Installing Cargo to '($dest)'."
+    if $nu.os-info.name == "windows" {
+        install-cargo-windows $dest $version
+        if not $preserve_env and not ($bin in $env.PATH) {
+            update-path $bin $system
+        }
+    } else {
+        install-cargo-unix $super $dest $version
+        if not $preserve_env and not ($bin in $env.PATH) {
+            update-shell $bin
         }
     }
 
-    $env.PATH = $env.PATH | prepend $dest
-    log $"Installed (just --version)."
+    $env.PATH = $env.PATH | prepend $bin
+    log $"Installed (cargo --version)."
 }
 
 # Add destination path to Windows environment path.

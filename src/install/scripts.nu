@@ -200,6 +200,9 @@ def install-script [
     if $ext == "py" and (which uv | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/uv.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
+    } else if $ext == "rs" and (which rust-script | is-empty) {
+        http get https://scruffaluff.github.io/picoware/install/rust-script.nu
+        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     } else if $ext == "ts" and (which deno | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/deno.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
@@ -241,6 +244,7 @@ def install-wrapper [ext: string dest: path] {
         "nu" => 'nu "%~dnp0.nu" %*'
         "ps1" => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
         "py" => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
+        "rs" => 'rust-script "%~dnp0.rs" %*'
         "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
     

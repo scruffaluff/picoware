@@ -43,7 +43,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder.
-def install [super: string dest: directory version: string] {
+def install-deno [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let target = match $nu.os-info.name {
         "linux" => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
@@ -86,6 +86,39 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
     }
 }
 
+
+# Download and install Deno for Alpine.
+def install-deno-alpine [] {
+    let super = find-super
+    log "Alpine Deno installation requires system package manager."
+    log "Ignoring arguments and installing Deno to '/usr/bin/deno'."
+
+    if ($super | is-empty) {
+        apk update
+        apk add deno
+    } else {
+        ^$super apk update
+        ^$super apk add deno
+    }
+    log $"Installed (deno --version)."
+}
+
+# Download and install Deno for FreeBSD.
+def install-deno-freebsd [] {
+    let super = find-super
+    log "FreeBSD Deno installation requires system package manager."
+    log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
+
+    if ($super | is-empty) {
+        pkg update
+        pkg install --yes deno
+    } else {
+        ^$super pkg update
+        ^$super pkg install --yes deno
+    }
+    log $"Installed (deno --version)."
+}
+
 # Check if super user elevation is required.
 def need-super [dest: directory global: bool] {
     if $global {
@@ -106,9 +139,18 @@ def main [
     --version (-v): string # Version of Deno to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
+
+    # Handle special installation cases.
+    if (which apk | is-not-empty) {
+        install-deno-alpine
+        return
+    } else if $nu.os-info.name == "freebsd" {
+        install-deno-freebsd
+        return
+    }
+
     # Force global if root on Unix.
     let global = $global or ((is-admin) and $nu.os-info.name != "windows")
-
     let dest_default = if $nu.os-info.name == "windows" {
         if $global {
             "C:\\Program Files\\Bin"
@@ -124,10 +166,10 @@ def main [
     let system = need-super $dest $global
     let super = if ($system) { find-super } else { "" }
     let version = $version
-    | default (http get https://dl.deno.land/release-latest.txt)
+    | default (http get https://dl.deno.land/release-latest.txt | str trim)
 
     log $"Installing Deno to '($dest)'."
-    install $super $dest $version
+    install-deno $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
             update-path $dest $system

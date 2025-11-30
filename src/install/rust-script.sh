@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Install Jq for MacOS and Linux systems.
+# Install Rust Script for MacOS and Linux systems.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -16,18 +16,18 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Jq.
+Installer script for Rust Script.
 
-Usage: install-jq [OPTIONS]
+Usage: install-rust-script [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install Jq
-  -g, --global              Install Jq for all users
+  -d, --dest <PATH>         Directory to install Rust Script
+  -g, --global              Install Rust Script for all users
   -h, --help                Print help information
   -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Jq to install
+  -v, --version <VERSION>   Version of Rust Script to install
 EOF
 }
 
@@ -50,14 +50,6 @@ configure_shell() {
     fish)
       export_cmd="set --export PATH \"${dst_dir}\" \$PATH"
       profile="${HOME}/.config/fish/config.fish"
-      ;;
-    nu)
-      export_cmd="\$env.PATH = [\"${dst_dir}\" ...\$env.PATH]"
-      if [ "$(uname -s)" = 'Darwin' ]; then
-        profile="${HOME}/Library/Application Support/nushell/config.nu"
-      else
-        profile="${HOME}/.config/nushell/config.nu"
-      fi
       ;;
     zsh)
       profile="${HOME}/.zshrc"
@@ -141,6 +133,43 @@ fetch() {
 }
 
 #######################################
+# Find or download Jq JSON parser.
+# Outputs:
+#   Path to Jq binary.
+#######################################
+find_jq() {
+  local jq_bin='' response='' tmp_dir=''
+
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
+  #
+  # Flags:
+  #   -s: Show operating system kernel name.
+  #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
+  jq_bin="$(command -v jq || echo '')"
+  if [ -x "${jq_bin}" ]; then
+    echo "${jq_bin}"
+  else
+    response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
+    tmp_dir="$(mktemp -d)"
+    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
+    echo "${tmp_dir}/jq"
+  fi
+}
+
+#######################################
+# Find latest Rust Script version.
+#######################################
+find_latest() {
+  local jq_bin='' response=''
+  jq_bin="$(find_jq)"
+  response="$(fetch 'https://formulae.brew.sh/api/formula/rust-script.json')"
+  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
+    '.versions.stable'
+}
+
+#######################################
 # Find command to elevate as super user.
 # Outputs:
 #   Super user command.
@@ -164,43 +193,55 @@ find_super() {
 }
 
 #######################################
-# Download and install Jq.
+# Download and install Rust Script.
 # Arguments:
 #   Super user command for installation.
-#   Jq version.
+#   Rust Script version.
 #   Destination path.
 #   Whether to update system environment.
 #######################################
-install_jq() {
-  local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}" subpath=''
-  local dst_file="${dst_dir}/jq"
+install_rust_script() {
+  local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
+  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
 
-  # Flags:
-  #   -n: Check if string has nonzero length.
-  if [ -n "${version}" ]; then
-    subpath="download/jq-${version}"
-  else
-    subpath='latest/download'
-  fi
+  arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
+  os="$(uname -s)"
+  case "${os}" in
+    Darwin)
+      target="rust-script-${arch}-apple-darwin"
+      ;;
+    Linux)
+      target="rust-script-${arch}-unknown-linux-musl"
+      ;;
+    *)
+      log --stderr "error: Unsupported operating system '${os}'."
+      exit 1
+      ;;
+  esac
 
-  # Do not use long form flags for uname. They are not supported on some
-  # systems.
+  # Exit early if tar is not installed.
   #
   # Flags:
-  #   -m: Show system architecture name.
-  #   -s: Show operating system kernel name.
-  arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
-  os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed s/darwin/macos/)"
+  #   -v: Only show file path of command.
+  #   -x: Check if file exists and execute permission is granted.
+  if ! command -v tar > /dev/null 2>&1; then
+    log --stderr 'error: Unable to find tar file archiver.'
+    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    exit 1
+  fi
 
-  # Create installation directory.
+  # Create installation directories.
   #
   # Flags:
   #   -p: Make parent directories if necessary.
+  tmp_dir="$(mktemp -d)"
   ${super:+"${super}"} mkdir -p "${dst_dir}"
 
-  log "Installing Jq to '${dst_file}'."
-  fetch --dest "${dst_file}" --mode 755 --super "${super}" \
-    "https://github.com/jqlang/jq/releases/${subpath}/jq-${os}-${arch}"
+  log "Installing Rust Script to '${dst_dir}/rust-script'."
+  fetch --dest "${tmp_dir}/${target}.tar.gz" \
+    "https://github.com/fornwall/rust-script/releases/download/${version}/${target}.tar.gz"
+  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
+  ${super:+"${super}"} install "${tmp_dir}/rust-script" "${dst_dir}/"
 
   # Update shell profile if destination is not in system path.
   #
@@ -216,21 +257,21 @@ install_jq() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
-  log "Installed $(jq --version)."
+  log "Installed $(rust-script --version)."
 }
 
 #######################################
-# Download and install Jq for FreeBSD.
+# Download and install Rust Script for FreeBSD.
 #######################################
-install_jq_freebsd() {
+install_rust_script_freebsd() {
   local super=
   super="$(find_super)"
 
-  log 'FreeBSD Jq installation requires system package manager.'
-  log "Ignoring arguments and installing Jq to '/local/usr/bin/jq'."
+  log 'FreeBSD Rust Script installation requires system package manager.'
+  log "Ignoring arguments and installing Rust Script to '/local/usr/bin/rust-script'."
   ${super} pkg update
-  ${super} pkg install --yes jq
-  log "Installed $(jq --version)."
+  ${super} pkg install --yes rust-script
+  log "Installed $(rust-script --version)."
 }
 
 #######################################
@@ -312,7 +353,7 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-jq --help' for usage"
+        log --stderr "Run 'install-rust-script --help' for usage."
         exit 2
         ;;
     esac
@@ -320,7 +361,7 @@ main() {
 
   # Handle special FreeBSD case.
   if [ "$(uname -s)" = 'FreeBSD' ]; then
-    install_jq_freebsd
+    install_rust_script_freebsd
     return
   fi
 
@@ -349,7 +390,10 @@ main() {
     super="$(find_super)"
   fi
 
-  install_jq "${super}" "${version}" "${dst_dir}" "${preserve_env}"
+  if [ -z "${version}" ]; then
+    version="$(find_latest)"
+  fi
+  install_rust_script "${super}" "${version}" "${dst_dir}" "${preserve_env}"
 }
 
 # Add ability to selectively skip main function during test suite.
