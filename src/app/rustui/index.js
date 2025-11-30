@@ -4,7 +4,7 @@ vue
   .createApp({
     setup() {
       async function greet(_) {
-        message.value = await getGreeting(name.value);
+        window.ipc.postMessage(name.value);
       }
 
       const message = vue.ref("");
