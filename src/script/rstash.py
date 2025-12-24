@@ -3,7 +3,7 @@
 # dependencies = [
 #   "loguru~=0.7.0",
 #   "pyyaml~=6.0",
-#   "typer~=0.15.0",
+#   "typer~=0.20.0",
 # ]
 # requires-python = "~=3.11"
 # ///
