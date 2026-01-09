@@ -5,7 +5,7 @@ def check-deps [] {
     if $nu.os-info.name != "windows" and (which tar | is-empty) {
         error make { msg: ("
 error: Unable to find tar file archiver.
-Install tar, https://www.gnu.org/software/tar, manually before continuing.
+Install tar, https://gnu.org/software/tar, manually before continuing.
 "
             | str trim)
         }
@@ -94,7 +94,7 @@ def need-super [dest: directory global: bool] {
     }
     try { mkdir $dest } catch { return true }
     try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check" 
+    rm $"($dest)/.super_check"
     false
 }
 

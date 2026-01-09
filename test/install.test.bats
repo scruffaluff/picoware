@@ -115,7 +115,7 @@ nushell_shows_error_if_tar_missing() { # @test
   assert_output "$(
     cat << EOF
 error: Unable to find tar file archiver.
-Install tar, https://www.gnu.org/software/tar, manually before continuing.
+Install tar, https://gnu.org/software/tar, manually before continuing.
 EOF
   )"
 }

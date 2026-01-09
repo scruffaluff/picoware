@@ -159,20 +159,20 @@ def download-windows-iso [dest: path] {
     let profile = "606624d44113"
     let session = random uuid
     let product = (
-        http get https://www.microsoft.com/en-us/software-download/windows11
+        http get https://microsoft.com/en-us/software-download/windows11
         | parse --regex '<option value="(?P<id>[0-9]+)">Windows'
         | get id | first
     )
 
     http get $"https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id=($session)"
-    let sku = http get $"https://www.microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=($profile)&ProductEditionId=($product)&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
+    let sku = http get $"https://microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=($profile)&ProductEditionId=($product)&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
     | from json | get Skus | where Language == "English"
     | get Id | first
 
     let response = (
         http get --headers
-        { Referer: "https://www.microsoft.com/en-us/software-download/windows11" }
-        $"https://www.microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=($profile)&productEditionId=undefined&SKU=($sku)&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
+        { Referer: "https://microsoft.com/en-us/software-download/windows11" }
+        $"https://microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=($profile)&productEditionId=undefined&SKU=($sku)&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
         | from json
     )
     let errors = $response | get --optional Errors
@@ -189,7 +189,7 @@ def find-super [] {
     if (is-admin) {
         ""
     } else if $nu.os-info.name == "windows" {
-        error make { msg: 
+        error make { msg:
 "System level installation requires an administrator console.
 Restart this script from an administrator console or install to a user directory.
 "       }
@@ -403,7 +403,7 @@ def --wrapped "main bootstrap" [
     }
     let key = $"(path-config)/key"
     let port = main port $domain 22
-    
+
     (
         bootware bootstrap --port $port --inventory localhost --temp-key $key
         ...$args
@@ -701,7 +701,7 @@ def "main remove" [
 # Configure machine for emulation.
 def "main setup" [
     --log-level (-l): string = "debug" # Log level
-    ...commands: string # Setup commands (desktop,guest,host) 
+    ...commands: string # Setup commands (desktop,guest,host)
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
 
@@ -748,7 +748,7 @@ def --wrapped "main scp" [
         print --stderr $"No domain found in '($args | str join ' ')'."
         exit 1
     }
-    
+
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
@@ -849,7 +849,7 @@ def path-home [] {
     if $nu.os-info.name == "windows" {
         $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
     } else {
-        $env.HOME? 
+        $env.HOME?
     }
 }
 

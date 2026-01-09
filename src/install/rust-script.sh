@@ -226,7 +226,7 @@ install_rust_script() {
   #   -x: Check if file exists and execute permission is granted.
   if ! command -v tar > /dev/null 2>&1; then
     log --stderr 'error: Unable to find tar file archiver.'
-    log --stderr 'Install tar, https://www.gnu.org/software/tar, manually before continuing.'
+    log --stderr 'Install tar, https://gnu.org/software/tar, manually before continuing.'
     exit 1
   fi
 
