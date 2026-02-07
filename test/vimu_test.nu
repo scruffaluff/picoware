@@ -31,5 +31,5 @@ exec vimu gui machine
 def vimu-prints-version [] {
     let result = nu src/script/vimu.nu --version | complete
     assert equal $result.exit_code 0 $result.stderr
-    assert str contains $result.stdout "Vimu 0.1.0"
+    assert str contains $result.stdout "Vimu 0.1.1"
 }

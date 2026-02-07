@@ -145,23 +145,29 @@ def install-completion [
     } else {
         $"https://raw.githubusercontent.com/scruffaluff/picoware/($version)/src/completion/($name)"
     }
-    let dest = match $nu.os-info.name {
-        "freebsd" => {
-            fish: $"/usr/local/etc/fish/completions/($name).fish"
-        }
-        "macos" => {
-            let prefix = if $nu.os-info.arch == "aarch64" {
-                "/opt/homebrew"
-            } else {
-                "/usr/local"
+    let dest = if $global {
+        match $nu.os-info.name {
+            "freebsd" => {
+                fish: $"/usr/local/etc/fish/completions/($name).fish"
             }
-            {
-                fish: $"($prefix)/etc/fish/completions/($name).fish"
+            "macos" => {
+                let prefix = if $nu.os-info.arch == "aarch64" {
+                    "/opt/homebrew"
+                } else {
+                    "/usr/local"
+                }
+                {
+                    fish: $"($prefix)/etc/fish/completions/($name).fish"
+                }
+            }
+            "windows" => { }
+            _ => {
+                fish: $"/etc/fish/completions/($name).fish"
             }
         }
-        "windows" => { }
-        _ => {
-            fish: $"/etc/fish/completions/($name).fish"
+    } else {
+        {
+            fish: $"($env.HOME)/.config/fish/completions/($name).fish"
         }
     }
 
@@ -247,7 +253,7 @@ def install-wrapper [ext: string dest: path] {
         "rs" => 'rust-script "%~dnp0.rs" %*'
         "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
-    
+
     $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"
 }
 
@@ -268,7 +274,7 @@ def need-super [dest: directory global: bool] {
     }
     try { mkdir $dest } catch { return true }
     try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check" 
+    rm $"($dest)/.super_check"
     false
 }
 
@@ -322,7 +328,7 @@ def main [
                 install-script $super $system $preserve_env $version $dest $name
             }
         }
-        
+
         if not $match {
             log --stderr $"error: No script found for '($script)'."
         }

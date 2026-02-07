@@ -341,7 +341,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.0"
+        print "Vimu 0.1.1"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -565,13 +565,24 @@ def "main forget" [
     $env.NU_LOG_LEVEL = $log_level | str upcase
     for file in [
         ".bash_history"
+        ".config/nushell/history.sqlite3"
+        ".config/nushell/history.sqlite3-shm"
+        ".config/nushell/history.sqlite3-wal"
         ".config/nushell/history.txt"
         ".lesshst"
         ".local/share/fish/fish_history"
+        ".local/state/lesshst"
         ".python_history"
         ".viminfo"
+        ".wget-hsts"
         ".zsh_history"
+        "AppData/Roaming/nushell/history.sqlite3"
+        "AppData/Roaming/nushell/history.sqlite3-shm"
+        "AppData/Roaming/nushell/history.sqlite3-wal"
         "AppData/Roaming/nushell/history.txt"
+        "Library/Application Support/nushell/history.sqlite3"
+        "Library/Application Support/nushell/history.sqlite3-shm"
+        "Library/Application Support/nushell/history.sqlite3-wal"
         "Library/Application Support/nushell/history.txt"
     ] {
         let path = $"($env.HOME)/($file)"
