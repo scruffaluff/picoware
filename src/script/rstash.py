@@ -3,7 +3,7 @@
 # dependencies = [
 #   "loguru~=0.7.0",
 #   "pyyaml~=6.0",
-#   "typer~=0.20.0",
+#   "typer~=0.21.0",
 # ]
 # requires-python = "~=3.11"
 # ///
@@ -31,7 +31,7 @@ from typer import Option, Typer
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 cli = Typer(
     add_completion=False,
@@ -90,6 +90,11 @@ class Manifest:
             return list(chain(*arguments)) + self.arguments + [self.source, self.dest]
         return list(chain(*arguments)) + self.arguments + [self.dest, self.source]
 
+    @property
+    def cmd(self) -> str:
+        """Get Rclone subcommand."""
+        return "copy" if self.filters else "copyto"
+
 
 def compute_changes(
     manifests: Iterable[Manifest],
@@ -109,7 +114,7 @@ def compute_changes(
             "rclone",
             "--dry-run",
             "--use-json-log",
-            "copy",
+            manifest.cmd,
             "--update",
             *manifest.args(upload),
         ]
@@ -131,7 +136,7 @@ def compute_changes(
             sys.exit(process.returncode)
 
         logs = map(json.loads, process.stderr.strip().split("\n"))
-        change = parse_logs(source, dest, logs)
+        change = parse_logs(source, dest, logs, manifest.cmd == "copyto")
         if change:
             records.append(manifest)
             changes = "{}\n{}".format(changes, "\n".join(change))
@@ -146,8 +151,12 @@ def load_config(config: Path) -> list[Manifest]:
     return [Manifest(**config) for config in configs]
 
 
-def parse_logs(source: str, dest: str, logs: Iterable[dict]) -> list[str]:
+def parse_logs(
+    source: str, dest: str, logs: Iterable[dict], rename: bool = False
+) -> list[str]:
     """Parse Rclone logs for synchronization changes."""
+    if rename:
+        return [f"{source} -> {dest}" for log in logs if "object" in log][:1]
     return [
         f"{source}/{log['object']} -> {dest}/{log['object']}"
         for log in logs
@@ -178,7 +187,7 @@ def sync_changes(manifests: Iterable[Manifest], upload: bool = True) -> None:
         command = [
             "rclone",
             "--verbose",
-            "copy",
+            manifest.cmd,
             "--update",
             *manifest.args(upload),
         ]
@@ -199,7 +208,10 @@ def download() -> None:
     """Download files with Rclone."""
     manifests = load_config(state["config"])
     for manifest in manifests:
-        Path(manifest.source).mkdir(exist_ok=True, parents=True)
+        folder = (
+            Path(manifest.source) if manifest.filters else Path(manifest.source).parent
+        )
+        folder.mkdir(exist_ok=True, parents=True)
 
     manifests, changes = compute_changes(manifests, upload=False)
     if not manifests:
