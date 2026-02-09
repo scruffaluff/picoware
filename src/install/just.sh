@@ -286,7 +286,7 @@ install_just_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Just installation requires system package manager.'
-  log "Ignoring arguments and installing Just to '/local/usr/bin/just'."
+  log "Ignoring arguments and installing Just to '/usr/local/bin/just'."
   ${super} pkg update
   ${super} pkg install --yes just
   log "Installed $(just --version)."

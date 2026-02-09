@@ -203,7 +203,7 @@ find_super() {
 #######################################
 install_uv() {
   local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
-  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
+  local arch='' dst_file="${dst_dir}/uv" os='' target='' tmp_dir=''
 
   arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
@@ -269,7 +269,7 @@ install_uv_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Uv installation requires system package manager.'
-  log "Ignoring arguments and installing Uv to '/local/usr/bin/uv'."
+  log "Ignoring arguments and installing Uv to '/usr/local/bin/uv'."
   ${super} pkg update
   ${super} pkg install --yes uv
   log "Installed $(uv --version)."

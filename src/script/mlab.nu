@@ -38,7 +38,7 @@ def main [
     --version (-v) # Print version information
 ] {
     if $version {
-        "Mlab 0.1.4"
+        "Mlab 0.1.5"
     } else {
         help main
     }
@@ -66,14 +66,14 @@ def --wrapped "main jupyter" [
     ...args: string # Arguments to Jupyter Lab
 ] {
     let venv = match $nu.os-info.name {
-        "windows" => $"($env.AppLocalData)/mlab/venv"
+        "windows" => $"($env.LocalAppData)/mlab/venv"
         _ => $"($env.HOME)/.local/share/mlab/venv"
     } | path expand
     let venv_bin = match $nu.os-info.name {
         "windows" => { $venv | path join "Scripts" }
         _ => { $venv | path join "bin" }
     }
-    let matlab_bin = find_matlab $"($matlab)" | path dirname
+    let matlab_bin = find-matlab $"($matlab)" | path dirname
     $env.PATH = ($env.PATH | prepend [$venv_bin $matlab_bin])
 
     if not ($venv | path exists) {

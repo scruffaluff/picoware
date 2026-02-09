@@ -19,7 +19,7 @@ Options:
   -h, --help        Print help information
   -v, --version     Print version information"
         )
-        if (which fd | is-not-empty) {
+        if (which rg | is-not-empty) {
             print "\nRipgrep Options:\n"
             rg ...$args
         }

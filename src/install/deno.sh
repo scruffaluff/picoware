@@ -262,7 +262,7 @@ install_deno_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Deno installation requires system package manager.'
-  log "Ignoring arguments and installing Deno to '/local/usr/bin/deno'."
+  log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
   ${super:+"${super}"} pkg update
   ${super:+"${super}"} pkg install --yes deno
   log "Installed $(deno --version)."

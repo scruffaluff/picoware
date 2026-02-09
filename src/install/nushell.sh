@@ -202,7 +202,7 @@ find_super() {
 #######################################
 install_nushell() {
   local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
-  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
+  local arch='' dst_file="${dst_dir}/nu" os='' target='' tmp_dir=''
 
   arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
@@ -268,7 +268,7 @@ install_nushell_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Nushell installation requires system package manager.'
-  log "Ignoring arguments and installing Nushell to '/local/usr/bin/nu'."
+  log "Ignoring arguments and installing Nushell to '/usr/local/bin/nu'."
   ${super} pkg update
   ${super} pkg install --yes nushell
   log "Installed Nushell $(nu --version)."

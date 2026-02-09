@@ -67,7 +67,7 @@ class App:
         self.samples = [self.read(file) for file in files]
         window.run_js("plot();")
 
-    def read(self, path: Path) -> list[NDArray]:
+    def read(self, path: Path) -> NDArray:
         """Read audio file as mono signal."""
         audio, rate = soundfile.read(path, always_2d=True)
         samples = numpy.mean(audio, axis=1)
@@ -111,7 +111,7 @@ def main(
 
     folder = Path(__file__).parent
     if dev:
-        Popen(
+        server = Popen(
             [
                 "deno",
                 "run",
@@ -125,9 +125,13 @@ def main(
         )
         url = "http://localhost:5173"
     else:
+        server = None
         url = str(folder / "index.html")
+
     webview.create_window("Augraph", url=url, js_api=app)
     webview.start(debug=dev, gui=gui, menu=menu)
+    if server:
+        server.terminate()
 
 
 if __name__ == "__main__":

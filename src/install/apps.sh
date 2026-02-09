@@ -622,7 +622,7 @@ main() {
       done
 
       if [ -z "${match_found:-}" ]; then
-        log --stderr "error: No app found for '${names}'."
+        log --stderr "error: No app found for '${name}'."
       fi
     done
   else

@@ -534,7 +534,7 @@ def "main detach-cdroms" [
     domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    let cdroms = virsh domblklist --details windows | from ssv | reject 0
+    let cdroms = virsh domblklist --details $domain | from ssv | reject 0
     | where Device == "cdrom" | get Source
 
     for cdrom in $cdroms {
@@ -655,12 +655,12 @@ def "main port" [
 
     let match = $maps | where to == $to | get --optional 0
     if $match == null {
-        let port = port
+        let rand_port = port
         (
             virsh qemu-monitor-command --domain $domain --hmp
-            $"hostfwd_add tcp::($port)-:($to)"
+            $"hostfwd_add tcp::($rand_port)-:($to)"
         )
-        $port
+        $rand_port
     } else {
         $match.from
     }

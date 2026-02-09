@@ -227,7 +227,7 @@ install_jq_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Jq installation requires system package manager.'
-  log "Ignoring arguments and installing Jq to '/local/usr/bin/jq'."
+  log "Ignoring arguments and installing Jq to '/usr/local/bin/jq'."
   ${super} pkg update
   ${super} pkg install --yes jq
   log "Installed $(jq --version)."

@@ -61,7 +61,7 @@ def install-jq [super: string dest: directory subpath: string] {
         ^$super mkdir -p $dest
         ^$super cp $program $dest_file
         if $nu.os-info.name != "windows" {
-            sudo chmod 755 $dest_file
+            ^$super chmod 755 $dest_file
         }
     }
 }
@@ -73,7 +73,7 @@ def need-super [dest: directory global: bool] {
     }
     try { mkdir $dest } catch { return true }
     try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check" 
+    rm $"($dest)/.super_check"
     false
 }
 
@@ -93,7 +93,7 @@ def main [
         if $global {
             "C:\\Program Files\\Bin"
         } else {
-            $"($env.LOCALAPPDATA)\\Programs\\Bin"
+            $"($env.LocalAppData)\\Programs\\Bin"
         }
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
@@ -155,7 +155,7 @@ def update-shell [dest: directory] {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
             } else {
-                $"$(env.HOME)/.config/nushell/config.nu"
+                $"($env.HOME)/.config/nushell/config.nu"
             }
         }
         "zsh" => $"($env.HOME)/.zshrc"

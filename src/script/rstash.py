@@ -31,7 +31,7 @@ from typer import Option, Typer
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-__version__ = "0.0.8"
+__version__ = "0.1.0"
 
 cli = Typer(
     add_completion=False,
@@ -95,6 +95,11 @@ class Manifest:
         """Get Rclone subcommand."""
         return "copy" if self.filters else "copyto"
 
+    def mkdir_source(self) -> None:
+        """Ensure the parent folder of the source path exists."""
+        folder = Path(self.source) if self.filters else Path(self.source).parent
+        folder.mkdir(exist_ok=True, parents=True)
+
 
 def compute_changes(
     manifests: Iterable[Manifest],
@@ -135,7 +140,7 @@ def compute_changes(
             print(process.stderr, file=sys.stderr)
             sys.exit(process.returncode)
 
-        logs = map(json.loads, process.stderr.strip().split("\n"))
+        logs = (json.loads(line) for line in process.stderr.strip().split("\n") if line)
         change = parse_logs(source, dest, logs, manifest.cmd == "copyto")
         if change:
             records.append(manifest)
@@ -208,11 +213,7 @@ def download() -> None:
     """Download files with Rclone."""
     manifests = load_config(state["config"])
     for manifest in manifests:
-        folder = (
-            Path(manifest.source) if manifest.filters else Path(manifest.source).parent
-        )
-        folder.mkdir(exist_ok=True, parents=True)
-
+        manifest.mkdir_source()
     manifests, changes = compute_changes(manifests, upload=False)
     if not manifests:
         return
@@ -273,7 +274,7 @@ def sync() -> None:
     """Sync files with Rclone."""
     manifests = load_config(state["config"])
     for manifest in manifests:
-        Path(manifest.source).mkdir(exist_ok=True, parents=True)
+        manifest.mkdir_source()
 
     downloads = compute_changes(manifests, upload=False)
     uploads = compute_changes(manifests, upload=True)

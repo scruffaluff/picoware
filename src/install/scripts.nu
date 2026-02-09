@@ -34,7 +34,7 @@ def deploy [
         ^$super mkdir -p $folder
         ^$super cp $file $dest
         if ($mode | is-not-empty) and $nu.os-info.name != "windows" {
-            sudo chmod $mode $dest
+            ^$super chmod $mode $dest
         }
     }
 }
@@ -209,7 +209,7 @@ def install-script [
     } else if $ext == "rs" and (which rust-script | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/rust-script.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
-    } else if $ext == "ts" and (which deno | is-empty) {
+    } else if $ext in ["ts" "tsx"] and (which deno | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/deno.nu
         | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
     }
@@ -251,7 +251,7 @@ def install-wrapper [ext: string dest: path] {
         "ps1" => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
         "py" => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
         "rs" => 'rust-script "%~dnp0.rs" %*'
-        "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
+        "ts" | "tsx" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
 
     $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"
@@ -309,7 +309,7 @@ def main [
         if $global {
             "C:\\Program Files\\Bin"
         } else {
-            $"($env.LOCALAPPDATA)\\Programs\\Bin"
+            $"($env.LocalAppData)\\Programs\\Bin"
         }
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
@@ -363,12 +363,12 @@ def update-shell [dest: directory] {
     }
     let profile = match $shell {
         "bash" => $"($env.HOME)/.bashrc"
-        "fish" => "($env.HOME)/.config/fish/config.fish"
+        "fish" => $"($env.HOME)/.config/fish/config.fish"
         "nu" => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
             } else {
-                $"$(env.HOME)/.config/nushell/config.nu"
+                $"($env.HOME)/.config/nushell/config.nu"
             }
         }
         "zsh" => $"($env.HOME)/.zshrc"

@@ -39,7 +39,7 @@ def install-cargo-unix [super: string dest: directory version: string] {
     } else {
         $"($parts.parent)/rustup"
     }
-    
+
     mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
     if $quiet {
         $args = [...$args "--quiet"]
@@ -71,7 +71,7 @@ def install-cargo-windows [dest: directory version: string] {
     } else {
         $"($parts.parent)\\rustup"
     }
-    
+
     mut args = ["-y" "--no-modify-path" "--profile" "minimal"]
     if $quiet {
         $args = [...$args "--quiet"]
@@ -82,7 +82,7 @@ def install-cargo-windows [dest: directory version: string] {
     let args = $args
 
     let temp = mktemp --directory --tmpdir
-    let uri = "https://static.rust-lang.org/rustup/dist/($nu.os-info.arch)-pc-windows-msvc/rustup-init.exe"
+    let uri = $"https://static.rust-lang.org/rustup/dist/($nu.os-info.arch)-pc-windows-msvc/rustup-init.exe"
     if $quiet {
         http get $uri | save $"($temp)\\rustup-init.exe"
     } else {
@@ -105,7 +105,7 @@ def need-super [dest: directory global: bool] {
     }
     try { mkdir $dest } catch { return true }
     try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check" 
+    rm $"($dest)/.super_check"
     false
 }
 
@@ -125,7 +125,7 @@ def main [
         if $global {
             "C:\\Program Files\\cargo"
         } else {
-            $"($env.LOCALAPPDATA)\\cargo"
+            $"($env.LocalAppData)\\cargo"
         }
     } else {
         if $global { "/usr/local/cargo" } else { $"($env.HOME)/.cargo" }
@@ -186,7 +186,7 @@ def update-shell [dest: directory] {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
             } else {
-                $"$(env.HOME)/.config/nushell/config.nu"
+                $"($env.HOME)/.config/nushell/config.nu"
             }
         }
         "zsh" => $"($env.HOME)/.zshrc"

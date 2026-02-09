@@ -268,7 +268,7 @@ install_rust_script_freebsd() {
   super="$(find_super)"
 
   log 'FreeBSD Rust Script installation requires system package manager.'
-  log "Ignoring arguments and installing Rust Script to '/local/usr/bin/rust-script'."
+  log "Ignoring arguments and installing Rust Script to '/usr/local/bin/rust-script'."
   ${super} pkg update
   ${super} pkg install --yes rust-script
   log "Installed $(rust-script --version)."

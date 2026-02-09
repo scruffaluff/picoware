@@ -115,7 +115,7 @@ function InstallApp($Target, $Version, $Name) {
     SetupRunner $Name $Script $DestDir $CliDir
 
     # Update path variable if CLI is not in system path.
-    $Path = [Environment]::GetEnvironmentVariable('Path', "$TargetEnv")
+    $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
     if (-not ($Path -like "*$CliDir*")) {
         $PrependedPath = "$CliDir;$Path"
         [System.Environment]::SetEnvironmentVariable(
