@@ -25,7 +25,7 @@ Options:
 
 # Print ClearCache version string.
 function Version() {
-    Write-Output 'ClearCache 0.3.0'
+    Write-Output 'Clear Cache 0.3.0'
 }
 
 # Script entrypoint.

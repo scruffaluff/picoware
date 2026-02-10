@@ -108,7 +108,7 @@ function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
 
         $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
         # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must be
-        # changed to machine PATHEXT + ';.NU' if prevously empty.
+        # changed to machine PATHEXT + ';.RS' if prevously empty.
         if ((-not $PathExt) -and ($TargetEnv -eq 'User')) {
             $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', 'Machine')
         }

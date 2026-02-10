@@ -100,11 +100,11 @@ def need-super [dest: directory global: bool] {
 
 # Install Rust for MacOS, Linux, and Windows systems.
 def main [
-    --dest (-d): directory # Directory to install Rust
-    --global (-g) # Install Rust for all users
+    --dest (-d): directory # Directory to install Rust Script
+    --global (-g) # Install Rust Script for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Rust install
+    --version (-v): string # Version of Rust Script install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     # Force global if root on Unix.

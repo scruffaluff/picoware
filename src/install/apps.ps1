@@ -119,7 +119,7 @@ function InstallApp($Target, $Version, $Name) {
     if (-not ($Path -like "*$CliDir*")) {
         $PrependedPath = "$CliDir;$Path"
         [System.Environment]::SetEnvironmentVariable(
-            'Path', "$PrependedPath", "$TargetEnv"
+            'Path', "$PrependedPath", "$Target"
         )
         Log "Added '$CliDir' to the system path."
         Log 'Source shell profile or restart shell after installation.'

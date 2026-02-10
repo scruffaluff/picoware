@@ -264,7 +264,7 @@ install_nushell() {
 # Download and install Nushell for FreeBSD.
 #######################################
 install_nushell_freebsd() {
-  local super=
+  local super
   super="$(find_super)"
 
   log 'FreeBSD Nushell installation requires system package manager.'
@@ -361,7 +361,7 @@ main() {
 
   # Handle special FreeBSD case.
   if [ "$(uname -s)" = 'FreeBSD' ]; then
-    install_nushell_freebsd "${super}"
+    install_nushell_freebsd
     return
   fi
 

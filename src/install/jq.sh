@@ -312,7 +312,7 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-jq --help' for usage"
+        log --stderr "Run 'install-jq --help' for usage."
         exit 2
         ;;
     esac

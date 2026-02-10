@@ -46,8 +46,8 @@ format:
   $ProgressPreference = 'SilentlyContinue'
   $PSNativeCommandUseErrorActionPreference = $True
   npx prettier --write .
-  Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Setting CodeFormatting
-  Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Setting CodeFormatting
+  Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Settings CodeFormatting
+  Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Settings CodeFormatting
   $Scripts = Get-ChildItem -Recurse -Filter *.ps1 -Path src, test
   foreach ($Script in $Scripts) {
     $Text = Get-Content -Raw $Script.FullName

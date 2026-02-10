@@ -1,4 +1,4 @@
-# Tests for Nushell installer scripts.
+# Tests for Vimu script.
 
 use std/assert
 use std/testing *

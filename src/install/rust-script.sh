@@ -202,7 +202,7 @@ find_super() {
 #######################################
 install_rust_script() {
   local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
-  local arch='' dst_file="${dst_dir}/just" os='' target='' tmp_dir=''
+  local arch='' dst_file="${dst_dir}/rust-script" os='' target='' tmp_dir=''
 
   arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
   os="$(uname -s)"
