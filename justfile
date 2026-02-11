@@ -27,9 +27,6 @@ doc:
 # Build documentation.
 [windows]
 doc:
-  Copy-Item -Force -Recurse -Path src/action -Destination data/public/
-  Copy-Item -Force -Recurse -Path src/install -Destination data/public/
-  deno run --allow-all npm:vitepress build .
 
 # Fix code formatting.
 [unix]

@@ -19,11 +19,13 @@ async function main(): Promise<void> {
 async function run(dev: boolean): Promise<void> {
   const folder = import.meta.dirname!;
   let url: string;
+  let server: Deno.ChildProcess | null = null;
+
   if (dev) {
     const command = new Deno.Command("deno", {
       args: ["run", "--allow-all", "npm:vite", "dev", "--port", "5173", folder],
     });
-    command.spawn();
+    server = command.spawn();
     url = "http://localhost:5173";
   } else {
     const js = await Deno.readTextFile(path.join(folder, "index.js"));
@@ -41,6 +43,10 @@ async function run(dev: boolean): Promise<void> {
   webview.bind("getGreeting", (name: string) => `Hello ${name}!`);
   webview.navigate(url);
   webview.run();
+
+  if (server !== null) {
+    server.kill();
+  }
 }
 
 await main();

@@ -47,7 +47,7 @@ Describe 'Install' {
 
     It 'Rust Script prints version' {
         $Actual = & src\install\rust-script.ps1 --preserve-env --dest `
-            $(MkTempDir)
+        $(MkTempDir)
         $($Actual -join "`n") | Should -Match 'Installed rust-script 0.'
     }
 

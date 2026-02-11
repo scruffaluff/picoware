@@ -44,10 +44,10 @@ cli = Typer(
 class App:
     """Application backend logic."""
 
-    def __init__(self) -> None:
+    def __init__(self, files: list[Path]) -> None:
         """Create an App instance."""
         self.sampler = LTTBDownsampler()
-        self.samples: list[NDArray] = []
+        self.samples: list[NDArray] = [self.read(file) for file in files]
 
     def load(self) -> list[list[float]]:
         """Convert audio samples into JavaScript compatible list."""
@@ -63,9 +63,10 @@ class App:
             directory=str(Path.home()),
             file_types=types,
         )
-        print(f"{files=}")
-        self.samples = [self.read(file) for file in files]
-        window.run_js("plot();")
+        if files:
+            print(f"{files=}")
+            self.samples = [self.read(file) for file in files]
+            window.run_js("plot();")
 
     def read(self, path: Path) -> NDArray:
         """Read audio file as mono signal."""
@@ -101,13 +102,10 @@ def main(
     ] = False,
 ) -> None:
     """Audio plotting example application."""
-    app = App()
+    app = App(files or [])
     gui = "qt" if sys.platform == "linux" else None
     menu = [Menu("File", [MenuAction("Open", app.open)])]
     webview.settings["OPEN_DEVTOOLS_IN_DEBUG"] = False
-
-    for file in files or []:
-        app.read(file)
 
     folder = Path(__file__).parent
     if dev:

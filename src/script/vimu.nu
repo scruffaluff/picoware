@@ -564,7 +564,9 @@ def "main forget" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     for file in [
+        ".ansible"
         ".bash_history"
+        ".cache"
         ".config/nushell/history.sqlite3"
         ".config/nushell/history.sqlite3-shm"
         ".config/nushell/history.sqlite3-wal"
@@ -580,6 +582,7 @@ def "main forget" [
         "AppData/Roaming/nushell/history.sqlite3-shm"
         "AppData/Roaming/nushell/history.sqlite3-wal"
         "AppData/Roaming/nushell/history.txt"
+        "AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt"
         "Library/Application Support/nushell/history.sqlite3"
         "Library/Application Support/nushell/history.sqlite3-shm"
         "Library/Application Support/nushell/history.sqlite3-wal"

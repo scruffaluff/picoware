@@ -94,20 +94,24 @@ fn main() -> eyre::Result<()> {
         .with_title("Rustui")
         .build(&event_loop)?;
     let _webview = build_webview(&window, dev)?;
-    if dev {
+    let mut server = if dev {
         let folder = script_folder()?;
-        process::Command::new("deno")
-            .args([
-                "run",
-                "--allow-all",
-                "npm:vite",
-                "dev",
-                "--port",
-                "5173",
-                &folder.to_string_lossy(),
-            ])
-            .spawn()?;
-    }
+        Some(
+            process::Command::new("deno")
+                .args([
+                    "run",
+                    "--allow-all",
+                    "npm:vite",
+                    "dev",
+                    "--port",
+                    "5173",
+                    &folder.to_string_lossy(),
+                ])
+                .spawn()?,
+        )
+    } else {
+        None
+    };
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -117,6 +121,9 @@ fn main() -> eyre::Result<()> {
             ..
         } = event
         {
+            if let Some(ref mut process) = server {
+                let _ = process.kill();
+            }
             *control_flow = ControlFlow::Exit
         }
     });
