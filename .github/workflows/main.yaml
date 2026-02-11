@@ -71,11 +71,7 @@ jobs:
       - if: ${{ runner.os != 'Windows' }}
         name: Install Just for Unix
         run: src/install/just.sh --global
-      - if: ${{ runner.os == 'Windows' }}
-        name: Run CI workflow commands
-        run: just setup format lint test
-      - if: ${{ runner.os != 'Windows' }}
-        name: Run CI workflow commands
+      - name: Run CI workflow commands
         run: just ci
       - if: ${{ always() && inputs.debug }}
         name: Launch Tmate session if debug enabled
@@ -137,7 +133,7 @@ jobs:
             See the [changelog](https://github.com/scruffaluff/picoware/blob/${{
             github.ref_name }}/CHANGELOG.md) for more information.
           name: Picoware ${{ github.ref_name }}
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
       - if: ${{ always() && inputs.debug }}
         name: Launch Tmate session if debug enabled
         timeout-minutes: 60

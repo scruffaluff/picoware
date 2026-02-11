@@ -98,6 +98,7 @@ list:
 setup:
   #!/usr/bin/env sh
   set -eu
+  arch='{{replace(replace(arch(), "x86_64", "amd64"), "aarch64", "arm64")}}'
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if ! command -v jq > /dev/null 2>&1; then
     src/install/jq.sh --preserve-env --dest .vendor/bin
@@ -130,8 +131,8 @@ setup:
       --depth 1 https://github.com/vyadh/nutest.git .vendor/lib/nutest
   fi
   if ! command -v shellcheck > /dev/null 2>&1; then
-    shellcheck_arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
-    shellcheck_version="$(curl  --fail --location --show-error \
+    shellcheck_arch='{{arch()}}'
+    shellcheck_version="$(curl --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shellcheck.json |
       jq --exit-status --raw-output .versions.stable)"
     curl --fail --location --show-error --output /tmp/shellcheck.tar.xz \
@@ -141,12 +142,11 @@ setup:
   fi
   shellcheck --version
   if ! command -v shfmt > /dev/null 2>&1; then
-    shfmt_arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
-    shfmt_version="$(curl  --fail --location --show-error \
+    shfmt_version="$(curl --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shfmt.json |
       jq --exit-status --raw-output .versions.stable)"
     curl --fail --location --show-error --output .vendor/bin/shfmt \
-      "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${shfmt_arch}"
+      "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${arch}"
     chmod 755 .vendor/bin/shfmt
   fi
   echo "Shfmt $(shfmt --version)"

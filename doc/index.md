@@ -31,7 +31,7 @@ install each program for immediate use.
 ## Scripts
 
 The following table shows the available scripts. These are single file programs
-that peform convenience tasks. They can be installed with the repostiory's
+that perform convenience tasks. They can be installed with the repository's
 `scripts` installer.
 
 | Name        | Description                                    |
@@ -41,10 +41,22 @@ that peform convenience tasks. They can be installed with the repostiory's
 | fdi         | Interactive Fd searcher.                       |
 | mlab        | Wrapper script for running Matlab as a CLI.    |
 | rgi         | Interactive Ripgrep searcher.                  |
+| rstash      | Interactive Rclone backup manager.             |
 | trsync      | Rsync for one time remote connections.         |
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
 | vimu        | Convenience script for QEMU and Virsh.         |
+
+## Apps
+
+The following table shows the available GUI applications. These applications are
+currently minimal example GUI applications meant as placeholders.
+
+| Name    | Description                         |
+| ------- | ----------------------------------- |
+| augraph | Audio plotting example application. |
+| denoui  | Example GUI application with Deno.  |
+| rustui  | Example GUI application with Rust.  |
 
 ## Actions
 
