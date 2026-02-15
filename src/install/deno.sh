@@ -237,7 +237,7 @@ install_deno() {
   fi
 
   export PATH="${dst_dir}:${PATH}"
-  log "Installed $(deno --version)."
+  log "Installed $(deno -V)."
 }
 
 #######################################
@@ -251,7 +251,7 @@ install_deno_alpine() {
   log "Ignoring arguments and installing Deno to '/usr/bin/deno'."
   ${super:+"${super}"} apk update
   ${super:+"${super}"} apk add deno
-  log "Installed $(deno --version)."
+  log "Installed $(deno -V)."
 }
 
 #######################################
@@ -265,7 +265,7 @@ install_deno_freebsd() {
   log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
   ${super:+"${super}"} pkg update
   ${super:+"${super}"} pkg install --yes deno
-  log "Installed $(deno --version)."
+  log "Installed $(deno -V)."
 }
 
 #######################################

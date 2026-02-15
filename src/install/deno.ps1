@@ -96,7 +96,7 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     }
 
     $Env:Path = "$DestDir;$Env:Path"
-    Log "Installed $(deno --version)."
+    Log "Installed $(deno -V)."
 }
 
 # Check if script is run from an admin console.

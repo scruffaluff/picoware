@@ -100,7 +100,7 @@ def install-deno-alpine [] {
         ^$super apk update
         ^$super apk add deno
     }
-    log $"Installed (deno --version)."
+    log $"Installed (deno -V)."
 }
 
 # Download and install Deno for FreeBSD.
@@ -116,7 +116,7 @@ def install-deno-freebsd [] {
         ^$super pkg update
         ^$super pkg install --yes deno
     }
-    log $"Installed (deno --version)."
+    log $"Installed (deno -V)."
 }
 
 # Check if super user elevation is required.
@@ -179,7 +179,7 @@ def main [
     }
 
     $env.PATH = $env.PATH | prepend $dest
-    log $"Installed (deno --version)."
+    log $"Installed (deno -V)."
 }
 
 # Add destination path to Windows environment path.

@@ -30,19 +30,19 @@ doc:
 
 # Fix code formatting.
 [unix]
-format:
-  npx prettier --write .
+format +paths=".":
+  npx prettier --write {{paths}}
   shfmt --write src test
-  uv tool run ruff format .
+  uv tool run ruff format {{paths}}
 
 # Fix code formatting.
 [windows]
-format:
+format +paths=".":
   #!powershell.exe
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue'
   $PSNativeCommandUseErrorActionPreference = $True
-  npx prettier --write .
+  npx prettier --write {{paths}}
   Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Settings CodeFormatting
   Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Settings CodeFormatting
   $Scripts = Get-ChildItem -Recurse -Filter *.ps1 -Path src, test
@@ -50,7 +50,7 @@ format:
     $Text = Get-Content -Raw $Script.FullName
     [System.IO.File]::WriteAllText($Script.FullName, $Text)
   }
-  uv tool run ruff format .
+  uv tool run ruff format {{paths}}
 
 # Install project programs.
 install workflow *args:
@@ -58,32 +58,32 @@ install workflow *args:
 
 # Run code analyses.
 [unix]
-lint:
+lint +paths=".":
   #!/usr/bin/env sh
   set -eu
-  deno run --allow-all npm:prettier --check .
+  deno run --allow-all npm:prettier --check {{paths}}
   shfmt --diff src test
   files="$(find src test -name '*.sh' -or -name '*.bats')"
   for file in ${files}; do
     shellcheck "${file}"
   done
-  uv tool run ruff format --check .
-  uv tool run ruff check .
-  uv tool run mypy .
+  uv tool run ruff format --check {{paths}}
+  uv tool run ruff check {{paths}}
+  uv tool run mypy {{paths}}
 
 # Run code analyses.
 [windows]
-lint:
-  deno run --allow-all npm:prettier --check .
+lint +paths=".":
+  deno run --allow-all npm:prettier --check {{paths}}
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings \
     data/config/script_analyzer.psd1
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings \
     data/config/script_analyzer.psd1
-  uv tool run ruff format --check .
-  uv tool run ruff check .
-  uv tool run mypy .
+  uv tool run ruff format --check {{paths}}
+  uv tool run ruff check {{paths}}
+  uv tool run mypy {{paths}}
 
 # List all commands available in justfile.
 [default]
@@ -98,36 +98,48 @@ setup:
   arch='{{replace(replace(arch(), "x86_64", "amd64"), "aarch64", "arm64")}}'
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if ! command -v jq > /dev/null 2>&1; then
+    echo 'Installing Jq.'
     src/install/jq.sh --preserve-env --dest .vendor/bin
   fi
-  jq --version
+  echo "Using $(jq --version)."
   if ! command -v nu > /dev/null 2>&1; then
+    echo 'Installing Nushell.'
     src/install/nushell.sh --preserve-env --dest .vendor/bin
   fi
-  echo "Nushell $(nu --version)"
+  echo "Using Nushell $(nu --version)."
   if ! command -v deno > /dev/null 2>&1; then
+    echo 'Installing Deno.'
     src/install/deno.sh --preserve-env --dest .vendor/bin
   fi
-  deno --version
+  echo "Using $(deno -V)."
   if ! command -v uv > /dev/null 2>&1; then
+    echo 'Installing Uv.'
     src/install/uv.sh --preserve-env --dest .vendor/bin
   fi
-  uv --version
+  echo "Using $(uv --version)."
   mkdir -p .vendor/bin .vendor/lib
   for spec in 'assert:v2.1.0' 'core:v1.11.1' 'file:v0.4.0' 'support:v0.3.0'; do
+    bats_check=''
     pkg="${spec%:*}"
     tag="${spec#*:}"
     if [ ! -d ".vendor/lib/bats-${pkg}" ]; then
+      if [ -z "${bats_check}" ]; then
+        echo 'Installing Bats.'
+        bats_check='1'
+      fi
       git clone -c advice.detachedHead=false --branch "${tag}" --depth 1 \
         "https://github.com/bats-core/bats-${pkg}.git" ".vendor/lib/bats-${pkg}"
     fi
   done
-  bats --version
+  echo "Using $(bats --version)."
   if [ ! -d .vendor/lib/nutest ]; then
+    echo 'Installing Nutest.'
     git clone -c advice.detachedHead=false --branch main \
       --depth 1 https://github.com/vyadh/nutest.git .vendor/lib/nutest
   fi
+  echo "Using Nutest $(git -C .vendor/lib/nutest rev-parse HEAD)."
   if ! command -v shellcheck > /dev/null 2>&1; then
+    echo 'Installing ShellCheck.'
     shellcheck_arch='{{arch()}}'
     shellcheck_version="$(curl --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shellcheck.json |
@@ -137,8 +149,9 @@ setup:
     tar fx /tmp/shellcheck.tar.xz -C /tmp
     install "/tmp/shellcheck-v${shellcheck_version}/shellcheck" .vendor/bin/
   fi
-  shellcheck --version
+  echo "Using $(shellcheck --version)."
   if ! command -v shfmt > /dev/null 2>&1; then
+    echo 'Installing Shfmt.'
     shfmt_version="$(curl --fail --location --show-error \
       https://formulae.brew.sh/api/formula/shfmt.json |
       jq --exit-status --raw-output .versions.stable)"
@@ -146,7 +159,8 @@ setup:
       "https://github.com/mvdan/sh/releases/download/v${shfmt_version}/shfmt_v${shfmt_version}_${os}_${arch}"
     chmod 755 .vendor/bin/shfmt
   fi
-  echo "Shfmt $(shfmt --version)"
+  echo "Using Shfmt $(shfmt --version)."
+  echo 'Installing packages with Deno.'
   if [ -n "${JUST_INIT:-}" ]; then
     deno install
   else
@@ -163,25 +177,31 @@ setup:
   $ModulePath = '.vendor\lib\powershell\modules'
   New-Item -Force -ItemType Directory -Path $ModulePath | Out-Null
   if (-not (Get-Command -ErrorAction SilentlyContinue jq)) {
+    Write-Output 'Installing Jq.'
     src/install/jq.ps1 --preserve-env --dest .vendor/bin
   }
-  jq --version
+  Write-Output "Using $(jq --version)."
   if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
+    Write-Output 'Installing Nushell.'
     src/install/nushell.ps1 --preserve-env --dest .vendor/bin
   }
-  Write-Output "Nushell $(nu --version)"
+  Write-Output "Using Nushell $(nu --version)"
   if (-not (Get-Command -ErrorAction SilentlyContinue deno)) {
+    Write-Output 'Installing Deno.'
     src/install/deno.ps1 --preserve-env --dest .vendor/bin
   }
-  deno --version
+  Write-Output "Using $(deno -V)."
   if (-not (Get-Command -ErrorAction SilentlyContinue uv)) {
+    Write-Output 'Installing Uv.'
     src/install/uv.ps1 --preserve-env --dest .vendor/bin
   }
-  uv --version
+  Write-Output "Using $(uv --version)."
   if (-not (Test-Path -Path .vendor/lib/nutest -PathType Container)) {
+    Write-Output 'Installing Nutest.'
     git clone -c advice.detachedHead=false --branch main --depth 1 `
       https://github.com/vyadh/nutest.git .vendor/lib/nutest
   }
+  Write-Output "Using Nutest $(git -C .vendor/lib/nutest rev-parse HEAD)."
   # If executing task from PowerShell Core, error such as "'Install-Module'
   # command was found in the module 'PowerShellGet', but the module could not be
   # loaded" unless earlier versions of PackageManagement and PowerShellGet are
@@ -193,16 +213,23 @@ setup:
     -not (Get-Module -ListAvailable -FullyQualifiedName `
     @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.0.0' })
   ) {
+    Write-Output 'Installing PSScriptAnalyzer.'
     Find-Module -MinimumVersion 1.0.0 -Name PSScriptAnalyzer | Save-Module `
       -Force -Path $ModulePath
   }
+  Write-Output "Using PSScriptAnalyzer $((Get-Module -ListAvailable `
+    PSScriptAnalyzer | Select-Object -First 1).Version)."
   if (
     -not (Get-Module -ListAvailable -FullyQualifiedName `
     @{ModuleName = 'Pester'; ModuleVersion = '5.0.0' })
   ) {
+    Write-Output 'Installing Pester.'
     Find-Module -MinimumVersion 5.0.0 -Name Pester | Save-Module -Force -Path `
       $ModulePath
   }
+  Write-Output "Using Pester $((Get-Module -ListAvailable Pester | `
+    Select-Object -First 1).Version)."
+  Write-Output 'Installing packages with Deno.'
   if ("$Env:JUST_INIT") {
     deno install
   }
