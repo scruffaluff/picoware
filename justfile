@@ -96,7 +96,8 @@ setup:
   #!/usr/bin/env sh
   set -eu
   arch='{{replace(replace(arch(), "x86_64", "amd64"), "aarch64", "arm64")}}'
-  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  os='{{replace(os(), "macos", "darwin")}}'
+  mkdir -p .vendor/bin .vendor/lib
   if ! command -v jq > /dev/null 2>&1; then
     echo 'Installing Jq.'
     src/install/jq.sh --preserve-env --dest .vendor/bin
@@ -117,7 +118,6 @@ setup:
     src/install/uv.sh --preserve-env --dest .vendor/bin
   fi
   echo "Using $(uv --version)."
-  mkdir -p .vendor/bin .vendor/lib
   for spec in 'assert:v2.1.0' 'core:v1.11.1' 'file:v0.4.0' 'support:v0.3.0'; do
     bats_check=''
     pkg="${spec%:*}"
@@ -145,7 +145,7 @@ setup:
       https://formulae.brew.sh/api/formula/shellcheck.json |
       jq --exit-status --raw-output .versions.stable)"
     curl --fail --location --show-error --output /tmp/shellcheck.tar.xz \
-      https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.${os}.${shellcheck_arch}.tar.xz
+      "https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/shellcheck-v${shellcheck_version}.${os}.${shellcheck_arch}.tar.xz"
     tar fx /tmp/shellcheck.tar.xz -C /tmp
     install "/tmp/shellcheck-v${shellcheck_version}/shellcheck" .vendor/bin/
   fi
