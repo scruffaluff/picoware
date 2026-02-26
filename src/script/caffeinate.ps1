@@ -25,7 +25,7 @@ Options:
 
 # Print Caffeinate version string.
 function Version() {
-    Write-Output 'Caffeinate 0.2.0'
+    Write-Output 'Caffeinate 0.2.1'
 }
 
 # Script entrypoint.

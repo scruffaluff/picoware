@@ -4,7 +4,7 @@
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 export PATH := if os() == "windows" {
-  join(justfile_directory(), ".vendor\\bin;") + env("Path")
+  join(justfile_directory(), ".vendor\\bin;") + env("PATH")
 } else {
   justfile_directory() / ".vendor/bin:" + justfile_directory() /
   ".vendor/lib/bats-core/bin:" + env("PATH")
@@ -69,7 +69,7 @@ lint +paths=".":
   done
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
-  uv tool run mypy {{paths}}
+  uv tool run ty check {{paths}}
 
 # Run code analyses.
 [windows]
@@ -83,7 +83,7 @@ lint +paths=".":
     data/config/script_analyzer.psd1
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
-  uv tool run mypy {{paths}}
+  uv tool run ty check {{paths}}
 
 # List all commands available in justfile.
 [default]

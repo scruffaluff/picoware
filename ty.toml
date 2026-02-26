@@ -1,0 +1,10 @@
+# Ty configuration file for Python type checking.
+#
+# For more information, visit
+# https://docs.astral.sh/ty/configuration/.
+
+[rules]
+unresolved-import = "ignore"
+
+[terminal]
+error-on-warning = true

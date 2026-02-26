@@ -72,7 +72,7 @@ log() {
 #   Caffeinate version string.
 #######################################
 version() {
-  echo 'Caffeinate 0.2.0'
+  echo 'Caffeinate 0.2.1'
 }
 
 #######################################
@@ -104,16 +104,18 @@ main() {
   # Flags:
   #   -x: Check if file exists and execute permission is granted.
   if command -v systemd-inhibit > /dev/null 2>&1; then
+    # Older versions of systemd-inhibit do not support the --no-ask-password
+    # flag.
     if [ "${#}" -eq 0 ]; then
       # Sleep infinity is not supported on all platforms.
       #
-      #  For more information, visit https://stackoverflow.com/a/41655546.
+      # For more information, visit https://stackoverflow.com/a/41655546.
       while true; do
-        systemd-inhibit --no-ask-password --no-legend --no-pager --mode block \
+        systemd-inhibit --no-legend --no-pager --mode block \
           --what idle:sleep sleep 86400
       done
     else
-      systemd-inhibit --no-ask-password --no-legend --no-pager --mode block \
+      systemd-inhibit --no-legend --no-pager --mode block \
         --what idle:sleep "$@"
     fi
   else

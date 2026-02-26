@@ -8,7 +8,7 @@ import pytest
 
 repo_path = Path(__file__).parents[1]
 sys.path.append(str(repo_path / "src"))
-from script import rstash  # type: ignore[attr-defined]
+from script import rstash
 
 
 @pytest.mark.parametrize(
