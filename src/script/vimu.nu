@@ -341,7 +341,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.1"
+        print "Vimu 0.1.2"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -592,7 +592,7 @@ def "main forget" [
         if ($path | path exists) {
             log info $"Deleting file ($path)."
             if not $dry_run {
-                rm $path
+                rm --force --recursive $path
             }
         }
     }
@@ -946,22 +946,19 @@ console="comconsole,vidconsole"
         "windows" => { setup-guest-windows }
     }
 
-    if (which bootware | is-empty) {
-        http get https://scruffaluff.github.io/bootware/install.nu
-        | nu -c $"($in | decode); main --global"
-    }
+    http get https://scruffaluff.github.io/bootware/install.nu
+    | nu -c $"($in | decode); main --global"
 
-    let programs = ["clear-cache" "fdi" "rgi" "rstash"]
-    | where {|program| which $program | is-empty }
-    if ($programs | is-not-empty) {
-        http get https://scruffaluff.github.io/picoware/install/scripts.nu
-        | nu -c $"($in | decode); main --global ($programs | str join ' ')"
-    }
+    let programs = ["clear-cache" "fdi" "rgi" "rstash" "vimu"]
+    http get https://scruffaluff.github.io/picoware/install/scripts.nu
+    | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
     if $nu.os-info.name == "windows" {
         if not ("C:/Program Files/Tailscale" | path exists) {
+            let version = http get https://formulae.brew.sh/api/formula/tailscale.json
+            | get versions.stable
             let temp = mktemp --tmpdir --suffix ".msi"
-            http get https://pkgs.tailscale.com/stable/tailscale-setup-1.86.2-amd64.msi
+            http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
             | save --force --progress $temp
             msiexec /quiet /i $temp
         }
@@ -1041,19 +1038,17 @@ def setup-guest-linux [super: string] {
         }
     }
 
-    if (which topgrade | is-empty) {
-        let temp = mktemp --directory --tmpdir
-        let version = http get https://formulae.brew.sh/api/formula/topgrade.json
-        | get versions.stable
-        let file_name = (
-            $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
-        )
+    let temp = mktemp --directory --tmpdir
+    let version = http get https://formulae.brew.sh/api/formula/topgrade.json
+    | get versions.stable
+    let file_name = (
+        $"topgrade-v($version)-($nu.os-info.arch)-unknown-linux-musl.tar.gz"
+    )
 
-        http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
-        | save --progress $"($temp)/topgrade.tar.gz"
-        tar xf $"($temp)/topgrade.tar.gz" -C $temp
-        ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
-    }
+    http get $"https://github.com/topgrade-rs/topgrade/releases/download/v($version)/($file_name)"
+    | save --progress $"($temp)/topgrade.tar.gz"
+    tar xf $"($temp)/topgrade.tar.gz" -C $temp
+    ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
 }
