@@ -341,7 +341,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.2"
+        print "Vimu 0.1.3"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -941,6 +941,7 @@ console="comconsole,vidconsole"
             ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
 
             mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
+            chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
         }
         "linux" => { setup-guest-linux $super }
         "windows" => { setup-guest-windows }
@@ -954,19 +955,26 @@ console="comconsole,vidconsole"
     | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
     if $nu.os-info.name == "windows" {
-        if not ("C:/Program Files/Tailscale" | path exists) {
-            let version = http get https://formulae.brew.sh/api/formula/tailscale.json
-            | get versions.stable
-            let temp = mktemp --tmpdir --suffix ".msi"
-            http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
-            | save --force --progress $temp
-            msiexec /quiet /i $temp
-        }
+        let version = http get https://formulae.brew.sh/api/formula/tailscale.json
+        | get versions.stable
+        let temp = mktemp --tmpdir --suffix ".msi"
+        http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
+        | save --force --progress $temp
+        msiexec /quiet /i $temp
     } else if (which tailscale | is-empty) {
         http get https://tailscale.com/install.sh | sh
     }
 
-    let config = '
+    let nushell_folder = match $nu.os-info.name {
+        "macos" => { $"($home)/Library/Application Support/nushell" }
+        "windows" => { $"($home)/AppData/Roaming/nushell" }
+        _ => { $"($home)/.config/nushell" }
+    }
+    mkdir $nushell_folder
+    http get https://raw.githubusercontent.com/scruffaluff/bootware/refs/heads/main/ansible_collections/scruffaluff/bootware/roles/nushell/files/config.nu
+    | save --force $"($nushell_folder)/config.nu"
+
+    '
 # Topgrade configuration file for updating system packages.
 #
 # For more infomation, visit
@@ -1051,6 +1059,7 @@ def setup-guest-linux [super: string] {
     ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
 
     mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
+    chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
 }
 
 # Configure guest filesystem for Windows.
