@@ -26,7 +26,6 @@ def cloud-init [domain: string username: string password: string] {
     let pub_key = open --raw $"(path-config)/key.pub" | str trim
     let content = $"
 #cloud-config
-
 hostname: '($domain)'
 preserve_hostname: false
 users:
@@ -36,7 +35,8 @@ users:
     plain_text_passwd: '($password)'
     ssh_authorized_keys:
       - '($pub_key)'
-    sudo: ALL=\(ALL\) NOPASSWD:ALL
+    sudo:
+      - 'ALL=\(ALL\) NOPASSWD:ALL'
 "
     | str trim --left
 
@@ -204,7 +204,7 @@ Restart this script from an administrator console or install to a user directory
 
 # Create a virtual machine from an ISO disk.
 def --wrapped install-cdrom [
-    domain: string osinfo: string cdrom: path ...args: string
+    domain: string arch: string osinfo: string cdrom: path ...args: string
 ] {
     let home = path-home
     let args = match $nu.os-info.name {
@@ -226,7 +226,7 @@ def --wrapped install-cdrom [
     log info $"Installing ($domain) from a CD-ROM."
     (
         virt-install --noreboot
-        --arch $nu.os-info.arch
+        --arch $arch
         --boot uefi
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=64
@@ -240,7 +240,7 @@ def --wrapped install-cdrom [
 
 # Create a virtual machine from a qcow2 disk.
 def --wrapped install-disk [
-    domain: string osinfo: string image: path extension: string ...args: string
+    domain: string arch: string osinfo: string image: path extension: string ...args: string
 ] {
     let args = match $nu.os-info.name {
         "linux" => [
@@ -260,6 +260,9 @@ def --wrapped install-disk [
     let username = $env.VIMU_USERNAME? | default { input "Username: " }
     let password = $env.VIMU_PASSWORD? | default { ask-password }
     let user_data = cloud-init $domain $username $password
+    # Appears that Cloud-Init requires an empty meta data file as mentioned at
+    # https://github.com/virt-manager/virt-manager/issues/975#issuecomment-3246370350.
+    let meta_data = mktemp --tmpdir --suffix ".yaml"
 
     let disk = $"(path-libvirt)/image/($domain).qcow2"
     let size = "64G"
@@ -270,9 +273,9 @@ def --wrapped install-disk [
     log info $"Installing ($domain) from a disk image."
     (
         virt-install --noreboot
-        --arch $nu.os-info.arch
+        --arch $arch
         --boot uefi
-        --cloud-init $"user-data=($user_data)"
+        --cloud-init $"meta-data=($meta_data),user-data=($user_data)"
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
         --memory 4096
         --name $domain
@@ -341,7 +344,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.3"
+        print "Vimu 0.1.4"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -426,16 +429,16 @@ def "main create" [
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
-            let image = $"($config)/image/alpine_amd64.qcow2"
+            let image = $"($config)/image/alpine_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
-                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.1-x86_64-bios-cloudinit-r0.qcow2"
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/generic_alpine-3.23.3-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
                 | save --progress $image
             }
 
             (
-                main install --arch x86_64 --domain alpine
-                --log-level $log_level --osinfo alpinelinux3.21 $image
+                main install --domain alpine --log-level $log_level --osinfo
+                alpinelinux3.23 $image
             )
         }
         "android" => {
@@ -456,7 +459,7 @@ def "main create" [
             let image = $"($config)/image/arch_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Arch image."
-                http get "https://gitlab.archlinux.org/archlinux/arch-boxes/-/package_files/9911/download"
+                http get "https://fastly.mirror.pkgbuild.com/images/v20260301.495047/Arch-Linux-x86_64-cloudimg.qcow2"
                 | save --progress $image
             }
 
@@ -482,26 +485,30 @@ def "main create" [
             let image = $"($config)/image/fedora_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Fedora image."
-                http get $"https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.($nu.os-info.arch).qcow2"
+                http get $"https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/($nu.os-info.arch)/images/Fedora-Cloud-Base-Generic-43-1.6.($nu.os-info.arch).qcow2"
                 | save --progress $image
             }
 
             (
                 main install --domain fedora --log-level $log_level
-                --osinfo fedora41 $image
+                --osinfo fedora43 $image
             )
         }
         "freebsd" => {
-            let image = $"($config)/image/freebsd_amd64.qcow2"
+            let image = $"($config)/image/freebsd_($arch).qcow2"
             if not ($image | path exists) {
+                let url = match $nu.os-info.arch {
+                    "aarch64" => "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/15.0-STABLE/aarch64/Latest/FreeBSD-15.0-STABLE-arm64-aarch64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                    "x86_64" => "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/15.0-STABLE/amd64/Latest/FreeBSD-15.0-STABLE-amd64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                }
                 log info "Downloading FreeBSD image."
-                http get "https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/14.2/2024-12-08/zfs/freebsd-14.2-zfs-2024-12-08.qcow2"
-                | save --progress $image
+                http get $url | save --progress $"($image).xz"
+                xz --decompress $"($image).xz"
             }
 
             (
-                main install --arch x86_64 --domain freebsd
-                --log-level $log_level --osinfo freebsd14.2 $image
+                main install --domain freebsd --log-level $log_level --osinfo
+                freebsd15.0 $image
             )
         }
         "windows" => {
@@ -631,11 +638,11 @@ def "main install" [
     match $extension {
         "iso" => {
             create-app $domain
-            install-cdrom $domain $osinfo $path
+            install-cdrom $domain $arch $osinfo $path
         }
         "img" | "qcow2" | "raw" | "vmdk" => {
             create-app $domain
-            install-disk $domain $osinfo $path $extension
+            install-disk $domain $arch $osinfo $path $extension
         }
         _ => {
             error make { msg: $"Unsupported extension '$extension'." }
