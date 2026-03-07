@@ -442,10 +442,10 @@ def "main create" [
             )
         }
         "android" => {
-            let image = $"($config)/image/android_($arch).qcow2"
+            let image = $"($config)/cdrom/android_amd64.iso"
             if not ($image | path exists) {
                 log info "Downloading Android image."
-                http get $"https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
+                http get "https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
                 | save --progress $image
             }
 
@@ -509,6 +509,19 @@ def "main create" [
             (
                 main install --domain freebsd --log-level $log_level --osinfo
                 freebsd15.0 $image
+            )
+        }
+        "proxmox" => {
+            let cdrom = $"($config)/cdrom/proxmox_amd64.iso"
+            if not ($cdrom | path exists) {
+                log info "Downloading Proxmox image."
+                http get "https://enterprise.proxmox.com/iso/proxmox-ve_9.1-1.iso"
+                | save --progress $cdrom
+            }
+
+            (
+                main install --arch x86_64 --domain proxmox
+                --log-level $log_level --osinfo debian13 $cdrom
             )
         }
         "windows" => {
@@ -793,7 +806,7 @@ def --wrapped "main ssh" [
     # Appears that `$in` needs to be saved to a variable for mutliple uses.
     let pipe = $in
     if ($pipe | is-empty) {
-        tssh -i $key -p $port localhost ...$args
+        tssh -t -i $key -p $port localhost ...$args
     } else {
         $pipe | tssh -i $key -p $port localhost ...$args
     }
