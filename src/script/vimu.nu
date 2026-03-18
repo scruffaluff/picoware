@@ -442,17 +442,17 @@ def "main create" [
             )
         }
         "android" => {
-            let image = $"($config)/cdrom/android_amd64.iso"
-            if not ($image | path exists) {
+            let cdrom = $"($config)/cdrom/android_amd64.iso"
+            if not ($cdrom | path exists) {
                 log info "Downloading Android image."
                 http get "https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
-                | save --progress $image
+                | save --progress $cdrom
             }
 
             print "Follow instructions at https://youtu.be/MG7-S_88nDg?t=120 during first boot."
             (
                 main install --arch x86_64 --domain android
-                --log-level $log_level --osinfo android-x86-9.0 $image
+                --log-level $log_level --osinfo android-x86-9.0 $cdrom
             )
         }
         "arch" => {
@@ -509,6 +509,19 @@ def "main create" [
             (
                 main install --domain freebsd --log-level $log_level --osinfo
                 freebsd15.0 $image
+            )
+        }
+        "nixos" => {
+            let cdrom = $"($config)/cdrom/nixos_($arch).iso"
+            if not ($cdrom | path exists) {
+                log info "Downloading NixOS image."
+                http get $"https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-($nu.os-info.arch)-linux.iso"
+                | save --progress $cdrom
+            }
+
+            (
+                main install --domain nixos --log-level $log_level --osinfo
+                nixos-25.11 $cdrom
             )
         }
         "proxmox" => {
@@ -735,15 +748,17 @@ def "main remove" [
 # Configure machine for emulation.
 def "main setup" [
     --log-level (-l): string = "debug" # Log level
+    --desktop (-d): string = "gnome" # Desktop environment
     ...commands: string # Setup commands (desktop,guest,host)
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
 
     for command in $commands {
         match $command {
-            "desktop" => { setup-desktop }
+            "desktop" => { setup-desktop $desktop }
             "guest" => { setup-guest }
             "host" => { setup-host }
+            "tailscale" => { setup-tailscale }
             _ => { error make { msg: $"Invalid setup command '($command)'." } }
         }
     }
@@ -893,29 +908,39 @@ def path-libvirt [] {
 }
 
 # Configure desktop environment on guest filesystem.
-def setup-desktop [] {
+def setup-desktop [desktop: string = "gnome"] {
     let super = find-super
 
     match $nu.os-info.name {
         "freebsd" => {
-            # Configure GNOME desktop for FreeBSD.
-            #
-            # Based on instructions at
-            # https://docs.freebsd.org/en/books/handbook/desktop/#gnome-environment.
             ^$super pkg update
-            ^$super pkg install --yes gnome
-            (
-                ^$super nu --commands
-                "'proc /proc procfs rw 0 0' | save --append /etc/fstab"
-            )
-            ^$super sysrc dbus_enable="YES"
-            ^$super sysrc gdm_enable="YES"
-            ^$super sysrc gnome_enable="YES"
+            # Based on instructions at
+            # https://docs.freebsd.org/en/books/handbook/desktop.
+            match $desktop {
+                "gnome" => {
+                    ^$super pkg install --yes gnome
+                    (
+                        ^$super nu --commands
+                        "'proc /proc procfs rw 0 0' | save --append /etc/fstab"
+                    )
+                    ^$super sysrc dbus_enable="YES"
+                    ^$super sysrc gdm_enable="YES"
+                    ^$super sysrc gnome_enable="YES"
+                }
+                "plasma" => {
+                    ^$super pkg install --yes kde sddm
+                    ^$super sysrc dbus_enable="YES"
+                    ^$super sysrc sddm_enable="YES"
+                }
+                _ => { error make {
+                    msg: $"Unsupported desktop environment '($desktop)'."
+                } }
+            }
         }
         "linux" => {
             if (which apk | is-not-empty) {
                 ^$super apk update
-                ^$super setup-desktop gnome
+                ^$super setup-desktop $desktop
             } else if (which apt-get | is-not-empty) {
                 # Avoid APT interactive configuration requests.
                 $env.DEBIAN_FRONTEND = "noninteractive"
@@ -974,17 +999,6 @@ console="comconsole,vidconsole"
     http get https://scruffaluff.github.io/picoware/install/scripts.nu
     | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
-    if $nu.os-info.name == "windows" {
-        let version = http get https://formulae.brew.sh/api/formula/tailscale.json
-        | get versions.stable
-        let temp = mktemp --tmpdir --suffix ".msi"
-        http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
-        | save --force --progress $temp
-        msiexec /quiet /i $temp
-    } else if (which tailscale | is-empty) {
-        http get https://tailscale.com/install.sh | sh
-    }
-
     let nushell_folder = match $nu.os-info.name {
         "macos" => { $"($home)/Library/Application Support/nushell" }
         "windows" => { $"($home)/AppData/Roaming/nushell" }
@@ -1018,7 +1032,7 @@ def setup-guest-linux [super: string] {
         ^$super apk update
         (
             ^$super apk add curl ncurses openssh-server python3 qemu-guest-agent
-            rclone spice-vdagent
+            rclone rsync spice-vdagent
         )
         ^$super rc-update add qemu-guest-agent
         ^$super service qemu-guest-agent start
@@ -1032,25 +1046,25 @@ def setup-guest-linux [super: string] {
         ^$super -E apt-get update
         (
             ^$super -E apt-get install --yes curl libncurses6 openssh-server
-            qemu-guest-agent rclone spice-vdagent
+            qemu-guest-agent rclone rsync spice-vdagent
         )
     } else if (which dnf | is-not-empty) {
         ^$super dnf makecache
         (
             ^$super dnf install --assumeyes curl ncurses openssh-server
-            qemu-guest-agent rclone spice-vdagent
+            qemu-guest-agent rclone rsync spice-vdagent
         )
     } else if (which pacman | is-not-empty) {
         ^$super pacman --noconfirm --refresh --sync --sysupgrade
         (
             ^$super pacman --noconfirm --sync curl ncurses openssh
-            qemu-guest-agent rclone spice-vdagent
+            qemu-guest-agent rclone rsync spice-vdagent
         )
     } else if (which zypper | is-not-empty) {
         ^$super zypper update --no-confirm
         (
             ^$super zypper install --no-confirm curl ncurses openssh-server
-            qemu-guest-agent rclone spice-vdagent
+            qemu-guest-agent rclone rsync spice-vdagent
         )
     }
 
@@ -1177,5 +1191,19 @@ def setup-host [] {
     if ($programs | is-not-empty) {
         http get https://scruffaluff.github.io/picoware/install/scripts.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
+    }
+}
+
+# Install Tailscale.
+def setup-tailscale [] {
+    if $nu.os-info.name == "windows" {
+        let version = http get https://formulae.brew.sh/api/formula/tailscale.json
+        | get versions.stable
+        let temp = mktemp --tmpdir --suffix ".msi"
+        http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
+        | save --force --progress $temp
+        msiexec /quiet /i $temp
+    } else if (which tailscale | is-empty) {
+        http get https://tailscale.com/install.sh | sh
     }
 }
