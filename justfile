@@ -87,8 +87,8 @@ lint +paths=".":
 
 # List all commands available in justfile.
 [default]
-list:
-  @just --list
+@list:
+  just --list
 
 # Install development dependencies.
 [unix]

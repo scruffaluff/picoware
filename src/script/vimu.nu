@@ -99,9 +99,7 @@ def create-app [domain: string] {
                 | save --force $"($dest)/Info.plist"
             )
         }
-        "windows" => {
-            error make { msg: "Windows application is not yet supported." }
-        }
+        "windows" => { error make "Windows application is not yet supported." }
         _ => {
             let dest = $"($home)/.local/share/applications"
             mkdir $dest
@@ -177,7 +175,7 @@ def download-windows-iso [dest: path] {
     )
     let errors = $response | get --optional Errors
     if ($errors | is-not-empty) {
-        error make { msg: ($errors | to json --indent 2) }
+        error make ($errors | to json --indent 2)
     }
 
     let link = $response | get ProductDownloadOptions | get Uri | first
@@ -198,7 +196,7 @@ Restart this script from an administrator console or install to a user directory
     } else if (which sudo | is-not-empty) {
         "sudo"
     } else {
-        error make { msg: "Unable to find a command for super user elevation." }
+        error make "Unable to find a command for super user elevation."
     }
 }
 
@@ -344,7 +342,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.4"
+        print "Vimu 0.1.5"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -557,7 +555,7 @@ def "main create" [
             create-app "windows"
             install-windows windows $cdrom $drivers
         }
-        _ => { error make { msg: $"Domain '($domain)' is not supported." } }
+        _ => { error make $"Domain '($domain)' is not supported." }
     }
 }
 
@@ -670,9 +668,7 @@ def "main install" [
             create-app $domain
             install-disk $domain $arch $osinfo $path $extension
         }
-        _ => {
-            error make { msg: $"Unsupported extension '$extension'." }
-        }
+        _ => { error make $"Unsupported extension '$extension'." }
     }
 }
 
@@ -758,8 +754,9 @@ def "main setup" [
             "desktop" => { setup-desktop $desktop }
             "guest" => { setup-guest }
             "host" => { setup-host }
+            "rustdesk" => { setup-rustdesk }
             "tailscale" => { setup-tailscale }
-            _ => { error make { msg: $"Invalid setup command '($command)'." } }
+            _ => { error make $"Invalid setup command '($command)'." }
         }
     }
 }
@@ -932,9 +929,7 @@ def setup-desktop [desktop: string = "gnome"] {
                     ^$super sysrc dbus_enable="YES"
                     ^$super sysrc sddm_enable="YES"
                 }
-                _ => { error make {
-                    msg: $"Unsupported desktop environment '($desktop)'."
-                } }
+                _ => { error make $"Unsupported desktop environment '($desktop)'." }
             }
         }
         "linux" => {
@@ -945,15 +940,32 @@ def setup-desktop [desktop: string = "gnome"] {
                 # Avoid APT interactive configuration requests.
                 $env.DEBIAN_FRONTEND = "noninteractive"
                 ^$super -E apt-get update
-                ^$super -E apt-get install --yes task-gnome-desktop
+                match $desktop {
+                    "gnome" => { ^$super -E apt-get install --yes task-gnome-desktop }
+                    "plasma" => { ^$super -E apt-get install --yes task-kde-desktop }
+                    _ => { error make $"Unsupported desktop environment '($desktop)'." }
+                }
             } else if (which dnf | is-not-empty) {
                 ^$super dnf makecache
-                ^$super dnf group install gnome-desktop
+                match $desktop {
+                    "gnome" => { ^$super dnf group install gnome-desktop }
+                    "plasma" => { ^$super dnf group install plasma-desktop }
+                    _ => { error make $"Unsupported desktop environment '($desktop)'." }
+                }
                 ^$super systemctl set-default graphical.target
             } else if (which pacman | is-not-empty) {
                 ^$super pacman --noconfirm --refresh --sync --sysupgrade
-                ^$super pacman --noconfirm --sync gnome
-                ^$super systemctl enable --now gdm.service
+                match $desktop {
+                    "gnome" => {
+                        ^$super pacman --noconfirm --sync gnome
+                        ^$super systemctl enable --now gdm.service
+                    }
+                    "plasma" => {
+                        ^$super pacman --noconfirm --sync plasma-meta
+                        ^$super systemctl enable --now sddm.service
+                    }
+                    _ => { error make $"Unsupported desktop environment '($desktop)'." }
+                }
             }
         }
     }
@@ -1191,6 +1203,58 @@ def setup-host [] {
     if ($programs | is-not-empty) {
         http get https://scruffaluff.github.io/picoware/install/scripts.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
+    }
+}
+
+# Install RustDesk.
+def setup-rustdesk [] {
+    let super = find-super
+    let version = http get https://formulae.brew.sh/api/cask/rustdesk.json
+    | get version
+    let url = $"https://github.com/rustdesk/rustdesk/releases/download/($version)/rustdesk-($version)-($nu.os-info.arch)"
+
+    match $nu.os-info.name {
+        "freebsd" => {
+            ^$super pkg update
+            ^$super pkg install --yes rustdesk-server
+        }
+        "linux" => {
+            if (which apk | is-not-empty) {
+                let temp = mktemp --tmpdir --suffix ".apk"
+                http get $"($url)-signed.apk" | save --force --progress $temp
+                ^$super apk add $temp
+            } else if (which apt-get | is-not-empty) {
+                # Avoid APT interactive configuration requests.
+                $env.DEBIAN_FRONTEND = "noninteractive"
+                let temp = mktemp --tmpdir --suffix ".deb"
+                http get $"($url).deb" | save --force --progress $temp
+                ^$super -E apt install --yes $temp
+            } else if (which dnf | is-not-empty) {
+                let temp = mktemp --tmpdir --suffix ".rpm"
+                http get $"($url).rpm" | save --force --progress $temp
+                ^$super dnf install --assumeyes $temp
+            } else if (which pacman | is-not-empty) {
+                let temp = mktemp --tmpdir --suffix ".pkg.tar.zst"
+                http get $"($url).pkg.tar.zst" | save --force --progress $temp
+                ^$super pacman --noconfirm --sync $temp
+            } else if (which zypper | is-not-empty) {
+                let temp = mktemp --tmpdir --suffix ".rpm"
+                http get $"($url)-suse.rpm" | save --force --progress $temp
+                ^$super zypper install --no-confirm $temp
+            }
+        }
+        "macos" => {
+            let temp = mktemp --tmpdir --suffix ".dmg"
+            http get $"($url).dmg" | save --force --progress $temp
+            hdiutil attach $temp
+            sudo cp -R $"/Volumes/rustdesk-($version)/RustDesk.app" /Applications/
+            hdiutil detach $"/Volumes/rustdesk-($version)"
+        }
+        "windows" => {
+            let temp = mktemp --tmpdir --suffix ".msi"
+            http get $"($url).msi" | save --force --progress $temp
+            msiexec /quiet /i $temp
+        }
     }
 }
 
