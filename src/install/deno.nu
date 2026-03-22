@@ -157,6 +157,14 @@ def main [
         } else {
             $"($env.LocalAppData)\\Programs\\Bin"
         }
+    } else if $nu.os-info.name == "freebsd" {
+        log 'FreeBSD Deno installation requires system package manager.'
+        log "Ignoring arguments and installing Deno to '/usr/local/bin/deno'."
+        let super = find-super
+        ^$super pkg update
+        ^$super pkg install --yes deno
+        log $"Installed (deno -V)."
+        return
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
     }

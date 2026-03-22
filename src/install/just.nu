@@ -116,6 +116,14 @@ def main [
         } else {
             $"($env.LocalAppData)\\Programs\\Bin"
         }
+    } else if $nu.os-info.name == "freebsd" {
+        log 'FreeBSD Just installation requires system package manager.'
+        log "Ignoring arguments and installing Just to '/usr/local/bin/just'."
+        let super = find-super
+        ^$super pkg update
+        ^$super pkg install --yes just
+        log $"Installed (just --version)."
+        return
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
     }

@@ -95,6 +95,14 @@ def main [
         } else {
             $"($env.LocalAppData)\\Programs\\Bin"
         }
+    } else if $nu.os-info.name == "freebsd" {
+        log 'FreeBSD Jq installation requires system package manager.'
+        log "Ignoring arguments and installing Jq to '/usr/local/bin/jq'."
+        let super = find-super
+        ^$super pkg update
+        ^$super pkg install --yes jq
+        log $"Installed (jq --version)."
+        return
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
     }

@@ -24,9 +24,18 @@ def ask-password [] {
 # Generate cloud init data.
 def cloud-init [domain: string username: string password: string] {
     let pub_key = open --raw $"(path-config)/key.pub" | str trim
-    let content = $"
+
+    # Some Cloud-Init systems requires a metadata file as mentioned at
+    # https://github.com/virt-manager/virt-manager/issues/975#issuecomment-3246370350.
+    let meta_path = mktemp --tmpdir --suffix .yaml
+    let meta_data = $"hostname: '($domain)'" | save --force $meta_path
+
+    let user_path = mktemp --tmpdir --suffix .yaml
+    let user_data = $"
 #cloud-config
 hostname: '($domain)'
+packages:
+  - sudo
 preserve_hostname: false
 users:
   - doas: [permit nopass ($username)]
@@ -38,11 +47,9 @@ users:
     sudo:
       - 'ALL=\(ALL\) NOPASSWD:ALL'
 "
-    | str trim --left
+    | str trim --left | save --force $user_path
 
-    let path = mktemp --tmpdir --suffix .yaml
-    $content | save --force $path
-    $path
+    $"meta-data=($meta_path),user-data=($user_path)"
 }
 
 # Create application desktop entry.
@@ -257,10 +264,7 @@ def --wrapped install-disk [
     print "Creating cloud init account for virtual machine."
     let username = $env.VIMU_USERNAME? | default { input "Username: " }
     let password = $env.VIMU_PASSWORD? | default { ask-password }
-    let user_data = cloud-init $domain $username $password
-    # Appears that Cloud-Init requires an empty meta data file as mentioned at
-    # https://github.com/virt-manager/virt-manager/issues/975#issuecomment-3246370350.
-    let meta_data = mktemp --tmpdir --suffix ".yaml"
+    let cloud_data = cloud-init $domain $username $password
 
     let disk = $"(path-libvirt)/image/($domain).qcow2"
     let size = "64G"
@@ -273,7 +277,7 @@ def --wrapped install-disk [
         virt-install --noreboot
         --arch $arch
         --boot uefi
-        --cloud-init $"meta-data=($meta_data),user-data=($user_data)"
+        --cloud-init $cloud_data
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
         --memory 4096
         --name $domain

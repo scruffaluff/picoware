@@ -116,6 +116,14 @@ def main [
         } else {
             $"($env.LocalAppData)\\Programs\\Bin"
         }
+    } else if $nu.os-info.name == "freebsd" {
+        log 'FreeBSD Uv installation requires system package manager.'
+        log "Ignoring arguments and installing Uv to '/usr/local/bin/uv'."
+        let super = find-super
+        ^$super pkg update
+        ^$super pkg install --yes uv
+        log $"Installed (uv --version)."
+        return
     } else {
         if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
     }
