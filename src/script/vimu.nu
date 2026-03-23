@@ -963,14 +963,19 @@ def setup-guest [] {
             ^$super sysrc qemu_guest_agent_enable="YES"
 
             # Enable serial console on next boot.
-            let content = '
-boot_multicons="YES"
-boot_serial="YES"
-comconsole_speed="115200"
-console="comconsole,vidconsole"
-'
-            | str trim --left
-            ^$super nu --commands $"'($content)' | save --force /boot/loader.conf"
+            for option in ({
+                "boot_multicons": "YES" "boot_serial": "YES"
+                "comconsole_speed": "115200" "console": "comconsole,vidconsole"
+            } | transpose key value) {
+                let lines = open "/boot/loader.conf" | lines
+                | where {|line| not ($line | str contains $"($option.key)=")}
+
+                let content = [...$lines $'($option.key)="($option.value)"']
+                | str join "\n"
+                ^$super nu --commands $"
+'($content)' | save --force /boot/loader.conf
+"
+            }
 
             mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
             chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
