@@ -182,7 +182,16 @@ def download-windows-iso [dest: path] {
     )
     let errors = $response | get --optional Errors
     if ($errors | is-not-empty) {
-        error make ($errors | to json --indent 2)
+        if ($errors | get --optional 0.Value) =~ "Sentinel marked this request as rejected" {
+            "Download manually from https://www.microsoft.com/en-us/software-download/windows11."
+            error make $"
+Microsoft blocked the automated download request based on your IP address.
+Download Windows ISO manually to ($dest)
+from https://www.microsoft.com/en-us/software-download/windows11.
+"
+        } else {
+            error make ($errors | to json --indent 2)
+        }
     }
 
     let link = $response | get ProductDownloadOptions | get Uri | first
@@ -212,19 +221,7 @@ def --wrapped install-cdrom [
     domain: string arch: string osinfo: string cdrom: path ...args: string
 ] {
     let home = path-home
-    let args = match $nu.os-info.name {
-        "linux" => [
-          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
-          "qxl" "--virt-type" "kvm" ...$args
-        ]
-        "macos" => [
-            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
-        ]
-        _ => [
-            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
-            ...$args
-        ]
-    }
+    let args = virt-args $arch ...$args
     let disk = $"(path-libvirt)/cdrom/($domain).iso"
     cp $cdrom $disk
 
@@ -247,20 +244,7 @@ def --wrapped install-cdrom [
 def --wrapped install-disk [
     domain: string arch: string osinfo: string image: path extension: string ...args: string
 ] {
-    let args = match $nu.os-info.name {
-        "linux" => [
-          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
-          "qxl" "--virt-type" "kvm" ...$args
-        ]
-        "macos" => [
-            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
-        ]
-        _ => [
-            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
-            ...$args
-        ]
-    }
-
+    let args = virt-args $arch ...$args
     print "Creating cloud init account for virtual machine."
     let username = $env.VIMU_USERNAME? | default { input "Username: " }
     let password = $env.VIMU_PASSWORD? | default { ask-password }
@@ -289,23 +273,10 @@ def --wrapped install-disk [
 
 # Create a Windows virtual machine from an ISO disk.
 def --wrapped install-windows [
-    domain: string cdrom: path drivers: string ...args: string
+    domain: string arch: string cdrom: path drivers: string ...args: string
 ] {
     let libvirt = path-libvirt
-    let args = match $nu.os-info.name {
-        "linux" => [
-          "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
-          "qxl" "--virt-type" "kvm" ...$args
-        ]
-        "macos" => [
-            "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf" ...$args
-        ]
-        _ => [
-            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
-            ...$args
-        ]
-    }
-
+    let args = virt-args $arch ...$args
     let disk = $"($libvirt)/cdrom/($domain).iso"
     let devices = $"($libvirt)/cdrom/($drivers | path basename).iso"
     cp $cdrom $disk
@@ -324,7 +295,7 @@ def --wrapped install-windows [
 
     (
         virt-install --noreboot
-        --arch x86_64
+        --arch $arch
         --boot uefi
         --cdrom $disk
         --disk bus=virtio,cache=none,format=qcow2,size=128
@@ -557,7 +528,7 @@ def "main create" [
             }
 
             create-app "windows"
-            install-windows windows $cdrom $drivers
+            install-windows windows x86_64 $cdrom $drivers
         }
         _ => { error make $"Domain '($domain)' is not supported." }
     }
@@ -1273,5 +1244,29 @@ def setup-tailscale [] {
         msiexec /quiet /i $temp
     } else if (which tailscale | is-empty) {
         http get https://tailscale.com/install.sh | sh
+    }
+}
+
+# Find recommended virtualization parameters.
+def virt-args [arch: string ...args: string] {
+    match $nu.os-info.name {
+        "linux" => [
+            "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
+            "qxl" "--virt-type" "kvm" ...$args
+        ]
+        "macos" => {
+            if $nu.os-info.arch == $arch {
+                [
+                    "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf"
+                    ...$args
+                ]
+            } else {
+                ["--graphics" "vnc" "--video" "virtio" ...$args]
+            }
+        }
+        _ => [
+            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
+            ...$args
+        ]
     }
 }
