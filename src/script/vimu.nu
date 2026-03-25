@@ -258,7 +258,6 @@ def --wrapped install-disk [
     arch: string
     osinfo: string
     image: path
-    extension: string
     ...args: string
 ] {
     let args = virt-args $arch ...$args
@@ -270,7 +269,7 @@ def --wrapped install-disk [
     let disk = $"(path-libvirt)/image/($domain).qcow2"
     let size = "64G"
     log info $"Resizing disk image to ($size)."
-    qemu-img convert -p -f $extension -O qcow2 $image $disk
+    qemu-img convert -p -O qcow2 $image $disk
     qemu-img resize $disk $size
 
     log info $"Installing ($domain) from a disk image."
@@ -295,7 +294,7 @@ def --wrapped install-windows [
     let libvirt = path-libvirt
     let args = virt-args $arch ...$args
     let disk = $"($libvirt)/cdrom/($domain).iso"
-    let devices = $"($libvirt)/cdrom/($drivers | path basename).iso"
+    let devices = $"($libvirt)/cdrom/($drivers | path basename)"
     cp $cdrom $disk
     cp $drivers $devices
 
@@ -527,6 +526,17 @@ def "main create" [
                 --log-level $log_level --osinfo debian13 $cdrom
             )
         }
+        "redox" => {
+            let image = $"($config)/image/redox_amd64.img"
+            if not ($image | path exists) {
+                let url = "https://static.redox-os.org/releases/0.9.0/x86_64/redox_demo_x86_64_2024-09-07_1225_harddrive.img.zst"
+                log info "Downloading Redox image."
+                http get $url | save --progress $"($image).zst"
+                zstd --decompress --rm $"($image).zst"
+            }
+
+            main install --domain redox --log-level $log_level $image
+        }
         "windows" => {
             let cdrom = $"($config)/cdrom/windows_amd64.iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
@@ -659,7 +669,7 @@ def "main install" [
         }
         "img" | "qcow2" | "raw" | "vmdk" => {
             create-app $domain
-            install-disk --super $super $domain $arch $osinfo $path $extension
+            install-disk --super $super $domain $arch $osinfo $path
         }
         _ => { error make $"Unsupported extension '$extension'." }
     }
@@ -944,6 +954,10 @@ def setup-desktop [desktop: string = "gnome"] {
                 match $desktop {
                     "cosmic" => { ^$super dnf group install --assumeyes cosmic-desktop }
                     "gnome" => { ^$super dnf group install --assumeyes gnome-desktop }
+                    "hyprland" => {
+                        ^$super dnf copr enable --assumeyes solopasha/hyprland
+                        ^$super dnf install --assumeyes hyprland
+                    }
                     "plasma" => { ^$super dnf group install --assumeyes kde-desktop }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
@@ -966,9 +980,18 @@ def setup-desktop [desktop: string = "gnome"] {
                         ^$super pacman --noconfirm --sync plasma-meta
                         ^$super systemctl enable --now plasmalogin.service
                     }
-                    _ => { error make $"Unsupported desktop environment '($desktop)'." }
+                    _ => {
+                        error make $"Unsupported desktop environment '($desktop)'."
+                    }
                 }
             }
+
+            (
+                ^$super rm -f
+                /usr/share/wayland-sessions/gnome-classic.desktop
+                /usr/share/wayland-sessions/gnome-classic-wayland.desktop
+                /usr/share/wayland-sessions/gnome-wayland.desktop
+            )
         }
     }
 }
