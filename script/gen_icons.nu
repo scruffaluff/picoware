@@ -2,7 +2,7 @@
 
 # Download SVG and export icon in all formats.
 def main [] {
-    const data = path self | path dirname --num-levels 2 | path join "data"
+    const data = path self ../data
     mkdir $"($data)/image" $"($data)/public"
 
     http get "https://raw.githubusercontent.com/phosphor-icons/core/refs/heads/main/assets/bold/faders-bold.svg"

@@ -130,7 +130,7 @@ Version=1.0
 
 # Create application entrypoint.
 def create-entry [domain: string path: path] {
-    const folder = path self | path dirname
+    const folder = path self .
 
     if $nu.os-info.name != "windows" {
         $"
