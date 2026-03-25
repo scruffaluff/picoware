@@ -22,8 +22,18 @@ def ask-password [] {
 }
 
 # Generate cloud init data.
-def cloud-init [domain: string username: string password: string] {
+def cloud-init [
+    --super (-s): string = "sudo"
+    domain: string
+    username: string
+    password: string
+] {
     let pub_key = open --raw $"(path-config)/key.pub" | str trim
+    let super_config = match $super {
+        "doas" => { $"doas: ['permit nopass ($username)']" }
+        "sudo" => { "sudo: ['ALL=\(ALL\) NOPASSWD:ALL']" }
+        _ => { error make $"Super command '($super)' is not supported." }
+    }
 
     # Some Cloud-Init systems requires a metadata file as mentioned at
     # https://github.com/virt-manager/virt-manager/issues/975#issuecomment-3246370350.
@@ -33,19 +43,20 @@ def cloud-init [domain: string username: string password: string] {
     let user_path = mktemp --tmpdir --suffix .yaml
     let user_data = $"
 #cloud-config
-hostname: '($domain)'
+groups:
+  - ($super)
+hostname: ($domain)
 packages:
-  - sudo
-preserve_hostname: false
+  - ($super)
 users:
-  - doas: [permit nopass ($username)]
+  - groups:
+      - ($super)
     lock_passwd: false
-    name: '($username)'
+    name: ($username)
     plain_text_passwd: '($password)'
     ssh_authorized_keys:
       - '($pub_key)'
-    sudo:
-      - 'ALL=\(ALL\) NOPASSWD:ALL'
+    ($super_config)
 "
     | str trim --left | save --force $user_path
 
@@ -242,13 +253,19 @@ def --wrapped install-cdrom [
 
 # Create a virtual machine from a qcow2 disk.
 def --wrapped install-disk [
-    domain: string arch: string osinfo: string image: path extension: string ...args: string
+    --super (-s): string = "sudo"
+    domain: string
+    arch: string
+    osinfo: string
+    image: path
+    extension: string
+    ...args: string
 ] {
     let args = virt-args $arch ...$args
     print "Creating cloud init account for virtual machine."
     let username = $env.VIMU_USERNAME? | default { input "Username: " }
     let password = $env.VIMU_PASSWORD? | default { ask-password }
-    let cloud_data = cloud-init $domain $username $password
+    let cloud_data = cloud-init --super $super $domain $username $password
 
     let disk = $"(path-libvirt)/image/($domain).qcow2"
     let size = "64G"
@@ -411,7 +428,7 @@ def "main create" [
 
             (
                 main install --domain alpine --log-level $log_level --osinfo
-                alpinelinux3.23 $image
+                alpinelinux3.23 --super doas $image
             )
         }
         "android" => {
@@ -610,6 +627,7 @@ def "main install" [
     --domain (-d): string # Virtual machine name
     --log-level (-l): string = "debug" # Log level
     --osinfo (-o): string = "generic" # Virt-install osinfo
+    --super (-s): string = "sudo" # Virtual machine super user command
     uri: string # Machine image URL or file path
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
@@ -641,7 +659,7 @@ def "main install" [
         }
         "img" | "qcow2" | "raw" | "vmdk" => {
             create-app $domain
-            install-disk $domain $arch $osinfo $path $extension
+            install-disk --super $super $domain $arch $osinfo $path $extension
         }
         _ => { error make $"Unsupported extension '$extension'." }
     }
@@ -917,27 +935,36 @@ def setup-desktop [desktop: string = "gnome"] {
                 ^$super -E apt-get update
                 match $desktop {
                     "gnome" => { ^$super -E apt-get install --yes task-gnome-desktop }
+                    "hyprland" => { ^$super -E apt-get install --yes hyprland }
                     "plasma" => { ^$super -E apt-get install --yes task-kde-desktop }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
             } else if (which dnf | is-not-empty) {
                 ^$super dnf makecache
                 match $desktop {
-                    "gnome" => { ^$super dnf group install gnome-desktop }
-                    "plasma" => { ^$super dnf group install plasma-desktop }
+                    "cosmic" => { ^$super dnf group install --assumeyes cosmic-desktop }
+                    "gnome" => { ^$super dnf group install --assumeyes gnome-desktop }
+                    "plasma" => { ^$super dnf group install --assumeyes kde-desktop }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
                 ^$super systemctl set-default graphical.target
             } else if (which pacman | is-not-empty) {
                 ^$super pacman --noconfirm --refresh --sync --sysupgrade
                 match $desktop {
+                    "cosmic" => {
+                        ^$super pacman --noconfirm --sync cosmic
+                        ^$super systemctl enable --now cosmic-greeter.service
+                    }
                     "gnome" => {
                         ^$super pacman --noconfirm --sync gnome
                         ^$super systemctl enable --now gdm.service
                     }
+                    "hyprland" => {
+                        ^$super pacman --noconfirm --sync hyprland
+                    }
                     "plasma" => {
                         ^$super pacman --noconfirm --sync plasma-meta
-                        ^$super systemctl enable --now sddm.service
+                        ^$super systemctl enable --now plasmalogin.service
                     }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
@@ -1191,7 +1218,8 @@ def setup-rustdesk [] {
     let super = find-super
     let version = http get https://formulae.brew.sh/api/cask/rustdesk.json
     | get version
-    let url = $"https://github.com/rustdesk/rustdesk/releases/download/($version)/rustdesk-($version)-($nu.os-info.arch)"
+    let target = $"rustdesk-($version)-($nu.os-info.arch)"
+    let url = $"https://github.com/rustdesk/rustdesk/releases/download/($version)"
 
     match $nu.os-info.name {
         "freebsd" => {
@@ -1201,38 +1229,40 @@ def setup-rustdesk [] {
         "linux" => {
             if (which apk | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".apk"
-                http get $"($url)-signed.apk" | save --force --progress $temp
+                http get $"($url)/($target)-signed.apk" | save --force --progress $temp
                 ^$super apk add $temp
             } else if (which apt-get | is-not-empty) {
                 # Avoid APT interactive configuration requests.
                 $env.DEBIAN_FRONTEND = "noninteractive"
                 let temp = mktemp --tmpdir --suffix ".deb"
-                http get $"($url).deb" | save --force --progress $temp
+                http get $"($url)/($target).deb" | save --force --progress $temp
                 ^$super -E apt install --yes $temp
             } else if (which dnf | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".rpm"
-                http get $"($url).rpm" | save --force --progress $temp
+                http get $"($url)/rustdesk-($version)-0.($nu.os-info.arch).rpm"
+                | save --force --progress $temp
                 ^$super dnf install --assumeyes $temp
             } else if (which pacman | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".pkg.tar.zst"
-                http get $"($url).pkg.tar.zst" | save --force --progress $temp
-                ^$super pacman --noconfirm --sync $temp
+                http get $"($url)/rustdesk-($version)-0-($nu.os-info.arch).pkg.tar.zst"
+                | save --force --progress $temp
+                ^$super pacman --noconfirm --upgrade $temp
             } else if (which zypper | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".rpm"
-                http get $"($url)-suse.rpm" | save --force --progress $temp
+                http get $"($url)/($target)-suse.rpm" | save --force --progress $temp
                 ^$super zypper install --no-confirm $temp
             }
         }
         "macos" => {
             let temp = mktemp --tmpdir --suffix ".dmg"
-            http get $"($url).dmg" | save --force --progress $temp
+            http get $"($url)/($target).dmg" | save --force --progress $temp
             hdiutil attach $temp
             sudo cp -R $"/Volumes/rustdesk-($version)/RustDesk.app" /Applications/
             hdiutil detach $"/Volumes/rustdesk-($version)"
         }
         "windows" => {
             let temp = mktemp --tmpdir --suffix ".msi"
-            http get $"($url).msi" | save --force --progress $temp
+            http get $"($url)/($target).msi" | save --force --progress $temp
             msiexec /quiet /i $temp
         }
     }
