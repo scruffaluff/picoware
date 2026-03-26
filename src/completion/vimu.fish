@@ -8,31 +8,46 @@ complete -c vimu -l help -s h -d 'Print help information'
 complete -c vimu -l log-level -d 'Log level'
 complete -c vimu -n __fish_use_subcommand -l version -s v -d 'Print version information'
 
-complete -c vimu -n __fish_use_subcommand -a install -d 'Create a virtual machine from a cdrom or disk file'
-complete -c vimu -n __fish_use_subcommand -a port -d 'Get host port mapping to domain'
 complete -c vimu -n __fish_use_subcommand -a scp -d 'Copy files between host and virtual machine'
 complete -c vimu -n __fish_use_subcommand -a snapshot-table -d 'List snapshots for all virtual machines'
 
+complete -c vimu -n __fish_use_subcommand -a adb -d 'Connect to virtual machine with Android debug bridge'
+complete -c vimu -n '__fish_seen_subcommand_from adb ' -a '$(__fish_virsh_get_domains)'
+
 complete -c vimu -n __fish_use_subcommand -a create -d 'Create virutal machine from default options'
-complete -c vimu -n '__fish_seen_subcommand_from create' -a 'alpine android arch debian freebsd windows'
+complete -c vimu -n '__fish_seen_subcommand_from create' -a 'alpine android arch debian freebsd nixos proxmox redox windows'
 
 complete -c vimu -n __fish_use_subcommand -a detach-cdroms -d 'Remove all cdrom disks from virtual machine'
-complete -c vimu -n '__fish_seen_subcommand_from detach-cdroms' -a '(__fish_virsh_get_domains)'
+complete -c vimu -n '__fish_seen_subcommand_from detach-cdroms' -a '$(__fish_virsh_get_domains)'
+
+complete -c vimu -n __fish_use_subcommand -a forget -d 'Clear history files'
+complete -c vimu -n '__fish_seen_subcommand_from forget' -s d -l dry-run -d 'Only print actions to be taken'
 
 complete -c vimu -n __fish_use_subcommand -a gui -d 'Connect to virtual machine as desktop'
-complete -c vimu -n '__fish_seen_subcommand_from gui' -a '(__fish_virsh_get_domains)'
+complete -c vimu -n '__fish_seen_subcommand_from gui' -a '$(__fish_virsh_get_domains)'
+
+complete -c vimu -n __fish_use_subcommand -a install -d 'Create a virtual machine from a cdrom or disk file'
+complete -c vimu -n '__fish_seen_subcommand_from install' -x -s a -l arch -a 'amd64 arm64' -d 'Virtual machine architecture'
+complete -c vimu -n '__fish_seen_subcommand_from install' -x -s d -l domain -d 'Virtual machine name'
+complete -c vimu -n '__fish_seen_subcommand_from install' -x -s o -l osinfo -a '$(virt-install --osinfo list)' -d 'Virtual machine name'
+complete -c vimu -n '__fish_seen_subcommand_from install' -x -s s -l super -a 'doas sudo' -d 'Virtual machine super user command'
+complete -c vimu -n '__fish_seen_subcommand_from install' -Fr
+
+complete -c vimu -n __fish_use_subcommand -a port -d 'Get host port mapping to domain'
+complete -c vimu -n '__fish_seen_subcommand_from port' -a '$(__fish_virsh_get_domains)'
 
 complete -c vimu -n __fish_use_subcommand -a remove -d 'Delete virtual machine and its disk images'
-complete -c vimu -n '__fish_seen_subcommand_from remove' -a '(__fish_virsh_get_domains)'
+complete -c vimu -n '__fish_seen_subcommand_from remove' -a '$(__fish_virsh_get_domains)'
 
 complete -c vimu -n __fish_use_subcommand -a setup -d 'Configure machine for emulation'
-complete -c vimu -n '__fish_seen_subcommand_from setup' -a 'guest desktop host'
+complete -c vimu -n '__fish_seen_subcommand_from setup' -x -s d -l desktop -a 'cosmic gnome hyprland plasma sway' -d 'Desktop environment'
+complete -c vimu -n '__fish_seen_subcommand_from setup' -a 'guest desktop host rustdesk tailscale'
 
 complete -c vimu -n __fish_use_subcommand -a ssh -d 'Connect to virtual machine with SSH'
-complete -c vimu -n '__fish_seen_subcommand_from ssh' -a '(__fish_virsh_get_domains)'
+complete -c vimu -n '__fish_seen_subcommand_from ssh' -a '$(__fish_virsh_get_domains)'
 
 complete -c vimu -n __fish_use_subcommand -a upload -d 'Upload Vimu to guest machine'
-complete -c vimu -n '__fish_seen_subcommand_from upload' -a '(__fish_virsh_get_domains)'
+complete -c vimu -n '__fish_seen_subcommand_from upload' -a '$(__fish_virsh_get_domains)'
 
 # Bootware bootstrap command completion based on
 # https://github.com/scruffaluff/bootware/blob/main/src/completion/bootware.fish.
@@ -55,6 +70,7 @@ complete -c vimu -n '__fish_seen_subcommand_from bootstrap' -x -l start-at-role 
 complete -c vimu -n '__fish_seen_subcommand_from bootstrap' -x -s t -l tags -a 'desktop server sysadmin wsl $(bootware roles)' -d 'Ansible playbook tags to select'
 complete -c vimu -n '__fish_seen_subcommand_from bootstrap' -x -s u -l url -d 'URL of playbook repository'
 complete -c vimu -n '__fish_seen_subcommand_from bootstrap' -x -l user -a '$(__fish_complete_users)' -d 'Remote user login name'
+complete -c vimu -n '__fish_seen_subcommand_from bootstrap' -a '$(__fish_virsh_get_domains)'
 
 # Virsh completion based on
 # https://github.com/fish-shell/fish-shell/blob/master/share/completions/virsh.fish.

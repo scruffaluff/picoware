@@ -333,7 +333,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.5"
+        print "Vimu 0.1.6"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -576,20 +576,6 @@ def "main detach-cdroms" [
     }
 }
 
-# Connect to virtual machine as desktop.
-def "main gui" [
-    --log-level (-l): string = "debug" # Log level
-    domain: string # Virtual machine name
-    ...args: string # Virt Viewer arguments
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-    if not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-
-    virt-viewer $domain ...$args
-}
-
 # Clear history files.
 def "main forget" [
     --dry-run (-d) # Only print actions to be taken
@@ -629,6 +615,20 @@ def "main forget" [
             }
         }
     }
+}
+
+# Connect to virtual machine as desktop.
+def "main gui" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+    ...args: string # Virt Viewer arguments
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    if not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+
+    virt-viewer $domain ...$args
 }
 
 # Create a virtual machine from a cdrom or disk file.
