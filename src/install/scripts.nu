@@ -251,7 +251,7 @@ def install-wrapper [ext: string dest: path] {
         "ps1" => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
         "py" => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
         "rs" => 'rust-script "%~dnp0.rs" %*'
-        "ts" | "tsx" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
+        "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
 
     $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"

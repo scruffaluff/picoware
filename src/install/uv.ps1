@@ -87,39 +87,6 @@ function InstallUv($TargetEnv, $Version, $DestDir, $PreserveEnv) {
             Log "Added '$DestDir' to the system path."
             Log 'Source shell profile or restart shell after installation.'
         }
-
-        if ($TargetEnv -eq 'Machine') {
-            $Registry = 'HKLM:\Software\Classes'
-        }
-        else {
-            $Registry = 'HKCU:\Software\Classes'
-        }
-        if (-not (Get-ItemProperty -ErrorAction SilentlyContinue -Name '(Default)' -Path "$Registry\.py")) {
-            New-Item -Force -Path "$Registry\.py" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\.py" -Type String `
-                -Value 'pyfile'
-
-            $Command = '"' + "$DestDir\uv.exe" + '" --no-config run --script "%1" %*'
-            New-Item -Force -Path "$Registry\pyfile\shell\open\command" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\pyfile\shell\open\command" `
-                -Type String -Value $Command
-            Log "Registered Uv to execute '.py' files."
-        }
-
-        $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
-        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must be
-        # changed to machine PATHEXT + ';.PY' if prevously empty.
-        if ((-not $PathExt) -and ($TargetEnv -eq 'User')) {
-            $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', 'Machine')
-        }
-        if (-not ($PathExt -like "*.PY*")) {
-            $AppendedPath = "$PathExt;.PY".TrimStart(';')
-            [System.Environment]::SetEnvironmentVariable(
-                'PATHEXT', $AppendedPath, $TargetEnv
-            )
-            $Env:PATHEXT = $AppendedPath
-            Log "Registered '.py' files as executables."
-        }
     }
 
     $Env:Path = "$DestDir;$Env:Path"

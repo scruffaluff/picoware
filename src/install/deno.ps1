@@ -58,41 +58,6 @@ function InstallDeno($TargetEnv, $Version, $DestDir, $PreserveEnv) {
             Log "Added '$DestDir' to the system path."
             Log 'Source shell profile or restart shell after installation.'
         }
-
-        if ($TargetEnv -eq 'Machine') {
-            $Registry = 'HKLM:\Software\Classes'
-        }
-        else {
-            $Registry = 'HKCU:\Software\Classes'
-        }
-        if (-not (Get-ItemProperty -ErrorAction SilentlyContinue -Name '(Default)' -Path "$Registry\.js")) {
-            New-Item -Force -Path "$Registry\.js" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\.js" -Type String `
-                -Value 'jsfile'
-
-            $Command = '"' + "$DestDir\deno.exe" + '" "%1" %*'
-            New-Item -Force -Path "$Registry\jsfile\shell\open\command" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\jsfile\shell\open\command" `
-                -Type String -Value $Command
-            Log "Registered Deno to execute '.js' files."
-        }
-
-        $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
-        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must
-        # be changed to machine PATHEXT + ';.JS' if prevously empty.
-        if ((-not $PathExt) -and ($TargetEnv -eq 'User')) {
-            $PathExt = [Environment]::GetEnvironmentVariable(
-                'PATHEXT', 'Machine'
-            )
-        }
-        if (-not ($PathExt -like "*.JS*")) {
-            $AppendedPath = "$PathExt;.JS".TrimStart(';')
-            [System.Environment]::SetEnvironmentVariable(
-                'PATHEXT', $AppendedPath, $TargetEnv
-            )
-            $Env:PATHEXT = $AppendedPath
-            Log "Registered '.js' files as executables."
-        }
     }
 
     $Env:Path = "$DestDir;$Env:Path"

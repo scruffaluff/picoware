@@ -87,39 +87,6 @@ function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
             Log "Added '$DestDir' to the system path."
             Log 'Source shell profile or restart shell after installation.'
         }
-
-        if ($TargetEnv -eq 'Machine') {
-            $Registry = 'HKLM:\Software\Classes'
-        }
-        else {
-            $Registry = 'HKCU:\Software\Classes'
-        }
-        if (-not (Get-ItemProperty -ErrorAction SilentlyContinue -Name '(Default)' -Path "$Registry\.rs")) {
-            New-Item -Force -Path "$Registry\.rs" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\.rs" -Type String `
-                -Value 'rsfile'
-
-            $Command = '"' + "$DestDir\rust-script.exe" + '" "%1" %*'
-            New-Item -Force -Path "$Registry\rsfile\shell\open\command" | Out-Null
-            Set-ItemProperty -Name '(Default)' -Path "$Registry\rsfile\shell\open\command" `
-                -Type String -Value $Command
-            Log "Registered Rust Script to execute '.rs' files."
-        }
-
-        $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', $TargetEnv)
-        # User PATHEXT does not extend machine PATHEXT. Thus user PATHEXT must be
-        # changed to machine PATHEXT + ';.RS' if prevously empty.
-        if ((-not $PathExt) -and ($TargetEnv -eq 'User')) {
-            $PathExt = [Environment]::GetEnvironmentVariable('PATHEXT', 'Machine')
-        }
-        if (-not ($PathExt -like "*.RS*")) {
-            $AppendedPath = "$PathExt;.RS".TrimStart(';')
-            [System.Environment]::SetEnvironmentVariable(
-                'PATHEXT', $AppendedPath, $TargetEnv
-            )
-            $Env:PATHEXT = $AppendedPath
-            Log "Registered '.rs' files as executables."
-        }
     }
 
     $Env:Path = "$DestDir;$Env:Path"
