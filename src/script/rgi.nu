@@ -3,7 +3,7 @@
 # Interactive Ripgrep searcher.
 def --wrapped main [
     --edit # Open selection in default editor
-    ...args: string # Ripgrep arguments.
+    ...args: path # Ripgrep arguments.
 ] {
     if ($args | is-empty) {
         rg

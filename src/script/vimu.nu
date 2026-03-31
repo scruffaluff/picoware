@@ -329,7 +329,7 @@ def --wrapped install-windows [
 def --wrapped main [
     --log-level (-l): string = "debug" # Log level
     --version (-v) # Print version information
-    ...args: string # Virsh arguments
+    ...args: path # Virsh arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
@@ -373,7 +373,7 @@ Subcommands:
 def --wrapped "main adb" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
-    ...args: string # Android debug bridge arguments.
+    ...args: path # Android debug bridge arguments.
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if not (virsh list --name | str contains $domain) {
@@ -387,7 +387,7 @@ def --wrapped "main adb" [
 def --wrapped "main bootstrap" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
-    ...args: string # Bootware arguments.
+    ...args: path # Bootware arguments.
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if not (virsh list --name | str contains $domain) {
@@ -621,7 +621,7 @@ def "main forget" [
 def "main gui" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
-    ...args: string # Virt Viewer arguments
+    ...args: path # Virt Viewer arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if not (virsh list --name | str contains $domain) {
@@ -778,7 +778,7 @@ def "main snapshot-table" [
 # Copy files between host and virtual machine.
 def --wrapped "main scp" [
     --log-level (-l): string = "debug" # Log level
-    ...args: string # Secure copy arguments
+    ...args: path # Secure copy arguments
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
 
@@ -809,7 +809,7 @@ def --wrapped "main scp" [
 def --wrapped "main ssh" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
-    ...args: string
+    ...args: path
 ]: [nothing -> nothing string -> string] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let key = $"(path-config)/key"

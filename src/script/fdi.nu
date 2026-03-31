@@ -3,7 +3,7 @@
 # Interactive Fd searcher.
 def --wrapped main [
     --edit # Open selection in default editor
-    ...args: string # Fd arguments.
+    ...args: path # Fd arguments.
 ] {
     if ("-h" in $args) or ("--help" in $args) {
         (
