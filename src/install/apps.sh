@@ -397,6 +397,7 @@ StartupWMClass=${wmclass}
 Terminal=false
 Type=Application
 EOF
+  ${super:+"${super}"} update-desktop-database "$(dirname "${manifest}")"
 
   # Update shell profile if CLI is not in system path.
   case ":${PATH:-}:" in

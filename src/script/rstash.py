@@ -151,8 +151,12 @@ def compute_changes(
 
 def load_config(config: Path) -> list[Manifest]:
     """Load Rstash configuration."""
-    with Path.open(config) as file:
-        configs = yaml.safe_load(file)
+    try:
+        with Path.open(config) as file:
+            configs = yaml.safe_load(file)
+    except FileNotFoundError:
+        logger.error(f"Unable to find configuration file at {config}.")
+        sys.exit(1)
     return [Manifest(**config) for config in configs]
 
 

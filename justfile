@@ -238,24 +238,24 @@ setup:
   }
 
 # Run test suites.
-test: test-shell test-nushell test-python
+test: test-sh test-nu test-py
 
 # Run shell test suites.
 [unix]
-test-shell *args:
+test-sh *args:
   bats --recursive test {{args}}
 
 # Run PowerShell test suite.
 [windows]
-test-shell *args:
+test-sh *args:
   Invoke-Pester -CI -Output Detailed -Path \
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
 
 # Run Nushell test suite.
-test-nushell *args:
+test-nu *args:
   nu --commands \
     "use .vendor/lib/nutest/nutest run-tests; run-tests --fail --path test {{args}}"
 
 # Run Python test suite.
-test-python *args:
+test-py *args:
   uv tool run --python 3.12 --with loguru,typer,pyyaml pytest test {{args}}
