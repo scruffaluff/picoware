@@ -23,7 +23,7 @@ Options:
         }
         return
     } else if ("-v" in $args) or ("--version" in $args) {
-        print "Fdi 0.1.0"
+        print "Fdi 0.1.1"
         return
     }
 
@@ -35,9 +35,9 @@ Options:
 
     # Single quotes are used to prevent expansion of glob and regex arguments.
     let arguments = if $nu.os-info.name == "windows" {
-        $args | each {|arg| $arg | str replace --all "'" "''" }
+        $args | each {|arg| $arg | str trim --char '"' | str replace --all "'" "''" }
     } else {
-        $args | each {|arg| $arg | str replace --all "'" "\\'" }
+        $args | each {|arg| $arg | str trim --char '"' | str replace --all "'" "\\'" }
     }
     let command = (
         "fd --hidden --no-require-git " + $"'($arguments | str join "' '")'"

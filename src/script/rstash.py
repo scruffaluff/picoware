@@ -35,7 +35,7 @@ __version__ = "0.1.0"
 
 cli = Typer(
     add_completion=False,
-    help="Rclone wrapper for interactive and conditional backups.",
+    help=__doc__,
     no_args_is_help=True,
     pretty_exceptions_enable=False,
 )
@@ -252,7 +252,7 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """Rclone wrapper for interactive and conditional backups."""
+    """Setup global state for commands."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
     state["dry_run"] = dry_run
