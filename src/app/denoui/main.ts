@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-all --no-config --quiet --node-modules-dir=none
 
-import { Command } from "jsr:@cliffy/command@1.0.0-rc.8";
+import { Command } from "jsr:@cliffy/command@1.0.0";
 import * as path from "jsr:@std/path";
 import { Webview } from "jsr:@webview/webview@0.9.0";
 

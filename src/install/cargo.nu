@@ -31,7 +31,7 @@ def --wrapped log [...args: string] {
 }
 
 # Install program to destination folder for Unix
-def install-cargo-unix [super: string dest: directory version: string] {
+def install-cargo-unix [super: string dest: directory version?: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $dest | path parse
     let rustup_home = if ($parts | get stem | str starts-with ".") {
@@ -63,7 +63,7 @@ def install-cargo-unix [super: string dest: directory version: string] {
 }
 
 # Install program to destination folder for Windows.
-def install-cargo-windows [dest: directory version: string] {
+def install-cargo-windows [dest: directory version?: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let parts = $dest | path parse
     let rustup_home = if ($parts | get stem | str starts-with ".") {
