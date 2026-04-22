@@ -25,7 +25,7 @@ Options:
 
 # Print ClearCache version string.
 function Version() {
-    Write-Output 'Clear Cache 0.3.0'
+    Write-Output 'Clear Cache 0.3.1'
 }
 
 # Script entrypoint.
@@ -83,6 +83,19 @@ function Main() {
         foreach ($Cache in $(poetry cache list)) {
             poetry cache clear --all --no-interaction "$Cache"
         }
+    }
+
+    if (Test-Path "$HOME\.ansible") {
+        Remove-Item -Force -Recurse -Path "$HOME\.ansible"
+    }
+    if (Test-Path "$HOME\.cache") {
+        Remove-Item -Force -Recurse -Path "$HOME\.cache"
+    }
+    if (Test-Path "$Env:AppData\Temp") {
+        Remove-Item -Force -Recurse -Path "$Env:AppData\Temp"
+    }
+    if (Test-Path "$Env:LocalAppData\Temp") {
+        Remove-Item -Force -Recurse -Path "$Env:LocalAppData\Temp"
     }
 }
 

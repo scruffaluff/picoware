@@ -100,6 +100,9 @@ clear_cache() {
       poetry cache clear --all --no-interaction "${cache}"
     done
   fi
+
+  ${super:+"${super}"} rm -fr /tmp/* "${HOME}/.ansible" "${HOME}/.cache" \
+    "${HOME}/Library/Caches"
 }
 
 #######################################
@@ -189,7 +192,7 @@ log() {
 #   Clear Cache version string.
 #######################################
 version() {
-  echo 'Clear Cache 0.3.0'
+  echo 'Clear Cache 0.3.1'
 }
 
 #######################################
