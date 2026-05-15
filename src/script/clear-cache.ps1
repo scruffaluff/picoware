@@ -88,9 +88,6 @@ function Main() {
     if (Test-Path "$HOME\.ansible") {
         Remove-Item -Force -Recurse -Path "$HOME\.ansible"
     }
-    if (Test-Path "$HOME\.cache") {
-        Remove-Item -Force -Recurse -Path "$HOME\.cache"
-    }
     if (Test-Path "$Env:AppData\Temp") {
         Remove-Item -Force -Recurse -Path "$Env:AppData\Temp"
     }

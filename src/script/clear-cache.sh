@@ -101,8 +101,7 @@ clear_cache() {
     done
   fi
 
-  ${super:+"${super}"} rm -fr /tmp/* "${HOME}/.ansible" "${HOME}/.cache" \
-    "${HOME}/Library/Caches"
+  ${super:+"${super}"} rm -fr /tmp/* "${HOME}/.ansible"
 }
 
 #######################################
