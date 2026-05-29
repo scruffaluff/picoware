@@ -214,10 +214,10 @@ def find-super [] {
     if (is-admin) {
         ""
     } else if $nu.os-info.name == "windows" {
-        error make { msg:
-"System level installation requires an administrator console.
+        error make "
+System level installation requires an administrator console.
 Restart this script from an administrator console or install to a user directory.
-"       }
+"
     } else if (which doas | is-not-empty) {
         "doas"
     } else if (which sudo | is-not-empty) {

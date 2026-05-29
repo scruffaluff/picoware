@@ -3,17 +3,22 @@
 # For more information, visit https://just.systems.
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+export DENO_INSTALL_ROOT := ".vendor/lib/deno"
 export PATH := if os() == "windows" {
-  join(justfile_directory(), ".vendor\\bin;") + env("PATH")
+  join(justfile_directory(), ".vendor\\bin;") + join(justfile_directory(),
+  ".vendor\\lib\\deno;") + env("PATH")
 } else {
   justfile_directory() / ".vendor/bin:" + justfile_directory() /
-  ".vendor/lib/bats-core/bin:" + env("PATH")
+  ".vendor/lib/bats-core/bin:" + justfile_directory() / ".vendor/lib/deno/bin:"
+  + env("PATH")
 }
 export PSModulePath := if os() == "windows" {
   join(justfile_directory(), ".vendor\\lib\\powershell\\modules;") +
   env("PSModulePath", "")
 } else { "" }
 export UV_PYTHON := "~=3.12"
+export UV_TOOL_BIN_DIR := ".vendor/bin"
+export UV_TOOL_DIR := ".vendor/lib/uv"
 
 # Execute CI workflow commands.
 ci: setup lint doc test
@@ -166,8 +171,9 @@ setup:
   fi
   echo "Using Shfmt $(shfmt --version)."
   echo 'Installing packages with Deno.'
-  if [ -n "${JUST_INIT:-}" ]; then
+  if [ -n "${INIT:-}" ]; then
     deno install
+    just format
   else
     deno install --frozen
   fi
@@ -235,8 +241,9 @@ setup:
   Write-Output "Using Pester $((Get-Module -ListAvailable Pester | `
     Select-Object -First 1).Version)."
   Write-Output 'Installing packages with Deno.'
-  if ("$Env:JUST_INIT") {
+  if ("$Env:INIT") {
     deno install
+    just format
   }
   else {
     deno install --frozen
