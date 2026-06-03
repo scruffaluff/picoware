@@ -33,9 +33,9 @@ def install-uv [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
     let target = match $nu.os-info.name {
-        "linux" => $"uv-($nu.os-info.arch)-unknown-linux-musl"
-        "macos" => $"uv-($nu.os-info.arch)-apple-darwin"
-        "windows" => $"uv-($nu.os-info.arch)-pc-windows-msvc"
+        linux => $"uv-($nu.os-info.arch)-unknown-linux-musl"
+        macos => $"uv-($nu.os-info.arch)-apple-darwin"
+        windows => $"uv-($nu.os-info.arch)-pc-windows-msvc"
     }
 
     let temp = mktemp --directory --tmpdir
@@ -127,7 +127,7 @@ def main [
 
     check-deps
     let system = need-super $dest $global
-    let super = if ($system) { find-super } else { "" }
+    let super = if $system { find-super } else { "" }
     let version = $version | default (
         http get "https://formulae.brew.sh/api/formula/uv.json"
         | get versions.stable
@@ -169,13 +169,13 @@ def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
-        "fish" => $"set --export PATH \"($dest)\" $PATH"
-        "nu" => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
+        fish => $"set --export PATH \"($dest)\" $PATH"
+        nu => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        "bash" => $"($env.HOME)/.bashrc"
-        "fish" => "($env.HOME)/.config/fish/config.fish"
+        bash => $"($env.HOME)/.bashrc"
+        fish => "($env.HOME)/.config/fish/config.fish"
         "nu" => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
@@ -183,7 +183,7 @@ def update-shell [dest: directory] {
                 $"($env.HOME)/.config/nushell/config.nu"
             }
         }
-        "zsh" => $"($env.HOME)/.zshrc"
+        zsh => $"($env.HOME)/.zshrc"
         _ => $"($env.HOME)/.profile"
     }
 

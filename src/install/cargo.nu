@@ -132,7 +132,7 @@ def main [
     let bin = $dest | path join "bin"
 
     let system = need-super $dest $global
-    let super = if ($system) { find-super } else { "" }
+    let super = if $system { find-super } else { "" }
 
     log $"Installing Cargo to '($dest)'."
     if $nu.os-info.name == "windows" {
@@ -173,13 +173,13 @@ def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
-        "fish" => $"set --export PATH \"($dest)\" $PATH"
-        "nu" => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
+        fish => $"set --export PATH \"($dest)\" $PATH"
+        nu => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        "bash" => $"($env.HOME)/.bashrc"
-        "fish" => "($env.HOME)/.config/fish/config.fish"
+        bash => $"($env.HOME)/.bashrc"
+        fish => "($env.HOME)/.config/fish/config.fish"
         "nu" => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
@@ -187,7 +187,7 @@ def update-shell [dest: directory] {
                 $"($env.HOME)/.config/nushell/config.nu"
             }
         }
-        "zsh" => $"($env.HOME)/.zshrc"
+        zsh => $"($env.HOME)/.zshrc"
         _ => $"($env.HOME)/.profile"
     }
 

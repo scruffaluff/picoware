@@ -6,11 +6,13 @@ def main [] {
     mkdir $"($data)/image" $"($data)/public"
 
     http get "https://raw.githubusercontent.com/phosphor-icons/core/refs/heads/main/assets/bold/faders-bold.svg"
-    | str replace "currentColor" "#c084fc" | save --force $"($data)/public/favicon.svg"
+    | str replace "currentColor" "#c084fc"
+    | save --force $"($data)/public/favicon.svg"
     magick -background none $"($data)/public/favicon.svg" -background none -resize 192x192 $"($data)/public/favicon.ico"
-    
+
     let background = '<rect fill="#fff6ea" height="100%" rx="30" ry="30" width="100%" />'
-    open $"($data)/public/favicon.svg" | str replace "<path" $"($background)<path"
+    open $"($data)/public/favicon.svg"
+    | str replace "<path" $"($background)<path"
     | save --force $"($data)/image/icon.svg"
     magick $"($data)/image/icon.svg" -background none -resize 192x192 $"($data)/image/icon.ico"
     magick $"($data)/image/icon.svg" -background none -resize 192x192 $"($data)/image/icon.png"

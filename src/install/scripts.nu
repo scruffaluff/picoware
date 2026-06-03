@@ -47,7 +47,9 @@ def find-completions [version: string = "main"] {
         ls $"($version)/src/completion" | get name
     } else {
         http get $"https://api.github.com/repos/scruffaluff/picoware/git/trees/($version)?recursive=true"
-        | get tree | where type == blob | get path
+        | get tree
+        | where type == blob
+        | get path
         | where {|path| ($path | str starts-with "src/completion/") }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
@@ -66,7 +68,9 @@ def find-scripts [version: string = "main"] {
         ls $"($version)/src/script" | get name
     } else {
         http get $"https://api.github.com/repos/scruffaluff/picoware/git/trees/($version)?recursive=true"
-        | get tree | where type == blob | get path
+        | get tree
+        | where type == blob
+        | get path
         | where {|path| ($path | str starts-with "src/script/") }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
@@ -114,7 +118,8 @@ set -eu
 
 exec ($command) '($script)' \"$@\"
 "
-    | str trim --left | save --force $temp
+    | str trim --left
+    | save --force $temp
     chmod +rx $temp
 
     # Move script to new location.
@@ -131,7 +136,10 @@ exec ($command) '($script)' \"$@\"
 
 # Install completion scripts.
 def install-completion [
-    super: string global: bool version: string script: string
+    super: string
+    global: bool
+    version: string
+    script: string
 ] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let name = $script | path parse | get stem
@@ -145,28 +153,20 @@ def install-completion [
     }
     let dest = if $global {
         match $nu.os-info.name {
-            "freebsd" => {
-                fish: $"/usr/local/etc/fish/completions/($name).fish"
-            }
+            freebsd => {fish: $"/usr/local/etc/fish/completions/($name).fish"}
             "macos" => {
                 let prefix = if $nu.os-info.arch == "aarch64" {
                     "/opt/homebrew"
                 } else {
                     "/usr/local"
                 }
-                {
-                    fish: $"($prefix)/etc/fish/completions/($name).fish"
-                }
+                {fish: $"($prefix)/etc/fish/completions/($name).fish"}
             }
             "windows" => { }
-            _ => {
-                fish: $"/etc/fish/completions/($name).fish"
-            }
+            _ => {fish: $"/etc/fish/completions/($name).fish"}
         }
     } else {
-        {
-            fish: $"($env.HOME)/.config/fish/completions/($name).fish"
-        }
+        {fish: $"($env.HOME)/.config/fish/completions/($name).fish"}
     }
 
     for completion in $completions {
@@ -245,11 +245,11 @@ def install-script [
 # Install wrapper script for Windows.
 def install-wrapper [ext: string dest: path] {
     let wrapper = match $ext {
-        "nu" => 'nu "%~dnp0.nu" %*'
-        "ps1" => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
-        "py" => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
-        "rs" => 'rust-script "%~dnp0.rs" %*'
-        "ts" => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
+        nu => 'nu "%~dnp0.nu" %*'
+        ps1 => 'powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%~dnp0.ps1" %*'
+        py => 'uv --no-config --quiet run --script "%~dnp0.py" %*'
+        rs => 'rust-script "%~dnp0.rs" %*'
+        ts => 'deno run --allow-all --no-config --quiet --node-modules-dir=none "%~dnp0.ts" %*'
     }
 
     $"@echo off\n($wrapper)\n" | save --force $"($dest).cmd"
@@ -315,7 +315,7 @@ def main [
     let dest = $dest | default $dest_default | path expand
 
     let system = need-super $dest $global
-    let super = if ($system) { find-super } else { "" }
+    let super = if $system { find-super } else { "" }
 
     for script in $scripts {
         mut match = false
@@ -355,13 +355,13 @@ def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
-        "fish" => $"set --export PATH \"($dest)\" $PATH"
-        "nu" => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
+        fish => $"set --export PATH \"($dest)\" $PATH"
+        nu => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        "bash" => $"($env.HOME)/.bashrc"
-        "fish" => $"($env.HOME)/.config/fish/config.fish"
+        bash => $"($env.HOME)/.bashrc"
+        fish => $"($env.HOME)/.config/fish/config.fish"
         "nu" => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
@@ -369,7 +369,7 @@ def update-shell [dest: directory] {
                 $"($env.HOME)/.config/nushell/config.nu"
             }
         }
-        "zsh" => $"($env.HOME)/.zshrc"
+        zsh => $"($env.HOME)/.zshrc"
         _ => $"($env.HOME)/.profile"
     }
 

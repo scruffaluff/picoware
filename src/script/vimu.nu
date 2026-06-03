@@ -58,7 +58,8 @@ users:
       - '($pub_key)'
     ($super_config)
 "
-    | str trim --left | save --force $user_path
+    | str trim --left
+    | save --force $user_path
 
     $"meta-data=($meta_path),user-data=($user_path)"
 }
@@ -151,7 +152,8 @@ set -eu
 export PATH=\"($folder):${PATH}\"
 exec vimu gui ($domain)
 "
-        | str trim --left | save --force $path
+        | str trim --left
+        | save --force $path
         chmod +rx $path
     }
 }
@@ -182,8 +184,11 @@ def download-windows-iso [dest: path] {
 
     http get $"https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id=($session)"
     let sku = http get $"https://microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=($profile)&ProductEditionId=($product)&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID=($session)"
-    | from json | get Skus | where Language == "English"
-    | get Id | first
+    | from json
+    | get Skus
+    | where Language == "English"
+    | get Id
+    | first
 
     let response = (
         http get --headers
@@ -229,7 +234,11 @@ Restart this script from an administrator console or install to a user directory
 
 # Create a virtual machine from an ISO disk.
 def --wrapped install-cdrom [
-    domain: string arch: string osinfo: string cdrom: path ...args: string
+    domain: string
+    arch: string
+    osinfo: string
+    cdrom: path
+    ...args: string
 ] {
     let home = path-home
     let args = virt-args $arch ...$args
@@ -289,7 +298,11 @@ def --wrapped install-disk [
 
 # Create a Windows virtual machine from an ISO disk.
 def --wrapped install-windows [
-    domain: string arch: string cdrom: path drivers: string ...args: string
+    domain: string
+    arch: string
+    cdrom: path
+    drivers: string
+    ...args: string
 ] {
     let libvirt = path-libvirt
     let args = virt-args $arch ...$args
@@ -409,8 +422,8 @@ def "main create" [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let arch = match $nu.os-info.arch {
-        "aarch64" => "arm64"
-        "x86_64" => "amd64"
+        aarch64 => "arm64"
+        x86_64 => "amd64"
     }
     let config = path-config
     setup-host
@@ -487,8 +500,8 @@ def "main create" [
             let image = $"($config)/image/freebsd_($arch).qcow2"
             if not ($image | path exists) {
                 let url = match $nu.os-info.arch {
-                    "aarch64" => "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/15.0-STABLE/aarch64/Latest/FreeBSD-15.0-STABLE-arm64-aarch64-BASIC-CLOUDINIT-zfs.qcow2.xz"
-                    "x86_64" => "https://download.freebsd.org/ftp/snapshots/VM-IMAGES/15.0-STABLE/amd64/Latest/FreeBSD-15.0-STABLE-amd64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                    aarch64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                    x86_64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/amd64/Latest/FreeBSD-15.0-RELEASE-amd64-BASIC-CLOUDINIT-zfs.qcow2.xz"
                 }
                 log info "Downloading FreeBSD image."
                 http get $url | save --progress $"($image).xz"
@@ -567,8 +580,11 @@ def "main detach-cdroms" [
     domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
-    let cdroms = virsh domblklist --details $domain | from ssv | reject 0
-    | where Device == "cdrom" | get Source
+    let cdroms = virsh domblklist --details $domain
+    | from ssv
+    | reject 0
+    | where Device == "cdrom"
+    | get Source
 
     for cdrom in $cdroms {
         log info $"Removing disk ($cdrom)."
@@ -683,10 +699,15 @@ def "main port" [
     # QEMU monitor commands are taken from
     # https://qemu-project.gitlab.io/qemu/system/monitor.html.
     let maps = virsh qemu-monitor-command --domain $domain --hmp "info usernet"
-    | str trim | lines | skip 2 | str join "\n"
+    | str trim
+    | lines
+    | skip 2
+    | str join "\n"
     | from ssv --minimum-spaces 1 --noheaders
-    | where column0 == "TCP[HOST_FORWARD]" | select column3 column5
-    | rename from to | into int from to
+    | where column0 == "TCP[HOST_FORWARD]"
+    | select column3 column5
+    | rename from to
+    | into int from to
 
     let match = $maps | where to == $to | get --optional 0
     if $match == null {
@@ -875,11 +896,16 @@ fi
 def os-info [domain: string] {
     let unix = (main ssh $domain "echo $PSVersionTable") | str trim | is-empty
     if $unix {
-        let query = (main ssh $domain uname -ms) | str trim | str downcase
+        let query = (main ssh $domain uname -ms)
+        | str trim
+        | str downcase
         | split row " "
-        { arch: ($query | get 1) name: ($query | get 0) }
+        {
+            arch: ($query | get 1)
+            name: ($query | get 0)
+        }
     } else {
-        { arch: "x86_64" name: "windows" }
+        {arch: "x86_64" name: "windows"}
     }
 }
 
@@ -887,8 +913,8 @@ def os-info [domain: string] {
 def path-config [] {
     let home = path-home
     match $nu.os-info.name {
-        "macos" => $"($home)/Library/Application Support/vimu"
-        "windows" => $"($home)/AppData/Roaming/vimu"
+        macos => $"($home)/Library/Application Support/vimu"
+        windows => $"($home)/AppData/Roaming/vimu"
         _ => $"($home)/.config/vimu"
     }
 }
@@ -1017,7 +1043,8 @@ def setup-guest [] {
                 "boot_multicons": "YES" "boot_serial": "YES"
                 "comconsole_speed": "115200" "console": "comconsole,vidconsole"
             } | transpose key value) {
-                let lines = open "/boot/loader.conf" | lines
+                let lines = open "/boot/loader.conf"
+                | lines
                 | where {|line| not ($line | str contains $"($option.key)=")}
 
                 let content = [...$lines $'($option.key)="($option.value)"']
@@ -1063,7 +1090,8 @@ no_retry = true
 notify_each_step = false
 skip_notify = true
 '
-    | str trim --left | save --force $"($home)/.config/topgrade.toml"
+    | str trim --left
+    | save --force $"($home)/.config/topgrade.toml"
 }
 
 # Configure guest filesystem for Linux.
@@ -1308,14 +1336,20 @@ def setup-tailscale [] {
 # Find recommended virtualization parameters.
 def virt-args [arch: string ...args: string] {
     match $nu.os-info.name {
-        "linux" => [
-            "--hvm" "--cpu" "host-passthrough" "--graphics" "spice" "--video"
-            "qxl" "--virt-type" "kvm" ...$args
+        linux => [
+            "--hvm"
+            "--cpu" "host-passthrough"
+            "--graphics" "spice"
+            "--video" "qxl"
+            "--virt-type" "kvm"
+            ...$args
         ]
         "macos" => {
             if $nu.os-info.arch == $arch {
                 [
-                    "--graphics" "vnc" "--video" "virtio" "--virt-type" "hvf"
+                    "--graphics" "vnc"
+                    "--video" "virtio"
+                    "--virt-type" "hvf"
                     ...$args
                 ]
             } else {
@@ -1323,7 +1357,9 @@ def virt-args [arch: string ...args: string] {
             }
         }
         _ => [
-            "--cpu" "host-passthrough" "--graphics" "spice" "--video" "qxl"
+            "--cpu" "host-passthrough"
+            "--graphics" "spice"
+            "--video" "qxl"
             ...$args
         ]
     }

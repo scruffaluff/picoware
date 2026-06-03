@@ -264,9 +264,10 @@ test-sh *args:
     $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
 
 # Run Nushell test suite.
+[script("nu")]
 test-nu *args:
-  nu --commands \
-    "use .vendor/lib/nutest/nutest run-tests; run-tests --fail --path test {{args}}"
+  use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
+  run-tests --fail --path test {{args}}
 
 # Run Python test suite.
 test-py *args:

@@ -32,8 +32,8 @@ def --wrapped log [...args: string] {
 def install-jq [super: string dest: directory subpath: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let arch = match $nu.os-info.arch {
-        "x86_64" => "amd64"
-        "aarch64" => "arm64"
+        x86_64 => "amd64"
+        aarch64 => "arm64"
         _ => $nu.os-info.arch
     }
     let target = $"jq-($nu.os-info.name)-($arch)"
@@ -107,7 +107,7 @@ def main [
     let dest = $dest | default $dest_default | path expand
 
     let system = need-super $dest $global
-    let super = if ($system) { find-super } else { "" }
+    let super = if $system { find-super } else { "" }
     let subpath = if $version == null {
         "latest/download"
     } else {
@@ -150,13 +150,13 @@ def update-shell [dest: directory] {
     let shell = $env.SHELL? | default "" | path basename
 
     let command = match $shell {
-        "fish" => $"set --export PATH \"($dest)\" $PATH"
-        "nu" => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
+        fish => $"set --export PATH \"($dest)\" $PATH"
+        nu => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        "bash" => $"($env.HOME)/.bashrc"
-        "fish" => "($env.HOME)/.config/fish/config.fish"
+        bash => $"($env.HOME)/.bashrc"
+        fish => "($env.HOME)/.config/fish/config.fish"
         "nu" => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
@@ -164,7 +164,7 @@ def update-shell [dest: directory] {
                 $"($env.HOME)/.config/nushell/config.nu"
             }
         }
-        "zsh" => $"($env.HOME)/.zshrc"
+        zsh => $"($env.HOME)/.zshrc"
         _ => $"($env.HOME)/.profile"
     }
 

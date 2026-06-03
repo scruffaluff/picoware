@@ -31,7 +31,7 @@ Options:
 
     let editor = $env.EDITOR? | default "vim"
     mut fzf_args = []
-    if ($edit) {
+    if $edit {
         $fzf_args = (
             [...$fzf_args "--bind" $"enter:execute\(($editor) +{2} {1}\)"]
         )

@@ -17,9 +17,9 @@ def find-matlab [path: path] {
     }
 
     let search = match $nu.os-info.name {
-        "macos" => { extension: "" pattern: "/Applications/MATLAB_*.app" }
-        "windows" => { extension: ".exe" pattern: "C:/Program Files/MATLAB/R*" }
-        _ => { extension: "" pattern: "/usr/local/MATLAB/R*" }
+        macos => {extension: "", pattern: "/Applications/MATLAB_*.app"}
+        windows => {extension: ".exe", pattern: "C:/Program Files/MATLAB/R*"}
+        _ => {extension: "", pattern: "/usr/local/MATLAB/R*"}
     }
 
     try {
@@ -66,12 +66,16 @@ def --wrapped "main jupyter" [
     ...args: path # Arguments to Jupyter Lab
 ] {
     let venv = match $nu.os-info.name {
-        "windows" => $"($env.LocalAppData)/mlab/venv"
+        windows => $"($env.LocalAppData)/mlab/venv"
         _ => $"($env.HOME)/.local/share/mlab/venv"
     } | path expand
     let venv_bin = match $nu.os-info.name {
-        "windows" => { $venv | path join "Scripts" }
-        _ => { $venv | path join "bin" }
+        windows => {
+            $venv | path join "Scripts"
+        }
+        _ => {
+            $venv | path join "bin"
+        }
     }
     let matlab_bin = find-matlab $"($matlab)" | path dirname
     $env.PATH = ($env.PATH | prepend [$venv_bin $matlab_bin])
