@@ -171,7 +171,7 @@ def create-key [] {
 }
 
 # Download Windows 11 ISO file.
-def download-windows-iso [dest: path] {
+def download-windows-iso [arch: string dest: path] {
     # Based on `download_windows_workstation` function from
     # https://github.com/quickemu-project/quickemu/blob/master/quickget.
     let profile = "606624d44113"
@@ -318,7 +318,7 @@ def --wrapped install-windows [
     log debug "Recommended steps for the Windows graphical installer."
     log debug "You may encounter a 'No bootable option or device was found' error message. If so press the 'Enter' key to open QEMU boot menu and select the 'QEMU DVD-ROM' option to try again. This process may need to repeat a few times."
     log debug "At the 'Where do you want to install Windows?' screen, the installer will not be able to find any hard drives. Select the 'Load driver' option and load the 'Red Hat VirtIO SCSI controller' from the path E:/amd64/w11."
-    log debug "At the 'Unlock your Microsoft experience' screen, press 'Shift+F10' and enter `start ms-cxh:localonly` into the command prompt."
+    log debug "At the 'Let's connect you to a network screen' screen, press 'Shift+F10' and enter `OOBE\\BYPASSNRO` into the command prompt."
     log debug "In the account creation form, enter your account username instead of your full name and skip entering a password to avoid the additional security questions."
     log debug "Once the installer completes, press 'Ctrl+Alt+Del' to create a password."
     log debug "Run the QEMU guest agent installer at E:/guest-agent/qemu-ga-x86_64.msi."
@@ -330,7 +330,7 @@ def --wrapped install-windows [
         --arch $arch
         --boot uefi
         --cdrom $disk
-        --disk bus=virtio,cache=none,format=qcow2,size=128
+        --disk bus=virtio,cache=none,format=qcow2,size=64
         --disk $"bus=sata,device=cdrom,path=($devices)"
         --memory 4096
         --name $domain
@@ -502,19 +502,18 @@ def "main create" [
             )
         }
         "windows" => {
-            let cdrom = $"($config)/cdrom/windows_amd64.iso"
+            let cdrom = $"($config)/cdrom/windows_($arch).iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
-            let image = $"($config)/image/windows_amd64.qcow2"
+            let image = $"($config)/image/windows_($arch).qcow2"
             if ($image | path exists) {
                 (
                     main install --domain windows --log-level $log_level
-                    --osinfo win11 $"($config)/image/windows_amd64.qcow2"
-                    --autoconsole none --tpm
+                    --osinfo win11 $image --autoconsole none --tpm
                     backend.type=emulator,backend.version=2.0,model=tpm-tis
                 )
             } else {
                 create-app "windows"
-                install-windows windows x86_64 $cdrom $drivers
+                install-windows windows $nu.os-info.arch $cdrom $drivers
             }
         }
         _ => { error make $"Domain '($domain)' is not supported." }
@@ -634,15 +633,15 @@ def "main fetch" [
             }
         }
         "windows" => {
-            let cdrom = $"($config)/cdrom/windows_amd64.iso"
+            let cdrom = $"($config)/cdrom/windows_($arch).iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
-            let image = $"($config)/image/windows_amd64.qcow2"
+            let image = $"($config)/image/windows_($arch).qcow2"
 
             if ($image | path exists) {
                 return
             }
             if not ($cdrom | path exists) {
-                download-windows-iso $cdrom
+                download-windows-iso $arch $cdrom
             }
             if not ($drivers | path exists) {
                 log info "Downloading Windows drivers."

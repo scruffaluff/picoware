@@ -52,11 +52,11 @@ that perform convenience tasks. They can be installed with the repository's
 The following table shows the available GUI applications. These applications are
 currently minimal example GUI applications meant as placeholders.
 
-| Name    | Description                         |
-| ------- | ----------------------------------- |
-| augraph | Audio plotting example application. |
-| denoui  | Example GUI application with Deno.  |
-| rustui  | Example GUI application with Rust.  |
+| Name    | Description                                    |
+| ------- | ---------------------------------------------- |
+| augraph | Audio plotting example application.            |
+| denoui  | Example GUI application with Deno.             |
+| strudel | Application wrapper around https://strudel.cc. |
 
 ## Actions
 

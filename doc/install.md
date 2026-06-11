@@ -143,11 +143,11 @@ The following apps are demos with little functionality.
 
 :::
 
-| Name    | Description                         |
-| ------- | ----------------------------------- |
-| augraph | Audio plotting example application. |
-| denoui  | Example GUI application with Deno.  |
-| rustui  | Example GUI application with Rust.  |
+| Name    | Description                                    |
+| ------- | ---------------------------------------------- |
+| augraph | Audio plotting example application.            |
+| denoui  | Example GUI application with Deno.             |
+| strudel | Application wrapper around https://strudel.cc. |
 
 The following command will install the augraph and denoui apps. Other apps can
 be installed by replacing the program names.
