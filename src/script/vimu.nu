@@ -267,13 +267,17 @@ def --wrapped install-disk [
     arch: string
     osinfo: string
     image: path
+    cloud_init: bool
     ...args: string
 ] {
-    let args = virt-args $arch ...$args
-    print "Creating cloud init account for virtual machine."
-    let username = $env.VIMU_USERNAME? | default { input "Username: " }
-    let password = $env.VIMU_PASSWORD? | default { ask-password }
-    let cloud_data = cloud-init --super $super $domain $username $password
+    mut args = virt-args $arch ...$args
+    if ($cloud_init) {
+        print "Creating cloud init account for virtual machine."
+        let username = $env.VIMU_USERNAME? | default { input "Username: " }
+        let password = $env.VIMU_PASSWORD? | default { ask-password }
+        let cloud_data = cloud-init --super $super $domain $username $password
+        $args = ["--cloud-init" $cloud_data ...$args]
+    }
 
     let disk = $"(path-libvirt)/image/($domain).qcow2"
     let size = "64G"
@@ -286,7 +290,6 @@ def --wrapped install-disk [
         virt-install --noreboot
         --arch $arch
         --boot uefi
-        --cloud-init $cloud_data
         --disk $"($disk),bus=virtio,cache=none,format=qcow2"
         --memory 4096
         --name $domain
@@ -346,7 +349,7 @@ def --wrapped main [
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     if $version {
-        print "Vimu 0.1.6"
+        print "Vimu 0.1.7"
     } else if $args == ["-h"] or $args == ["--help"] {
         (
             print
@@ -426,149 +429,93 @@ def "main create" [
         x86_64 => "amd64"
     }
     let config = path-config
-    setup-host
+    main fetch $domain
 
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
         "alpine" => {
-            let image = $"($config)/image/alpine_($arch).qcow2"
-            if not ($image | path exists) {
-                log info "Downloading Alpine image."
-                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/generic_alpine-3.23.3-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
-                | save --progress $image
-            }
-
             (
-                main install --domain alpine --log-level $log_level --osinfo
-                alpinelinux3.23 --super doas $image
+                main install --cloud-init --domain alpine --log-level
+                $log_level --osinfo alpinelinux3.23 --super doas
+                $"($config)/image/alpine_($arch).qcow2"
             )
         }
         "android" => {
             let cdrom = $"($config)/cdrom/android_amd64.iso"
-            if not ($cdrom | path exists) {
-                log info "Downloading Android image."
-                http get "https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
-                | save --progress $cdrom
-            }
-
+            let image = $"($config)/image/android_amd64.qcow2"
+            let disk = if ($image | path exists) { $image } else { $cdrom }
             print "Follow instructions at https://youtu.be/MG7-S_88nDg?t=120 during first boot."
             (
-                main install --arch x86_64 --domain android
-                --log-level $log_level --osinfo android-x86-9.0 $cdrom
+                main install --arch x86_64 --domain android --log-level
+                $log_level --osinfo android-x86-9.0
+                $"($config)/cdrom/android_amd64.iso"
             )
         }
         "arch" => {
-            let image = $"($config)/image/arch_amd64.qcow2"
-            if not ($image | path exists) {
-                log info "Downloading Arch image."
-                http get "https://fastly.mirror.pkgbuild.com/images/v20260301.495047/Arch-Linux-x86_64-cloudimg.qcow2"
-                | save --progress $image
-            }
-
             (
-                main install --arch x86_64 --domain arch --log-level $log_level
-                --osinfo archlinux $image
+                main install --cloud-init --arch x86_64 --domain arch
+                --log-level $log_level --osinfo archlinux
+                $"($config)/image/arch_amd64.qcow2"
             )
         }
         "debian" => {
-            let image = $"($config)/image/debian_($arch).qcow2"
-            if not ($image | path exists) {
-                log info "Downloading Debian image."
-                http get $"https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-($arch).qcow2"
-                | save --progress $image
-            }
-
             (
-                main install --domain debian --log-level $log_level
-                --osinfo debian13 $image
+                main install --cloud-init --domain debian --log-level
+                $log_level --osinfo debian13
+                $"($config)/image/debian_($arch).qcow2"
             )
         }
         "fedora" => {
-            let image = $"($config)/image/fedora_($arch).qcow2"
-            if not ($image | path exists) {
-                log info "Downloading Fedora image."
-                http get $"https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/($nu.os-info.arch)/images/Fedora-Cloud-Base-Generic-43-1.6.($nu.os-info.arch).qcow2"
-                | save --progress $image
-            }
-
             (
-                main install --domain fedora --log-level $log_level
-                --osinfo fedora43 $image
+                main install --cloud-init --domain fedora --log-level
+                $log_level --osinfo fedora43
+                $"($config)/image/fedora_($arch).qcow2"
             )
         }
         "freebsd" => {
-            let image = $"($config)/image/freebsd_($arch).qcow2"
-            if not ($image | path exists) {
-                let url = match $nu.os-info.arch {
-                    aarch64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.qcow2.xz"
-                    x86_64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/amd64/Latest/FreeBSD-15.0-RELEASE-amd64-BASIC-CLOUDINIT-zfs.qcow2.xz"
-                }
-                log info "Downloading FreeBSD image."
-                http get $url | save --progress $"($image).xz"
-                xz --decompress $"($image).xz"
-            }
-
             (
-                main install --domain freebsd --log-level $log_level --osinfo
-                freebsd15.0 $image
+                main install --cloud-init --domain freebsd --log-level
+                $log_level --osinfo freebsd15.0
+                $"($config)/image/freebsd_($arch).qcow2"
             )
         }
         "nixos" => {
             let cdrom = $"($config)/cdrom/nixos_($arch).iso"
-            if not ($cdrom | path exists) {
-                log info "Downloading NixOS image."
-                http get $"https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-($nu.os-info.arch)-linux.iso"
-                | save --progress $cdrom
-            }
-
+            let image = $"($config)/image/nixos_($arch).qcow2"
+            let disk = if ($image | path exists) { $image } else { $cdrom }
             (
                 main install --domain nixos --log-level $log_level --osinfo
-                nixos-25.11 $cdrom
+                nixos-25.11 $disk
             )
         }
         "proxmox" => {
-            let cdrom = $"($config)/cdrom/proxmox_amd64.iso"
-            if not ($cdrom | path exists) {
-                log info "Downloading Proxmox image."
-                http get "https://enterprise.proxmox.com/iso/proxmox-ve_9.1-1.iso"
-                | save --progress $cdrom
-            }
-
             (
                 main install --arch x86_64 --domain proxmox
-                --log-level $log_level --osinfo debian13 $cdrom
+                --log-level $log_level --osinfo debian13
+                $"($config)/cdrom/proxmox_amd64.iso"
             )
         }
         "redox" => {
-            let image = $"($config)/image/redox_amd64.img"
-            if not ($image | path exists) {
-                let url = "https://static.redox-os.org/releases/0.9.0/x86_64/redox_demo_x86_64_2024-09-07_1225_harddrive.img.zst"
-                log info "Downloading Redox image."
-                http get $url | save --progress $"($image).zst"
-                zstd --decompress --rm $"($image).zst"
-            }
-
-            main install --domain redox --log-level $log_level $image
+            (
+                main install --domain redox --log-level $log_level
+                $"($config)/image/redox_amd64.img"
+            )
         }
         "windows" => {
             let cdrom = $"($config)/cdrom/windows_amd64.iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
-
-            if not ($cdrom | path exists) {
-                download-windows-iso $cdrom
+            let image = $"($config)/image/windows_amd64.qcow2"
+            if ($image | path exists) {
+                (
+                    main install --domain windows --log-level $log_level
+                    --osinfo win11 $"($config)/image/windows_amd64.qcow2"
+                    --autoconsole none --tpm
+                    backend.type=emulator,backend.version=2.0,model=tpm-tis
+                )
+            } else {
+                create-app "windows"
+                install-windows windows x86_64 $cdrom $drivers
             }
-            if not ($drivers | path exists) {
-                log info "Downloading Windows drivers."
-                http get "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
-                | save --progress $drivers
-            }
-            if (virsh list --all --name | str contains "windows") {
-                print --stderr "error: Domain 'windows' is already in use."
-                exit 1
-            }
-
-            create-app "windows"
-            install-windows windows x86_64 $cdrom $drivers
         }
         _ => { error make $"Domain '($domain)' is not supported." }
     }
@@ -589,6 +536,121 @@ def "main detach-cdroms" [
     for cdrom in $cdroms {
         log info $"Removing disk ($cdrom)."
         virsh detach-disk --persistent $domain $cdrom
+    }
+}
+
+# Download default virtual machine disks.
+def "main fetch" [
+    --log-level (-l): string = "debug" # Log level
+    domain: string # Virtual machine name
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+    let arch = match $nu.os-info.arch {
+        aarch64 => "arm64"
+        x86_64 => "amd64"
+    }
+    let config = path-config
+    setup-host
+
+    match $domain {
+        "alpine" => {
+            let image = $"($config)/image/alpine_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Alpine image."
+                http get $"https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/generic_alpine-3.23.4-($nu.os-info.arch)-uefi-cloudinit-r0.qcow2"
+                | save --progress $image
+            }
+        }
+        "android" => {
+            let cdrom = $"($config)/cdrom/android_amd64.iso"
+            let image = $"($config)/image/android_amd64.qcow2"
+            if not (($image | path exists) or ($cdrom | path exists)) {
+                log info "Downloading Android image."
+                http get "https://gigenet.dl.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
+                | save --progress $cdrom
+            }
+        }
+        "arch" => {
+            let image = $"($config)/image/arch_amd64.qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Arch image."
+                http get "https://mirror.pkgbuild.com/images/v20260601.539459/Arch-Linux-x86_64-cloudimg.qcow2"
+                | save --progress $image
+            }
+        }
+        "debian" => {
+            let image = $"($config)/image/debian_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Debian image."
+                http get $"https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-($arch).qcow2"
+                | save --progress $image
+            }
+        }
+        "fedora" => {
+            let image = $"($config)/image/fedora_($arch).qcow2"
+            if not ($image | path exists) {
+                log info "Downloading Fedora image."
+                http get $"https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/($nu.os-info.arch)/images/Fedora-Cloud-Base-Generic-44-1.7.($nu.os-info.arch).qcow2"
+                | save --progress $image
+            }
+        }
+        "freebsd" => {
+            let image = $"($config)/image/freebsd_($arch).qcow2"
+            if not ($image | path exists) {
+                let url = match $nu.os-info.arch {
+                    aarch64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/aarch64/Latest/FreeBSD-15.0-RELEASE-arm64-aarch64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                    x86_64 => "https://download.freebsd.org/releases/VM-IMAGES/15.0-RELEASE/amd64/Latest/FreeBSD-15.0-RELEASE-amd64-BASIC-CLOUDINIT-zfs.qcow2.xz"
+                }
+                log info "Downloading FreeBSD image."
+                http get $url | save --progress $"($image).xz"
+                xz --decompress $"($image).xz"
+            }
+        }
+        "nixos" => {
+            let cdrom = $"($config)/cdrom/nixos_($arch).iso"
+            let image = $"($config)/image/nixos_($arch).qcow2"
+            if not (($image | path exists) or ($cdrom | path exists)) {
+                log info "Downloading NixOS image."
+                http get $"https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-($nu.os-info.arch)-linux.iso"
+                | save --progress $cdrom
+            }
+        }
+        "proxmox" => {
+            let cdrom = $"($config)/cdrom/proxmox_amd64.iso"
+            let image = $"($config)/image/proxmox_amd64.qcow2"
+            if not (($image | path exists) or ($cdrom | path exists)) {
+                log info "Downloading Proxmox image."
+                http get "https://enterprise.proxmox.com/iso/proxmox-ve_9.1-1.iso"
+                | save --progress $cdrom
+            }
+        }
+        "redox" => {
+            let image = $"($config)/image/redox_amd64.img"
+            if not ($image | path exists) {
+                let url = "https://static.redox-os.org/releases/0.9.0/x86_64/redox_demo_x86_64_2024-09-07_1225_harddrive.img.zst"
+                log info "Downloading Redox image."
+                http get $url | save --progress $"($image).zst"
+                zstd --decompress --rm $"($image).zst"
+            }
+        }
+        "windows" => {
+            let cdrom = $"($config)/cdrom/windows_amd64.iso"
+            let drivers = $"($config)/cdrom/winvirt_drivers.iso"
+            let image = $"($config)/image/windows_amd64.qcow2"
+
+            if ($image | path exists) {
+                return
+            }
+            if not ($cdrom | path exists) {
+                download-windows-iso $cdrom
+            }
+            if not ($drivers | path exists) {
+                log info "Downloading Windows drivers."
+                http get "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+                | save --progress $drivers
+            }
+        }
+        _ => { error make $"Domain '($domain)' is not supported." }
     }
 }
 
@@ -648,13 +710,15 @@ def "main gui" [
 }
 
 # Create a virtual machine from a cdrom or disk file.
-def "main install" [
+def --wrapped "main install" [
     --arch (-a): string # Virtual machine architecture
+    --cloud-init # Configure cloud init if possible
     --domain (-d): string # Virtual machine name
     --log-level (-l): string = "debug" # Log level
     --osinfo (-o): string = "generic" # Virt-install osinfo
     --super (-s): string = "sudo" # Virtual machine super user command
     uri: string # Machine image URL or file path
+    ...args: string
 ] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     setup-host
@@ -663,10 +727,8 @@ def "main install" [
 
     # Check if domain is already used by libvirt.
     if (virsh list --all --name | str contains $domain) {
-        print --stderr $"error: Domain '($domain)' is already in use."
-        exit 1
+        error make $"Domain '($domain)' is already in use."
     }
-
     let path = if ($uri | str starts-with "https://") {
         let image = $"($config)/image/($uri | path basename)"
         log info $"Downloading image from ($uri)."
@@ -681,13 +743,16 @@ def "main install" [
     match $extension {
         "iso" => {
             create-app $domain
-            install-cdrom $domain $arch $osinfo $path
+            install-cdrom $domain $arch $osinfo $path ...$args
         }
         "img" | "qcow2" | "raw" | "vmdk" => {
             create-app $domain
-            install-disk --super $super $domain $arch $osinfo $path
+            (
+                install-disk --super $super $domain $arch $osinfo $path
+                $cloud_init ...$args
+            )
         }
-        _ => { error make $"Unsupported extension '$extension'." }
+        _ => { error make $"Unsupported extension for disk '($path)'." }
     }
 }
 
@@ -815,8 +880,7 @@ def --wrapped "main scp" [
         }
     }
     if ($domain | is-empty) {
-        print --stderr $"No domain found in '($args | str join ' ')'."
-        exit 1
+        error make $"No domain found in '($args | str join ' ')'."
     }
 
     if not (virsh list --name | str contains $domain) {
@@ -830,7 +894,7 @@ def --wrapped "main scp" [
 def --wrapped "main ssh" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
-    ...args: path
+    ...args: path # Secure shell arguments
 ]: [nothing -> nothing string -> string] {
     $env.NU_LOG_LEVEL = $log_level | str upcase
     let key = $"(path-config)/key"
@@ -859,20 +923,27 @@ def "main upload" [
 
     # Copy Vimu to remote machine and install with super command.
     if $info.name == "windows" {
-        main ssh $domain '
+        # Using command 'powershell -file' instead of 'powershell -command' to
+        # run the following code since the latter runs into quoting errors.
+        let temp = mktemp --tmpdir --suffix ".ps1"
+        '
 if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
     $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
         https://scruffaluff.github.io/picoware/install/nushell.ps1
     Invoke-Expression "& { $NushellScript } --global"
 }
 New-Item -Force -ItemType Directory -Path "C:\Program Files\Bin" | Out-Null
-if (-not (($Env:PathExt -Split ";.") -contains "NU")) {
+if (-not (($Env:PathExt -Split ";") -contains "NU")) {
     Set-Content -Path "C:\Program Files\Bin\vimu.cmd" -Value @"
 @echo off
 nu "%~dnp0.nu" %*
 "@
-}
-'
+};
+        '
+        | str trim
+        | save --force $temp
+        main scp $temp $"($domain):C:/Windows/Temp/vimu_upload.ps1"
+        main ssh $domain powershell -file "C:/Windows/Temp/vimu_upload.ps1"
         main scp $vimu $"($domain):C:/Program Files/Bin/vimu.nu"
     } else {
         let check = main ssh $domain command -v nu | complete
@@ -894,8 +965,17 @@ fi
 
 # Get operating system information about a domain.
 def os-info [domain: string] {
-    let unix = (main ssh $domain "echo $PSVersionTable") | str trim | is-empty
-    if $unix {
+    # Windows shell check based on https://stackoverflow.com/a/34480405.
+    let command = "(dir 2>&1 *`|echo commandprompt);&<# rem #>echo powershell"
+    let process = main ssh $domain $command | complete
+    let windows = (
+        $process.exit_code == 0 and ("commandprompt" in $process.stdout or
+        "powershell" in $process.stdout)
+    )
+
+    if $windows {
+        {arch: "x86_64" name: "windows"}
+    } else {
         let query = (main ssh $domain uname -ms)
         | str trim
         | str downcase
@@ -904,8 +984,6 @@ def os-info [domain: string] {
             arch: ($query | get 1)
             name: ($query | get 0)
         }
-    } else {
-        {arch: "x86_64" name: "windows"}
     }
 }
 
@@ -1169,12 +1247,13 @@ def setup-guest-linux [super: string] {
 # Configure guest filesystem for Windows.
 def setup-guest-windows [] {
     let home = path-home
+    let config = path-config
 
     powershell -command '
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 '
 
-    if not ($"($home)/.ssh_server" | path exists) {
+    if not ($"($config)/.ssh_server" | path exists) {
         powershell -command '
 if (
     (Get-WindowsCapability -Online -Name OpenSSH.Server).State -ne "Installed"
@@ -1198,17 +1277,17 @@ if (-not (Test-Path -Path $Key -PathType Leaf)) {
 Set-Service -Name sshd -StartupType Automatic
 Start-Service sshd
 '
-        touch $"($home)/.ssh_server"
+        touch $"($config)/.ssh_server"
     }
 
-    if not ($"($home)/.win_debloat" | path exists) {
+    if not ($"($config)/.win_debloat" | path exists) {
         powershell -command '
 & ([ScriptBlock]::Create((irm "https://debloat.raphi.re/"))) -DisableDVR `
     -DisableStartPhoneLink -DisableStartRecommended -ExplorerToHome `
     -RemoveCommApps -RemoveDevApps -RemoveGamingApps -RemoveHPApps `
     -RunDefaults -ShowHiddenFolders -Silent
 '
-        touch $"($home)/.win_debloat"
+        touch $"($config)/.win_debloat"
     }
 
     if (which rclone | is-empty) {
