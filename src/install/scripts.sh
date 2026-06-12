@@ -249,7 +249,7 @@ handle_shebang() {
   esac
 
   # Move script to new location.
-  cmd="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //')"
+  cmd="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //;s/#!\/usr\/bin\/env //')"
   ${super:+"${super}"} cp "${path}" "${script}"
   ${super:+"${super}"} chmod -x "${script}"
 

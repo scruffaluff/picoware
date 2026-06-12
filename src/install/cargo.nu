@@ -113,7 +113,7 @@ def main [
     --global (-g) # Install Cargo for all users
     --preserve-env (-p) # Do not update system environment
     --quiet (-q) # Print only error messages
-    --version (-v): string # Version of Cargo to install
+    --version (-v): string # Version of Rust to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     # Force global if root on Unix.

@@ -190,7 +190,7 @@ install_jq() {
   #   -m: Show system architecture name.
   #   -s: Show operating system kernel name.
   arch="$(uname -m | sed 's/x86_64/amd64/;s/x64/amd64/;s/aarch64/arm64/')"
-  os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed s/darwin/macos/)"
+  os="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')"
 
   # Create installation directory.
   #

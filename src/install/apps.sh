@@ -46,7 +46,7 @@ capitalize() {
       echo "${1}" | sed 's/_/ /g' | awk '{for (i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1'
       ;;
     *)
-      echo "${1}" | sed 's/_/ /g' | sed 's/[^ ]*/\u&/g'
+      echo "${1}" | sed 's/_/ /g;s/[^ ]*/\u&/g'
       ;;
   esac
 }
@@ -109,7 +109,7 @@ create_entry() {
   local folder="${3}" script="${2}" super="${1}" path="${4}"
   local command='' shebang=''
   shebang="$(head -n 1 "$(dirname "${path}")/$(basename "${script}")")"
-  command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //;#!\/usr\/bin\/env //')"
+  command="$(echo "${shebang}" | sed 's/#!\/usr\/bin\/env -S //;s/#!\/usr\/bin\/env //')"
 
   cat << EOF | ${super:+"${super}"} tee "${path}" > /dev/null
 #!/usr/bin/env sh
@@ -120,7 +120,7 @@ export PATH="${folder}:\${PATH}"
 # Resolve symlinks to find script folder.
 folder="\$(dirname "\$(realpath "\${0}")")"
 # Use interpeter to avoid env shebang conflicts.
-exec ${command} "\${folder}/$(basename "${script}")" "\$@"
+exec '${command}' "\${folder}/$(basename "${script}")" "\$@"
 EOF
   ${super:+"${super}"} chmod +rx "${path}"
 }
@@ -277,8 +277,10 @@ find_jq() {
 #   Application runner path.
 #######################################
 find_runner() {
+  # System path is temporarily updated to ensure that runners can be found.
   local script="${2}" super="${1}"
-  local runner=''
+  local runner='' PATH="${HOME}/.local/bin:/usr/local/bin:${PATH}"
+  export PATH
 
   if [ "${script##*.}" = 'nu' ]; then
     runner="$(command -v nu)"
