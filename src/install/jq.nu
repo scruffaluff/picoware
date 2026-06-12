@@ -36,9 +36,11 @@ def install-jq [super: string dest: directory subpath: string] {
         aarch64 => "arm64"
         _ => $nu.os-info.arch
     }
-    let target = $"jq-($nu.os-info.name)-($arch)"
     let ext = if $nu.os-info.name == "windows" { ".exe" } else { "" }
+    let target = $"jq-($nu.os-info.name)-($arch)"
+    let dest_file = $"($dest)/jq($ext)"
 
+    log $"Installing Jq to '($dest_file)'."
     let temp = mktemp --directory --tmpdir
     let program = $"($temp)/jq($ext)"
     let uri = $"https://github.com/jqlang/jq/releases/($subpath)/($target)($ext)"
@@ -48,7 +50,6 @@ def install-jq [super: string dest: directory subpath: string] {
         http get $uri | save --progress $program
     }
 
-    let dest_file = $"($dest)/($program | path basename)"
     if ($super | is-empty) {
         mkdir $dest
         cp $program $dest_file
@@ -114,7 +115,6 @@ def main [
         $"download/jq-($version)"
     }
 
-    log $"Installing Jq to '($dest)'."
     install-jq $super $dest $subpath
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {

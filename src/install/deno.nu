@@ -41,12 +41,15 @@ def --wrapped log [...args: string] {
 # Install program to destination folder.
 def install-deno [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
+    let ext = if $nu.os-info.name == "windows" { ".exe" } else { "" }
     let target = match $nu.os-info.name {
         linux => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
         macos => $"deno-($nu.os-info.arch)-apple-darwin"
         windows => $"deno-($nu.os-info.arch)-pc-windows-msvc"
     }
+    let dest_file = $"($dest)/deno($ext)"
 
+    log $"Installing Deno to '($dest_file)'."
     let temp = mktemp --directory --tmpdir
     let uri = $"https://dl.deno.land/release/($version)/($target).zip"
     if $quiet {
@@ -66,7 +69,6 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
         $"($temp)/deno"
     }
 
-    let dest_file = $"($dest)/($program | path basename)"
     if ($super | is-empty) {
         mkdir $dest
         cp $program $dest_file
@@ -171,7 +173,6 @@ def main [
     let version = $version
     | default (http get https://dl.deno.land/release-latest.txt | str trim)
 
-    log $"Installing Deno to '($dest)'."
     install-deno $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {

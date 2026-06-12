@@ -32,12 +32,15 @@ Restart this script from an administrator console or install to a user directory
 def install-uv [super: string dest: directory version: string] {
     let quiet = $env.SCRIPTS_NOLOG? | into bool --relaxed
     let archive = if $nu.os-info.name == "windows" { ".zip" } else { ".tar.gz" }
+    let ext = if $nu.os-info.name == "windows" { ".exe" } else { "" }
     let target = match $nu.os-info.name {
         linux => $"uv-($nu.os-info.arch)-unknown-linux-musl"
         macos => $"uv-($nu.os-info.arch)-apple-darwin"
         windows => $"uv-($nu.os-info.arch)-pc-windows-msvc"
     }
+    let dest_file = $"($dest)/uv($ext)"
 
+    log $"Installing Uv to '($dest_file)'."
     let temp = mktemp --directory --tmpdir
     let uri = $"https://github.com/astral-sh/uv/releases/download/($version)/($target)($archive)"
     if $quiet {
@@ -57,7 +60,6 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/uv.zip'
         $"($temp)/($target)/uv"
     }
 
-    let dest_file = $"($dest)/($program | path basename)"
     if ($super | is-empty) {
         mkdir $dest
         cp $program $dest_file
@@ -133,7 +135,6 @@ def main [
         | get versions.stable
     )
 
-    log $"Installing Uv to '($dest)'."
     install-uv $super $dest $version
     if not $preserve_env and not ($dest in $env.PATH) {
         if $nu.os-info.name == "windows" {
