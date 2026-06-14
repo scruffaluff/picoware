@@ -1247,6 +1247,7 @@ def setup-guest-linux [super: string] {
 def setup-guest-windows [] {
     let home = path-home
     let config = path-config
+    mkdir $config
 
     powershell -command '
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -1281,10 +1282,34 @@ Start-Service sshd
 
     if not ($"($config)/.win_debloat" | path exists) {
         powershell -command '
-& ([ScriptBlock]::Create((irm "https://debloat.raphi.re/"))) -DisableDVR `
-    -DisableStartPhoneLink -DisableStartRecommended -ExplorerToHome `
-    -RemoveCommApps -RemoveDevApps -RemoveGamingApps -RemoveHPApps `
-    -RunDefaults -ShowHiddenFolders -Silent
+& ([ScriptBlock]::Create((irm "https://debloat.raphi.re/"))) `
+    -DisableBraveBloat `
+    -DisableDVR `
+    -DisableDeliveryOptimization `
+    -DisableDesktopSpotlight `
+    -DisableEdgeAI `
+    -DisableFindMyDevice `
+    -DisableGameBarIntegration `
+    -DisableLocationServices `
+    -DisableNotepadAI `
+    -DisablePaintAI `
+    -DisableSearchHighlights `
+    -DisableSearchHistory `
+    -DisableSettings365Ads `
+    -DisableStartPhoneLink `
+    -DisableStartRecommended `
+    -ExplorerToHome `
+    -HideOnedrive `
+    -HideSearchTb `
+    -HideTaskview `
+    -PreventUpdateAutoReboot `
+    -RemoveCommApps `
+    -RemoveDevApps `
+    -RemoveGamingApps `
+    -RemoveHPApps `
+    -RunDefaults `
+    -ShowHiddenFolders `
+    -Silent
 '
         touch $"($config)/.win_debloat"
     }

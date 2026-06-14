@@ -93,6 +93,7 @@ https://scruffaluff.github.io/picoware/install/scripts.ps1 for Windows.
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
 | vimu        | Convenience script for QEMU and Virsh.         |
+| zhy         | Zellij workspace with Helix and Yazi.          |
 
 The following command will install the clear-cache and rgi scripts. Other
 scripts can be installed by replacing the program names.

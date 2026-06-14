@@ -42,6 +42,7 @@ repository's `scripts` installer.
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
 | vimu        | Convenience script for QEMU and Virsh.         |
+| zhy         | Zellij workspace with Helix and Yazi.          |
 
 ## Actions
 

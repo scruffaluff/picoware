@@ -46,6 +46,7 @@ that perform convenience tasks. They can be installed with the repository's
 | tscp        | SCP for one time remote connections.           |
 | tssh        | SSH for one time remote connections.           |
 | vimu        | Convenience script for QEMU and Virsh.         |
+| zhy         | Zellij workspace with Helix and Yazi.          |
 
 ## Apps
 

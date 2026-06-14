@@ -62,13 +62,14 @@ fn main() -> eyre::Result<()> {
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
-
-        if let Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } = event
-        {
-            *control_flow = ControlFlow::Exit
+        match event {
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                *control_flow = ControlFlow::Exit
+            },
+            Event::WindowEvent { event: WindowEvent::Destroyed, .. } => {
+                *control_flow = ControlFlow::Exit
+            },
+            _ => (),
         }
     });
 }
