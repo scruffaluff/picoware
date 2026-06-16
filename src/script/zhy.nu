@@ -1,7 +1,11 @@
 #!/usr/bin/env nu
 
 # Set Zellij layout with initialization paths.
-def layout [path: path] {
+def layout [
+    --store (-s): path = "" # Store path override
+    path: path # Input path
+] {
+    let store = $store | default --empty $env.ZHY_STORE?
     $'
 layout {
     default_tab_template {
@@ -16,11 +20,11 @@ layout {
     tab {
         pane split_direction="vertical" {
             pane command="zhy" size="20%" {
-                args "file" "($path)"
+                args "file" "--store" "($store)" "($path)"
             }
             pane size="80%" split_direction="horizontal" {
                 pane command="zhy" size="68%" {
-                    args "edit" "--init" "($path)"
+                    args "edit" "--store" "($store)" "($path)"
                     focus true
                 }
                 pane size="32%"
@@ -49,76 +53,64 @@ def main [
         return
     }
 
-    if ("ZELLIJ" in $env) {
-        if (list-panes | length) == 1 {
+    if "ZELLIJ" in $env {
+        if "ZHY_STORE" in $env {
+            main edit $path
+        } else if (list-panes | length) == 1 {
+            let store = path-store
             (
                 zellij action override-layout --apply-only-to-active-tab
-                --layout-string (layout $path)
+                --layout-string (layout --store $store $path)
             )
         } else {
-            main edit $path
+            error make "Cannot start Zhy inside a Zellij tab with more than one pane."
         }
     } else {
-        zellij --layout-string (layout $path)
+        with-env { ZHY_STORE: (path-store) } {
+            zellij --layout-string (layout $path)
+        }
     }
 }
 
 # Open file editor in Zhy pane.
 def "main edit" [
-    --init (-i) # Setup pane metadata
+    --store (-s): path = "" # Store path override
     path: path # Input path
 ] {
-    let config = path-config
-    let pane_file = $"($config)/editor_pane"
+    let store_path = $store | default --empty $env.ZHY_STORE?
+    let store = open $store_path
 
-    if $init {
-        mkdir $config
-        $env.ZELLIJ_PANE_ID | save --force $pane_file
-        hx $path
-    } else {
-        let id = open $pane_file
-        zellij action focus-pane-id $id
+    if ("editor" in $store) {
+        zellij action focus-pane-id $store.editor
         # Press escape key before sending Helix command.
         zellij action write 27
         zellij action write-chars $":open ($path | path expand)"
         # Send Helix command with enter key.
         zellij action write 13
+    } else {
+        $store
+        | upsert editor $env.ZELLIJ_PANE_ID
+        | save --force $store_path
+        exec hx $path
     }
 }
 
 # Open file manager in Zhy pane.
 def "main file" [
+    --store (-s): path = "" # Store path override
     path: path # Input path
 ] {
-    let home = path-home
-    let yazi_config = match $nu.os-info.name {
-        windows => $"($home)/AppData/Roaming/yazi"
-        _ => $"($home)/.config/yazi"
-    }
-    let temp = mktemp --dry --directory --tmpdir
-
-    cp --recursive $yazi_config $temp
-    open $"($temp)/yazi.toml"
-    | update mgr.ratio [0 1 0]
-    | save --force $"($temp)/yazi.toml"
-    with-env { EDITOR: "zhy" YAZI_CONFIG_HOME: $temp } { yazi $path }
+    let store = $store | default --empty $env.ZHY_STORE?
+    with-env { EDITOR: "zhy" ZHY_STORE: $store } { exec yazi $path }
 }
 
-# Get Zhy configuration folder.
-def path-config [] {
-    let home = path-home
-    match $nu.os-info.name {
-        macos => $"($home)/Library/Application Support/zhy"
-        windows => $"($home)/AppData/Roaming/zhy"
-        _ => $"($home)/.config/zhy"
-    }
-}
-
-# Get user home folder.
-def path-home [] {
-    if $nu.os-info.name == "windows" {
-        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
+# Get store path.
+def path-store [] {
+    if "ZHY_STORE" in $env {
+        $env.ZHY_STORE
     } else {
-        $env.HOME?
+        let path = mktemp --tmpdir --suffix ".json"
+        {} | save --force $path
+        $path
     }
 }
