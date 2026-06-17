@@ -19,6 +19,7 @@ def install-cargo-unix [dest: directory version?: string] {
     }
     let args = $args
 
+    log $"Installing Cargo to '($dest)/bin/cargo'."
     with-env {
         CARGO_HOME: $dest
         PATH: [$"($dest)/bin" ...$env.PATH]
@@ -47,6 +48,7 @@ def install-cargo-windows [dest: directory version?: string] {
     }
     let args = $args
 
+    log $"Installing Cargo to '($dest)\\bin\\cargo.exe'."
     let temp = mktemp --directory --tmpdir
     let uri = $"https://static.rust-lang.org/rustup/dist/($nu.os-info.arch)-pc-windows-msvc/rustup-init.exe"
     if $quiet {
@@ -92,11 +94,13 @@ def main [
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
     let dest = $dest | default $"(path-home)/.cargo" | path expand
     let bin = $dest | path join "bin"
+
+    # Check if admin permissions are required since rustup cannot be installed
+    # globally.
     if ($nu.os-info.name != "windows" and (is-admin)) or (need-super $dest) {
         error make "Cargo cannot be installed with admin permissions."
     }
 
-    log $"Installing Cargo to '($dest)'."
     if $nu.os-info.name == "windows" {
         install-cargo-windows $dest $version
         if not $preserve_env and not ($bin in $env.PATH) {

@@ -21,7 +21,7 @@ export UV_TOOL_BIN_DIR := ".vendor/bin"
 export UV_TOOL_DIR := ".vendor/lib/uv"
 
 # Execute CI workflow commands.
-ci: setup lint doc test
+ci: setup lint test doc
 
 # Build documentation.
 [unix]

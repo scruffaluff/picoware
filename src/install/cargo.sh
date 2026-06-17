@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 #
-# Install Uv for MacOS and Linux systems. This script differs from
-# https://astral.sh/uv/install.sh by supporting custom installation locations.
+# Install Cargo for MacOS and Linux systems. This script differs from
+# https://sh.rustup.rs by providing more installation options.
 
 # Exit immediately if a command exits with non-zero return code.
 #
@@ -17,18 +17,17 @@ set -eu
 #######################################
 usage() {
   cat 1>&2 << EOF
-Installer script for Uv.
+Installer script for Cargo.
 
-Usage: install-uv [OPTIONS]
+Usage: install-cargo [OPTIONS]
 
 Options:
       --debug               Show shell debug traces
-  -d, --dest <PATH>         Directory to install Uv
-  -g, --global              Install Uv for all users
+  -d, --dest <PATH>         Directory to install Cargo
   -h, --help                Print help information
   -p, --preserve-env        Do not update system environment
   -q, --quiet               Print only error messages
-  -v, --version <VERSION>   Version of Uv to install
+  -v, --version <VERSION>   Version of Rust to install
 EOF
 }
 
@@ -142,115 +141,57 @@ fetch() {
 }
 
 #######################################
-# Find or download Jq JSON parser.
-# Outputs:
-#   Path to Jq binary.
-#######################################
-find_jq() {
-  local jq_bin='' response='' tmp_dir=''
-
-  # Do not use long form flags for uname. They are not supported on some
-  # systems.
-  #
-  # Flags:
-  #   -s: Show operating system kernel name.
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  jq_bin="$(command -v jq || echo '')"
-  if [ -x "${jq_bin}" ]; then
-    echo "${jq_bin}"
-  else
-    response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
-    tmp_dir="$(mktemp -d)"
-    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
-    echo "${tmp_dir}/jq"
-  fi
-}
-
-#######################################
-# Find latest Uv version.
-#######################################
-find_latest() {
-  local jq_bin='' response=''
-  jq_bin="$(find_jq)"
-  response="$(fetch 'https://formulae.brew.sh/api/formula/uv.json')"
-  printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
-    '.versions.stable'
-}
-
-#######################################
-# Find command to elevate as super user.
-# Outputs:
-#   Super user command.
-#######################################
-find_super() {
-  # Do not use long form flags for id. They are not supported on some systems.
-  #
-  # Flags:
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if [ "$(id -u)" -eq 0 ]; then
-    echo ''
-  elif command -v doas > /dev/null 2>&1; then
-    echo 'doas'
-  elif command -v sudo > /dev/null 2>&1; then
-    echo 'sudo'
-  else
-    log --stderr 'error: Unable to find a command for super user elevation.'
-    exit 1
-  fi
-}
-
-#######################################
-# Download and install Uv.
+# Download and install Cargo.
 # Arguments:
-#   Super user command for installation.
-#   Uv version.
 #   Destination path.
+#   Rust version (optional).
 #   Whether to update system environment.
 #######################################
-install_uv() {
-  local super="${1}" version="${2}" dst_dir="${3}" preserve_env="${4}"
-  local arch='' dst_file="${dst_dir}/uv" os='' target='' tmp_dir=''
+install_cargo() {
+  local dst_dir="${1}" version="${2:-}" preserve_env="${3}"
+  local args='' bin_dir rustup_home
+  bin_dir="${dst_dir}/bin"
+  rustup_home="$(dirname "${dst_dir}")"
 
-  arch="$(uname -m | sed 's/amd64/x86_64/;s/x64/x86_64/;s/arm64/aarch64/')"
-  os="$(uname -s)"
-  case "${os}" in
-    Darwin)
-      target="uv-${arch}-apple-darwin"
-      ;;
-    Linux)
-      target="uv-${arch}-unknown-linux-musl"
+  # Determine RUSTUP_HOME based on destination directory name.
+  #
+  # Flags:
+  #   -n: Check if string has nonzero length.
+  local dest_name
+  dest_name="$(basename "${dst_dir}")"
+  case "${dest_name}" in
+    .*)
+      rustup_home="${rustup_home}/.rustup"
       ;;
     *)
-      log --stderr "error: Unsupported operating system '${os}'."
-      exit 1
+      rustup_home="${rustup_home}/rustup"
       ;;
   esac
 
-  # Exit early if tar is not installed.
+  # Build rustup installer arguments.
   #
   # Flags:
-  #   -v: Only show file path of command.
-  #   -x: Check if file exists and execute permission is granted.
-  if ! command -v tar > /dev/null 2>&1; then
-    log --stderr 'error: Unable to find tar file archiver.'
-    log --stderr 'Install tar, https://gnu.org/software/tar, manually before continuing.'
-    exit 1
+  #   -z: Check if string has zero length.
+  args='-y --no-modify-path --profile minimal'
+  if [ -n "${preserve_env:-}" ] || [ -n "${SCRIPTS_NOLOG:-}" ]; then
+    args="${args} --quiet"
+  fi
+  if [ -n "${version:-}" ]; then
+    args="${args} --default-toolchain ${version}"
   fi
 
-  # Create installation directories.
+  # Create installation directory.
   #
   # Flags:
   #   -p: Make parent directories if necessary.
-  tmp_dir="$(mktemp -d)"
-  ${super:+"${super}"} mkdir -p "${dst_dir}"
+  mkdir -p "${dst_dir}"
 
-  log "Installing Uv to '${dst_dir}/uv'."
-  fetch --dest "${tmp_dir}/${target}.tar.gz" \
-    "https://github.com/astral-sh/uv/releases/download/${version}/${target}.tar.gz"
-  tar fx "${tmp_dir}/${target}.tar.gz" -C "${tmp_dir}"
-  ${super:+"${super}"} install "${tmp_dir}/${target}/uv" "${dst_dir}/"
+  log "Installing Cargo to '${bin_dir}/cargo'."
+  # Do not quote args variable. Otherwise it will be interpreted as a single
+  # argument.
+  # shellcheck disable=SC2086
+  fetch 'https://sh.rustup.rs' | env CARGO_HOME="${dst_dir}" \
+    RUSTUP_HOME="${rustup_home}" PATH="${bin_dir}:${PATH}" sh -s -- ${args}
 
   # Update shell profile if destination is not in system path.
   #
@@ -258,29 +199,15 @@ install_uv() {
   #   -z: Check if string has zero length.
   if [ -z "${preserve_env}" ]; then
     case ":${PATH:-}:" in
-      *:${dst_dir}:*) ;;
+      *:${bin_dir}:*) ;;
       *)
-        configure_shell "${dst_dir}"
+        configure_shell "${bin_dir}"
         ;;
     esac
   fi
 
-  export PATH="${dst_dir}:${PATH}"
-  log "Installed $(uv --version)."
-}
-
-#######################################
-# Download and install Uv for FreeBSD.
-#######################################
-install_uv_freebsd() {
-  local super=
-  super="$(find_super)"
-
-  log 'FreeBSD Uv installation requires system package manager.'
-  log "Ignoring arguments and installing Uv to '/usr/local/bin/uv'."
-  ${super} pkg update
-  ${super} pkg install --yes uv
-  log "Installed $(uv --version)."
+  export PATH="${bin_dir}:${PATH}"
+  log "Installed $(cargo --version)."
 }
 
 #######################################
@@ -323,10 +250,30 @@ log() {
 }
 
 #######################################
+# Check if super user elevation is required.
+# Arguments:
+#   Destination directory.
+# Outputs:
+#   0 if elevation is required, 1 otherwise.
+#######################################
+need_super() {
+  local dest="${1}"
+  if ! mkdir -p "${dest}" 2> /dev/null; then
+    return 0
+  fi
+  if ! touch "${dest}/.super_check" 2> /dev/null; then
+    rm -f "${dest}/.super_check"
+    return 0
+  fi
+  rm -f "${dest}/.super_check"
+  return 1
+}
+
+#######################################
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' preserve_env='' super='' version=''
+  local dst_dir='' preserve_env='' version=''
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do
@@ -338,11 +285,6 @@ main() {
       -d | --dest)
         dst_dir="${2}"
         shift 2
-        ;;
-      -g | --global)
-        dst_dir="${dst_dir:-/usr/local/bin}"
-        global_='true'
-        shift 1
         ;;
       -h | --help)
         usage
@@ -362,47 +304,30 @@ main() {
         ;;
       *)
         log --stderr "error: No such option '${1}'."
-        log --stderr "Run 'install-uv --help' for usage."
+        log --stderr "Run 'install-cargo --help' for usage."
         exit 2
         ;;
     esac
   done
-
-  # Handle special FreeBSD case.
-  if [ "$(uname -s)" = 'FreeBSD' ]; then
-    install_uv_freebsd
-    return
-  fi
 
   # Choose destination if not selected.
   #
   # Flags:
   #   -z: Check if string has zero length.
   if [ -z "${dst_dir}" ]; then
-    if [ "$(id -u)" -eq 0 ]; then
-      global_='true'
-      dst_dir='/usr/local/bin'
-    else
-      dst_dir="${HOME}/.local/bin"
-    fi
+    dst_dir="${HOME}/.cargo"
   fi
 
-  # Find super user command if destination is not writable.
+  # Check if admin permissions are required since rustup cannot be installed
+  # globally.
   #
   # Flags:
-  #   -n: Check if string has nonzero length.
-  #   -p: Make parent directories if necessary.
-  #   -w: Check if file exists and is writable.
-  if [ -n "${global_}" ] || ! mkdir -p "${dst_dir}" > /dev/null 2>&1 ||
-    [ ! -w "${dst_dir}" ]; then
-    global_='true'
-    super="$(find_super)"
+  #   -v: Only show file path of command.
+  if [ "$(id -u)" -eq 0 ] || need_super "${dst_dir}"; then
+    log --stderr 'error: Cargo cannot be installed with admin permissions.'
+    exit 1
   fi
-
-  if [ -z "${version}" ]; then
-    version="$(find_latest)"
-  fi
-  install_uv "${super}" "${version}" "${dst_dir}" "${preserve_env}"
+  install_cargo "${dst_dir}" "${version}" "${preserve_env}"
 }
 
 # Add ability to selectively skip main function during test suite.
