@@ -154,7 +154,7 @@ def install-completion [
     let dest = if $global {
         match $nu.os-info.name {
             freebsd => {fish: $"/usr/local/etc/fish/completions/($name).fish"}
-            "macos" => {
+            macos => {
                 let prefix = if $nu.os-info.arch == "aarch64" {
                     "/opt/homebrew"
                 } else {
@@ -162,7 +162,7 @@ def install-completion [
                 }
                 {fish: $"($prefix)/etc/fish/completions/($name).fish"}
             }
-            "windows" => { }
+            windows => { }
             _ => {fish: $"/etc/fish/completions/($name).fish"}
         }
     } else {
@@ -362,7 +362,7 @@ def update-shell [dest: directory] {
     let profile = match $shell {
         bash => $"($env.HOME)/.bashrc"
         fish => $"($env.HOME)/.config/fish/config.fish"
-        "nu" => {
+        nu => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
             } else {

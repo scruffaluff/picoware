@@ -30,8 +30,8 @@ def cloud-init [
 ] {
     let pub_key = open --raw $"(path-config)/key.pub" | str trim
     let super_config = match $super {
-        "doas" => { $"doas: ['permit nopass ($username)']" }
-        "sudo" => { "sudo: ['ALL=\(ALL\) NOPASSWD:ALL']" }
+        doas => $"doas: ['permit nopass ($username)']"
+        sudo => "sudo: ['ALL=\(ALL\) NOPASSWD:ALL']"
         _ => { error make $"Super command '($super)' is not supported." }
     }
 
@@ -71,7 +71,7 @@ def create-app [domain: string] {
     let title = $domain | str capitalize
 
     match $nu.os-info.name {
-        "macos" => {
+        macos => {
             let dest = $"($home)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
             cp $"($config)/icon.icns" $"($dest)/Resources/icon.icns"
@@ -118,7 +118,7 @@ def create-app [domain: string] {
                 | save --force $"($dest)/Info.plist"
             )
         }
-        "windows" => { error make "Windows application is not yet supported." }
+        windows => { error make "Windows application is not yet supported." }
         _ => {
             let dest = $"($home)/.local/share/applications"
             mkdir $dest
@@ -433,14 +433,14 @@ def "main create" [
 
     # To find all osinfo options, run "virt-install --osinfo list".
     match $domain {
-        "alpine" => {
+        alpine => {
             (
                 main install --cloud-init --domain alpine --log-level
                 $log_level --osinfo alpinelinux3.23 --super doas
                 $"($config)/image/alpine_($arch).qcow2"
             )
         }
-        "android" => {
+        android => {
             let cdrom = $"($config)/cdrom/android_amd64.iso"
             let image = $"($config)/image/android_amd64.qcow2"
             let disk = if ($image | path exists) { $image } else { $cdrom }
@@ -451,35 +451,35 @@ def "main create" [
                 $"($config)/cdrom/android_amd64.iso"
             )
         }
-        "arch" => {
+        arch => {
             (
                 main install --cloud-init --arch x86_64 --domain arch
                 --log-level $log_level --osinfo archlinux
                 $"($config)/image/arch_amd64.qcow2"
             )
         }
-        "debian" => {
+        debian => {
             (
                 main install --cloud-init --domain debian --log-level
                 $log_level --osinfo debian13
                 $"($config)/image/debian_($arch).qcow2"
             )
         }
-        "fedora" => {
+        fedora => {
             (
                 main install --cloud-init --domain fedora --log-level
                 $log_level --osinfo fedora43
                 $"($config)/image/fedora_($arch).qcow2"
             )
         }
-        "freebsd" => {
+        freebsd => {
             (
                 main install --cloud-init --domain freebsd --log-level
                 $log_level --osinfo freebsd15.0
                 $"($config)/image/freebsd_($arch).qcow2"
             )
         }
-        "nixos" => {
+        nixos => {
             let cdrom = $"($config)/cdrom/nixos_($arch).iso"
             let image = $"($config)/image/nixos_($arch).qcow2"
             let disk = if ($image | path exists) { $image } else { $cdrom }
@@ -488,20 +488,20 @@ def "main create" [
                 nixos-25.11 $disk
             )
         }
-        "proxmox" => {
+        proxmox => {
             (
                 main install --arch x86_64 --domain proxmox
                 --log-level $log_level --osinfo debian13
                 $"($config)/cdrom/proxmox_amd64.iso"
             )
         }
-        "redox" => {
+        redox => {
             (
                 main install --domain redox --log-level $log_level
                 $"($config)/image/redox_amd64.img"
             )
         }
-        "windows" => {
+        windows => {
             let cdrom = $"($config)/cdrom/windows_($arch).iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
             let image = $"($config)/image/windows_($arch).qcow2"
@@ -552,7 +552,7 @@ def "main fetch" [
     setup-host
 
     match $domain {
-        "alpine" => {
+        alpine => {
             let image = $"($config)/image/alpine_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Alpine image."
@@ -560,7 +560,7 @@ def "main fetch" [
                 | save --progress $image
             }
         }
-        "android" => {
+        android => {
             let cdrom = $"($config)/cdrom/android_amd64.iso"
             let image = $"($config)/image/android_amd64.qcow2"
             if not (($image | path exists) or ($cdrom | path exists)) {
@@ -569,7 +569,7 @@ def "main fetch" [
                 | save --progress $cdrom
             }
         }
-        "arch" => {
+        arch => {
             let image = $"($config)/image/arch_amd64.qcow2"
             if not ($image | path exists) {
                 log info "Downloading Arch image."
@@ -577,7 +577,7 @@ def "main fetch" [
                 | save --progress $image
             }
         }
-        "debian" => {
+        debian => {
             let image = $"($config)/image/debian_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Debian image."
@@ -585,7 +585,7 @@ def "main fetch" [
                 | save --progress $image
             }
         }
-        "fedora" => {
+        fedora => {
             let image = $"($config)/image/fedora_($arch).qcow2"
             if not ($image | path exists) {
                 log info "Downloading Fedora image."
@@ -593,7 +593,7 @@ def "main fetch" [
                 | save --progress $image
             }
         }
-        "freebsd" => {
+        freebsd => {
             let image = $"($config)/image/freebsd_($arch).qcow2"
             if not ($image | path exists) {
                 let url = match $nu.os-info.arch {
@@ -605,7 +605,7 @@ def "main fetch" [
                 xz --decompress $"($image).xz"
             }
         }
-        "nixos" => {
+        nixos => {
             let cdrom = $"($config)/cdrom/nixos_($arch).iso"
             let image = $"($config)/image/nixos_($arch).qcow2"
             if not (($image | path exists) or ($cdrom | path exists)) {
@@ -614,7 +614,7 @@ def "main fetch" [
                 | save --progress $cdrom
             }
         }
-        "proxmox" => {
+        proxmox => {
             let cdrom = $"($config)/cdrom/proxmox_amd64.iso"
             let image = $"($config)/image/proxmox_amd64.qcow2"
             if not (($image | path exists) or ($cdrom | path exists)) {
@@ -623,7 +623,7 @@ def "main fetch" [
                 | save --progress $cdrom
             }
         }
-        "redox" => {
+        redox => {
             let image = $"($config)/image/redox_amd64.img"
             if not ($image | path exists) {
                 let url = "https://static.redox-os.org/releases/0.9.0/x86_64/redox_demo_x86_64_2024-09-07_1225_harddrive.img.zst"
@@ -632,7 +632,7 @@ def "main fetch" [
                 zstd --decompress --rm $"($image).zst"
             }
         }
-        "windows" => {
+        windows => {
             let cdrom = $"($config)/cdrom/windows_($arch).iso"
             let drivers = $"($config)/cdrom/winvirt_drivers.iso"
             let image = $"($config)/image/windows_($arch).qcow2"
@@ -740,11 +740,11 @@ def --wrapped "main install" [
     let parts = $path | path parse
     let extension = $parts | get extension
     match $extension {
-        "iso" => {
+        iso => {
             create-app $domain
             install-cdrom $domain $arch $osinfo $path ...$args
         }
-        "img" | "qcow2" | "raw" | "vmdk" => {
+        "img" | "qcow2" | "raw" | vmdk => {
             create-app $domain
             (
                 install-disk --super $super $domain $arch $osinfo $path
@@ -812,14 +812,14 @@ def "main remove" [
     }
 
     match $nu.os-info.name {
-        "linux" => {
+        linux => {
             (
                 rm --force --recursive
                 $"($home)/.local/share/applications/($domain).desktop"
                 $"($libvirt)/cdrom/($domain).iso"
             )
         }
-        "macos" => {
+        macos => {
             (
                 rm --force --recursive
                 $"($home)/Applications/($title).app"
@@ -839,11 +839,11 @@ def "main setup" [
 
     for command in $commands {
         match $command {
-            "desktop" => { setup-desktop $desktop }
-            "guest" => { setup-guest }
-            "host" => { setup-host }
-            "rustdesk" => { setup-rustdesk }
-            "tailscale" => { setup-tailscale }
+            desktop => { setup-desktop $desktop }
+            guest => { setup-guest }
+            host => { setup-host }
+            rustdesk => { setup-rustdesk }
+            tailscale => { setup-tailscale }
             _ => { error make $"Invalid setup command '($command)'." }
         }
     }
@@ -1015,12 +1015,12 @@ def setup-desktop [desktop: string = "gnome"] {
     let super = find-super
 
     match $nu.os-info.name {
-        "freebsd" => {
+        freebsd => {
             ^$super pkg update
             # Based on instructions at
             # https://docs.freebsd.org/en/books/handbook/desktop.
             match $desktop {
-                "gnome" => {
+                gnome => {
                     ^$super pkg install --yes gnome
                     (
                         ^$super nu --commands
@@ -1030,7 +1030,7 @@ def setup-desktop [desktop: string = "gnome"] {
                     ^$super sysrc gdm_enable="YES"
                     ^$super sysrc gnome_enable="YES"
                 }
-                "plasma" => {
+                plasma => {
                     ^$super pkg install --yes kde sddm
                     ^$super sysrc dbus_enable="YES"
                     ^$super sysrc sddm_enable="YES"
@@ -1038,7 +1038,7 @@ def setup-desktop [desktop: string = "gnome"] {
                 _ => { error make $"Unsupported desktop environment '($desktop)'." }
             }
         }
-        "linux" => {
+        linux => {
             if (which apk | is-not-empty) {
                 ^$super apk update
                 ^$super setup-desktop $desktop
@@ -1047,39 +1047,39 @@ def setup-desktop [desktop: string = "gnome"] {
                 $env.DEBIAN_FRONTEND = "noninteractive"
                 ^$super -E apt-get update
                 match $desktop {
-                    "gnome" => { ^$super -E apt-get install --yes task-gnome-desktop }
-                    "hyprland" => { ^$super -E apt-get install --yes hyprland }
-                    "plasma" => { ^$super -E apt-get install --yes task-kde-desktop }
+                    gnome => { ^$super -E apt-get install --yes task-gnome-desktop }
+                    hyprland => { ^$super -E apt-get install --yes hyprland }
+                    plasma => { ^$super -E apt-get install --yes task-kde-desktop }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
             } else if (which dnf | is-not-empty) {
                 ^$super dnf makecache
                 match $desktop {
-                    "cosmic" => { ^$super dnf group install --assumeyes cosmic-desktop }
-                    "gnome" => { ^$super dnf group install --assumeyes gnome-desktop }
-                    "hyprland" => {
+                    cosmic => { ^$super dnf group install --assumeyes cosmic-desktop }
+                    gnome => { ^$super dnf group install --assumeyes gnome-desktop }
+                    hyprland => {
                         ^$super dnf copr enable --assumeyes solopasha/hyprland
                         ^$super dnf install --assumeyes hyprland
                     }
-                    "plasma" => { ^$super dnf group install --assumeyes kde-desktop }
+                    plasma => { ^$super dnf group install --assumeyes kde-desktop }
                     _ => { error make $"Unsupported desktop environment '($desktop)'." }
                 }
                 ^$super systemctl set-default graphical.target
             } else if (which pacman | is-not-empty) {
                 ^$super pacman --noconfirm --refresh --sync --sysupgrade
                 match $desktop {
-                    "cosmic" => {
+                    cosmic => {
                         ^$super pacman --noconfirm --sync cosmic
                         ^$super systemctl enable --now cosmic-greeter.service
                     }
-                    "gnome" => {
+                    gnome => {
                         ^$super pacman --noconfirm --sync gnome
                         ^$super systemctl enable --now gdm.service
                     }
-                    "hyprland" => {
+                    hyprland => {
                         ^$super pacman --noconfirm --sync hyprland
                     }
-                    "plasma" => {
+                    plasma => {
                         ^$super pacman --noconfirm --sync plasma-meta
                         ^$super systemctl enable --now plasmalogin.service
                     }
@@ -1105,7 +1105,7 @@ def setup-guest [] {
     let super = find-super
 
     match $nu.os-info.name {
-        "freebsd" => {
+        freebsd => {
             ^$super pkg update
             # Seems as though openssh-server is builtin to FreeBSD.
             (
@@ -1134,8 +1134,8 @@ def setup-guest [] {
             mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
             chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
         }
-        "linux" => { setup-guest-linux $super }
-        "windows" => { setup-guest-windows }
+        linux => { setup-guest-linux $super }
+        windows => { setup-guest-windows }
     }
 
     http get https://scruffaluff.github.io/bootware/install.nu
@@ -1146,9 +1146,9 @@ def setup-guest [] {
     | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
     let nushell_folder = match $nu.os-info.name {
-        "macos" => { $"($home)/Library/Application Support/nushell" }
-        "windows" => { $"($home)/AppData/Roaming/nushell" }
-        _ => { $"($home)/.config/nushell" }
+        macos => $"($home)/Library/Application Support/nushell"
+        windows => $"($home)/AppData/Roaming/nushell"
+        _ => $"($home)/.config/nushell"
     }
     mkdir $nushell_folder
     http get https://raw.githubusercontent.com/scruffaluff/bootware/refs/heads/main/ansible_collections/scruffaluff/bootware/roles/nushell/files/config.nu
@@ -1376,11 +1376,11 @@ def setup-rustdesk [] {
     let url = $"https://github.com/rustdesk/rustdesk/releases/download/($version)"
 
     match $nu.os-info.name {
-        "freebsd" => {
+        freebsd => {
             ^$super pkg update
             ^$super pkg install --yes rustdesk-server
         }
-        "linux" => {
+        linux => {
             if (which apk | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".apk"
                 http get $"($url)/($target)-signed.apk" | save --force --progress $temp
@@ -1407,14 +1407,14 @@ def setup-rustdesk [] {
                 ^$super zypper install --no-confirm $temp
             }
         }
-        "macos" => {
+        macos => {
             let temp = mktemp --tmpdir --suffix ".dmg"
             http get $"($url)/($target).dmg" | save --force --progress $temp
             hdiutil attach $temp
             sudo cp -R $"/Volumes/rustdesk-($version)/RustDesk.app" /Applications/
             hdiutil detach $"/Volumes/rustdesk-($version)"
         }
-        "windows" => {
+        windows => {
             let temp = mktemp --tmpdir --suffix ".msi"
             http get $"($url)/($target).msi" | save --force --progress $temp
             msiexec /quiet /i $temp
@@ -1447,7 +1447,7 @@ def virt-args [arch: string ...args: string] {
             "--virt-type" "kvm"
             ...$args
         ]
-        "macos" => {
+        macos => {
             if $nu.os-info.arch == $arch {
                 [
                     "--graphics" "vnc"

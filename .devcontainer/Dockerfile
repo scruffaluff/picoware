@@ -3,9 +3,9 @@ FROM docker.io/debian:13-slim
 ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Curl, Tar, and Zip.
+# Install essential packages.
 RUN apt-get update --ignore-missing && apt-get install --quiet --yes \
-  build-essential curl git sudo tar zip
+  gcc curl git sudo tar zip
 
 # Create non-priviledged user and grant user passwordless sudo.
 RUN useradd --create-home --no-log-init debian \
@@ -14,3 +14,6 @@ RUN useradd --create-home --no-log-init debian \
 
 ENV HOME=/home/debian USER=debian
 USER debian
+
+# Disable Git dubious ownership warnings.
+RUN git config --global --add safe.directory '*'
