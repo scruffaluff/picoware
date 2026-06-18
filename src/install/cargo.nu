@@ -165,7 +165,7 @@ def update-shell [dest: directory] {
         _ => $"($env.HOME)/.profile"
     }
 
-    # Create profile parent directory and add export command to profile
+    # Create profile parent directory and add export command to profile.
     mkdir ($profile | path dirname)
     $"\n# Added by Picoware installer.\n($command)\n" | save --append $profile
     log $"Added '($command)' to the '($profile)' shell profile."

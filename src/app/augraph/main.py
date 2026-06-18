@@ -2,13 +2,13 @@
 #
 # /// script
 # dependencies = [
-#   "cryptography~=44.0",
-#   "numpy~=2.3",
-#   "pywebview~=6.0",
-#   "pywebview[qt]~=6.0; sys_platform == 'linux'",
-#   "soundfile~=0.13.1",
-#   "tsdownsample~=0.1.4",
-#   "typer~=0.24.0",
+#   "cryptography~=49.0",
+#   "numpy~=2.4",
+#   "pywebview~=6.2; sys_platform != 'linux'",
+#   "pywebview[qt]~=6.2; sys_platform == 'linux'",
+#   "soundfile~=0.14.0",
+#   "tsdownsample~=0.1.5",
+#   "typer~=0.26.7",
 # ]
 # requires-python = "~=3.11"
 # ///

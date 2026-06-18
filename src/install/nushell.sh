@@ -59,7 +59,7 @@ configure_shell() {
       ;;
   esac
 
-  # Create profile parent directory and add export command to profile
+  # Create profile parent directory and add export command to profile.
   #
   # Flags:
   #   -p: Make parent directories if necessary.
