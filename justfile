@@ -71,9 +71,9 @@ install +programs="all": setup
   }
   for program in $programs {
     if $program in $apps {
-      nu src/install/apps.nu --version $repo $program
+      nu src/install/app.nu --version $repo $program
     } else if $program in $scripts {
-      nu src/install/scripts.nu --version $repo $program
+      nu src/install/script.nu --version $repo $program
     } else {
       error make $"No program found for '($program)'."
     }

@@ -2,7 +2,7 @@
 
 BeforeAll {
     Set-Location $([System.IO.Path]::GetFullPath("$PSScriptRoot\.."))
-    $Scripts = 'src\install\scripts.ps1'
+    $Scripts = 'src\install\script.ps1'
     . $Scripts
 
     Mock Invoke-WebRequest { Get-Content data\test\github_trees.json }

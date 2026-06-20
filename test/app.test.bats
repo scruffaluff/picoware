@@ -11,9 +11,9 @@ setup() {
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
   if [ -n "${DEBUG:-}" ]; then
-    run bash src/install/apps.sh ${DEBUG:+--debug} --debug --list
+    run bash src/install/app.sh ${DEBUG:+--debug} --debug --list
   else
-    run bash src/install/apps.sh ${DEBUG:+--debug} --list
+    run bash src/install/app.sh ${DEBUG:+--debug} --list
   fi
 
   curl() {
@@ -31,7 +31,7 @@ setup() {
 
 # shellcheck disable=SC2016
 create_entry_wraps_shebang() { # @test
-  BATS_SOURCE_ONLY='true' source src/install/apps.sh
+  BATS_SOURCE_ONLY='true' source src/install/app.sh
   local entry temp
   temp="$(mktemp -d)"
   entry="${temp}/main.sh"
@@ -48,7 +48,7 @@ json_parser_finds_all_apps() { # @test
   export _curl
   export -f curl
 
-  run bash src/install/apps.sh ${DEBUG:+--debug} ${DEBUG:+--debug} --list
+  run bash src/install/app.sh ${DEBUG:+--debug} ${DEBUG:+--debug} --list
   assert_success
   assert_output $'pyapp\nrsapp'
 }

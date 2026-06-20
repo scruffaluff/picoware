@@ -1142,7 +1142,7 @@ def setup-guest [] {
     | nu -c $"($in | decode); main --global"
 
     let programs = ["clear-cache" "fdi" "rgi" "rstash" "vimu"]
-    http get https://scruffaluff.github.io/picoware/install/scripts.nu
+    http get https://scruffaluff.github.io/picoware/install/script.nu
     | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
     let nushell_folder = match $nu.os-info.name {
@@ -1362,7 +1362,7 @@ def setup-host [] {
     let programs = ["tscp" "tssh"]
     | where {|program| which $program | is-empty }
     if ($programs | is-not-empty) {
-        http get https://scruffaluff.github.io/picoware/install/scripts.nu
+        http get https://scruffaluff.github.io/picoware/install/script.nu
         | nu -c $"($in | decode); main --global ($programs | str join ' ')"
     }
 }

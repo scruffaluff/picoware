@@ -28,16 +28,17 @@ The installer programs, from the following table, can be executed by piping them
 into Bash and PowerShell for Unix systems and Windows respectively.
 Additionally, the Nushell installer programs work on any platform.
 
-| Name        | Description                                         |
-| ----------- | --------------------------------------------------- |
-| cargo       | Installs Cargo Rust package manager.                |
-| deno        | Installs Deno JavaScript runtime.                   |
-| jq          | Installs Jq JSON parser.                            |
-| just        | Installs Just command runner.                       |
-| nushell     | Installs Nushell structured data shell.             |
-| rust-script | Installs Rust Script Rust script executor.          |
-| scripts     | Installs programs from the following scripts table. |
-| uv          | Installs Uv Python package manager.                 |
+| Name        | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| app         | Installs GUI applications from the applications table below. |
+| cargo       | Installs Cargo Rust package manager.                         |
+| deno        | Installs Deno JavaScript runtime.                            |
+| jq          | Installs Jq JSON parser.                                     |
+| just        | Installs Just command runner.                                |
+| nushell     | Installs Nushell structured data shell.                      |
+| rust-script | Installs Rust Script Rust script executor.                   |
+| script      | Installs programs from the scripts table below.              |
+| uv          | Installs Uv Python package manager.                          |
 
 The following command installs Deno. To execute the other installers, replace
 `deno` with the installer name.
@@ -79,8 +80,8 @@ http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $"($in |
 ## Scripts
 
 The programs, from the following table, can be installed with the
-https://scruffaluff.github.io/picoware/install/scripts.sh for Unix systems and
-https://scruffaluff.github.io/picoware/install/scripts.ps1 for Windows.
+https://scruffaluff.github.io/picoware/install/script.sh for Unix systems and
+https://scruffaluff.github.io/picoware/install/script.ps1 for Windows.
 
 | Name        | Description                                    |
 | ----------- | ---------------------------------------------- |
@@ -101,15 +102,15 @@ scripts can be installed by replacing the program names.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/picoware/install/scripts.sh | sh -s -- clear-cache rgi
+curl -LSfs https://scruffaluff.github.io/picoware/install/script.sh | sh -s -- clear-cache rgi
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/scripts.ps1))) clear-cache rgi
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/script.ps1))) clear-cache rgi
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/scripts.nu | nu -c $"($in | decode); main clear-cache rgi"
+http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $"($in | decode); main clear-cache rgi"
 ```
 
 :::
@@ -119,24 +120,24 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/picoware/install/scripts.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/install/script.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/scripts.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/script.ps1))) --help
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/scripts.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::
 
-## Apps
+## Applications
 
 The programs, from the following table, can be installed with the
-https://scruffaluff.github.io/picoware/install/apps.sh for Unix systems and
-https://scruffaluff.github.io/picoware/install/apps.ps1 for Windows.
+https://scruffaluff.github.io/picoware/install/app.sh for Unix systems and
+https://scruffaluff.github.io/picoware/install/app.ps1 for Windows.
 
 ::: warning
 
@@ -156,15 +157,15 @@ be installed by replacing the program names.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/picoware/install/apps.sh | sh -s -- augraph denoui
+curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- augraph denoui
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/apps.ps1))) augraph denoui
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/app.ps1))) augraph denoui
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/apps.nu | nu -c $"($in | decode); main augraph denoui"
+http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main augraph denoui"
 ```
 
 :::
@@ -174,15 +175,15 @@ To view usage options, run the following command.
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/picoware/install/apps.sh | sh -s -- --help
+curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- --help
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/apps.ps1))) --help
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/app.ps1))) --help
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/apps.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main --help"
 ```
 
 :::

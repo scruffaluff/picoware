@@ -14,22 +14,23 @@ The following table shows the available installer programs. These are Bash, and
 PowerShell scripts that download dependencies, configure system settings, and
 install each program for immediate use.
 
-| Name        | Description                                         |
-| ----------- | --------------------------------------------------- |
-| cargo       | Installs Cargo Rust package manager.                |
-| deno        | Installs Deno JavaScript runtime.                   |
-| jq          | Installs Jq JSON parser.                            |
-| just        | Installs Just command runner.                       |
-| nushell     | Installs Nushell structured data shell.             |
-| rust-script | Installs Rust Script Rust script executor.          |
-| scripts     | Installs programs from the following scripts table. |
-| uv          | Installs Uv Python package manager.                 |
+| Name        | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| app         | Installs GUI applications from the applications table below. |
+| cargo       | Installs Cargo Rust package manager.                         |
+| deno        | Installs Deno JavaScript runtime.                            |
+| jq          | Installs Jq JSON parser.                                     |
+| just        | Installs Just command runner.                                |
+| nushell     | Installs Nushell structured data shell.                      |
+| rust-script | Installs Rust Script Rust script executor.                   |
+| script      | Installs programs from the scripts table below.              |
+| uv          | Installs Uv Python package manager.                          |
 
 ## Scripts
 
 The following table shows the available scripts. These scripts are single file
 programs that perform convenience tasks. They can be installed with the
-repository's `scripts` installer.
+repository's `script` installer.
 
 | Name        | Description                                    |
 | ----------- | ---------------------------------------------- |
@@ -43,6 +44,17 @@ repository's `scripts` installer.
 | tssh        | SSH for one time remote connections.           |
 | vimu        | Convenience script for QEMU and Virsh.         |
 | zhy         | Zellij workspace with Helix and Yazi.          |
+
+## Applications
+
+The following table shows the available GUI applications. These applications are
+currently minimal example GUI applications meant as placeholders.
+
+| Name    | Description                                    |
+| ------- | ---------------------------------------------- |
+| augraph | Audio plotting example application.            |
+| denoui  | Example GUI application with Deno.             |
+| strudel | Application wrapper around https://strudel.cc. |
 
 ## Actions
 

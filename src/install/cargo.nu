@@ -153,7 +153,7 @@ def update-shell [dest: directory] {
     }
     let profile = match $shell {
         bash => $"($env.HOME)/.bashrc"
-        fish => "($env.HOME)/.config/fish/config.fish"
+        fish => $"($env.HOME)/.config/fish/config.fish"
         nu => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"
