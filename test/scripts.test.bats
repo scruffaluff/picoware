@@ -47,7 +47,8 @@ create_wrapper_for_incompatible_env() { # @test
   export _curl _temp="${temp}"
   export -f curl env
 
-  run bash src/install/scripts.sh --preserve-env --dest "${temp}" pyscript
+  run bash src/install/scripts.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "${temp}" pyscript
   assert_success
   assert_equal "$(ls -1 "${temp}")" $'pyscript\npyscript.py'
   assert_equal "$(head -n 1 "${temp}/pyscript")" "#!/usr/bin/env sh"
@@ -59,7 +60,7 @@ json_parser_finds_all_unix_scripts() { # @test
   export _curl
   export -f curl
 
-  run bash src/install/scripts.sh --list
+  run bash src/install/scripts.sh ${DEBUG:+--debug} --list
   assert_success
   assert_output $'mockscript\nnewscript\notherscript\npyscript'
 }
@@ -76,6 +77,7 @@ installer_uses_sudo_when_destination_is_not_writable() { # @test
   export _curl _sudo
   export -f curl sudo
 
-  run bash src/install/scripts.sh --preserve-env --dest /fake/path mockscript
+  run bash src/install/scripts.sh ${DEBUG:+--debug} --preserve-env --dest \
+    /fake/path mockscript
   assert_failure 100
 }

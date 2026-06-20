@@ -13,7 +13,8 @@ setup() {
 }
 
 deno_prints_version() { # @test
-  run bash src/install/deno.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/deno.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed deno 2.'
 }
@@ -29,7 +30,8 @@ deno_shows_error_if_zip_missing() { # @test
   }
   export -f command
 
-  run bash src/install/deno.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/deno.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_failure
   assert_output "$(
     cat << EOF
@@ -40,7 +42,8 @@ EOF
 }
 
 jq_prints_version() { # @test
-  run bash src/install/jq.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/jq.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed jq-1.'
 }
@@ -49,19 +52,21 @@ jq_global_owner_is_root() { # @test
   local dst_dir
   dst_dir="$(mktemp -d)"
 
-  run bash src/install/jq.sh --preserve-env --quiet --global --dest "${dst_dir}"
+  run bash src/install/jq.sh ${DEBUG:+--debug} --preserve-env --quiet --global \
+    --dest "${dst_dir}"
   assert_success
   assert_file_owner root "${dst_dir}/jq"
 }
 
 jq_quiet_is_silent() { # @test
-  run bash src/install/jq.sh --preserve-env --quiet --dest "$(mktemp -d)"
+  run bash src/install/jq.sh ${DEBUG:+--debug} --preserve-env --quiet --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output ''
 }
 
 just_shows_error_usage_for_bad_argument() { # @test
-  run bash src/install/just.sh --preserve-env --dst
+  run bash src/install/just.sh ${DEBUG:+--debug} --preserve-env --dst
   assert_failure
   assert_output "$(
     cat << EOF
@@ -72,7 +77,8 @@ EOF
 }
 
 just_prints_version() { # @test
-  run bash src/install/just.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/just.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'
 }
@@ -88,13 +94,15 @@ just_downloads_jq_if_missing() { # @test
   }
   export -f command
 
-  run bash src/install/just.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/just.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed just 1.'
 }
 
 nushell_prints_version() { # @test
-  run bash src/install/nushell.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/nushell.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed Nushell 0.'
 }
@@ -110,7 +118,8 @@ nushell_shows_error_if_tar_missing() { # @test
   }
   export -f command
 
-  run bash src/install/nushell.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/nushell.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_failure
   assert_output "$(
     cat << EOF
@@ -121,13 +130,15 @@ EOF
 }
 
 rust_script_prints_version() { # @test
-  run bash src/install/rust-script.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/rust-script.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed rust-script 0.'
 }
 
 uv_prints_version() { # @test
-  run bash src/install/uv.sh --preserve-env --dest "$(mktemp -d)"
+  run bash src/install/uv.sh ${DEBUG:+--debug} --preserve-env --dest \
+    "$(mktemp -d)"
   assert_success
   assert_output --partial 'Installed uv 0.'
 }

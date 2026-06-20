@@ -443,7 +443,7 @@ install_app_macos() {
 
   log "Installing application ${title}."
   fetch --dest "${icon}" --super "${super}" "${icon_url}"
-  script="$(fetch_app "${super}" "${2}" "${name}" "${dest}")"
+  script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
   runner="$(find_runner "${super}" "${script}")"
   create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
   ${super:+"${super}"} ln -fs "${entry_point}" "${cli_dir}/${name}"
@@ -540,7 +540,7 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local global_='' names='' super='' version='main'
+  local global_='' list_apps='' names='' super='' version='main'
 
   # Parse command line arguments.
   #

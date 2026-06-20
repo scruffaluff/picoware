@@ -20,7 +20,7 @@ export UV_PYTHON := "~=3.12"
 export UV_TOOL_BIN_DIR := ".vendor/bin"
 export UV_TOOL_DIR := ".vendor/lib/uv"
 
-# Execute CI workflow commands.
+# Run continuous integration pipeline.
 ci: setup lint test doc
 
 # Build documentation.
@@ -33,14 +33,14 @@ doc:
 [windows]
 doc:
 
-# Fix code formatting.
+# Format project files.
 [unix]
 format +paths=".":
   npx prettier --write {{paths}}
   shfmt --write src test
   uv tool run ruff format {{paths}}
 
-# Fix code formatting.
+# Format project files.
 [windows]
 format +paths=".":
   #!powershell.exe
@@ -57,11 +57,29 @@ format +paths=".":
   }
   uv tool run ruff format {{paths}}
 
-# Install project programs.
-install workflow *args:
-  nu src/install/{{workflow}}.nu --version {{justfile_directory()}} {{args}}
+# Install project applications and scripts.
+[script("nu")]
+install +programs="all": setup
+  let repo = "{{justfile_directory()}}"
+  let apps = ls src/app | where type == dir | get name | path basename
+  let scripts = ls src/script | where type == file | get name | path parse
+  | get stem | uniq
+  let programs = if "{{programs}}" == "all" {
+    [...$apps ...$scripts]
+  } else {
+    "{{programs}}" | split words
+  }
+  for program in $programs {
+    if $program in $apps {
+      nu src/install/apps.nu --version $repo $program
+    } else if $program in $scripts {
+      nu src/install/scripts.nu --version $repo $program
+    } else {
+      error make $"No program found for '($program)'."
+    }
+  }
 
-# Run code analyses.
+# Analyze files for issues.
 [unix]
 lint +paths=".":
   #!/usr/bin/env sh
@@ -76,7 +94,7 @@ lint +paths=".":
   uv tool run ruff check {{paths}}
   uv tool run ty check {{paths}}
 
-# Run code analyses.
+# Analyze files for issues.
 [windows]
 lint +paths=".":
   deno run --allow-all npm:prettier --check {{paths}}
@@ -90,17 +108,17 @@ lint +paths=".":
   uv tool run ruff check {{paths}}
   uv tool run ty check {{paths}}
 
-# List all commands available in justfile.
+# List available commands.
 [default]
 @list:
   just --list
 
-# Wrapper to Nushell.
+# Run Nushell in project environment.
 [no-exit-message]
-@nu *args:
+@nu *args="nu --login":
   nu --commands "{{args}}"
 
-# Install development dependencies.
+# Install development tools and dependencies.
 [unix]
 setup:
   #!/usr/bin/env sh
@@ -178,7 +196,7 @@ setup:
     deno install --frozen
   fi
 
-# Install development dependencies.
+# Install development tools and dependencies.
 [windows]
 setup:
   #!powershell.exe
@@ -241,7 +259,7 @@ setup:
   Write-Output "Using Pester $((Get-Module -ListAvailable Pester | `
     Select-Object -First 1).Version)."
   Write-Output 'Installing packages with Deno.'
-  if ("$Env:INIT") {
+  if ($Env:INIT) {
     deno install
     just format
   }
@@ -249,26 +267,55 @@ setup:
     deno install --frozen
   }
 
-# Run test suites.
+# Run tests (use DEBUG=1 for debugger).
 test: test-sh test-nu test-py
 
-# Run shell test suites.
+# Run bash tests (use DEBUG=1 for debugger).
 [unix]
-test-sh *args:
-  bats --recursive test {{args}}
+test-sh *args="test":
+  #!/usr/bin/env sh
+  if [ -n "${DEBUG:-}" ]; then
+    bats --recursive --trace {{args}}
+  else
+    bats --recursive {{args}}
+  fi
 
-# Run PowerShell test suite.
+# Run PowerShell tests (use DEBUG=1 for debugger).
 [windows]
 test-sh *args:
-  Invoke-Pester -CI -Output Detailed -Path \
-    $(Get-ChildItem -Recurse -Filter *.test.ps1 -Path test).FullName
+  #!powershell.exe
+  $ErrorActionPreference = 'Stop'
+  $ProgressPreference = 'SilentlyContinue'
+  $PSNativeCommandUseErrorActionPreference = $True
+  Import-Module Pester
+  $Config = [PesterConfiguration]::Default
+  $Config.Run = @{ Exit = $True; Path = 'test'; TestExtension = '.test.ps1' }
+  $Config.Output.Verbosity = 'Detailed'
+  if ($Env:DEBUG) {
+    $Config.Output = @{
+      Verbosity = [PesterConfigurationOutput]::Diagnostic;
+      StackTraceVerbosity = [PesterConfigurationStackTraceVerbosity]::Full;
+    }
+  }
+  Invoke-Pester -Configuration $Config {{args}}
 
-# Run Nushell test suite.
+# Run Nushell tests (use DEBUG=1 for debugger).
 [script("nu")]
-test-nu *args:
+test-nu *args="--path test":
   use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
-  run-tests --fail --path test {{args}}
+  if ($env.DEBUG? | into bool --relaxed) {
+    with-env { NU_BACKTRACE: "1" } {
+      run-tests --fail --display table {{args}}
+    }
+  } else {
+    run-tests --fail --display table {{args}}
+  }
 
-# Run Python test suite.
-test-py *args:
-  uv tool run --python 3.12 --with loguru,typer,pyyaml pytest test {{args}}
+# Run Python tests (use DEBUG=1 for debugger).
+[script("nu")]
+test-py *args="test":
+  if ($env.DEBUG? | into bool --relaxed) {
+    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest --pdb {{args}}
+  } else {
+    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest {{args}}
+  }
