@@ -74,7 +74,7 @@ def find-scripts [version: string = "main"] {
         | where {|path| ($path | str starts-with "src/script/") }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
-    | each {|name| $name | path basename }
+    | each {|name| $name | path parse | get stem }
 }
 
 # Find command to elevate as super user.
@@ -292,7 +292,7 @@ def main [
 
     let names = if $list {
         for script in (find-scripts $version) {
-            print ($script | path parse | get stem)
+            print $script
         }
         return
     } else if ($scripts | is-empty) {

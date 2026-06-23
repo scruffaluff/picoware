@@ -77,20 +77,27 @@ def "main edit" [
     --store (-s): path = "" # Store path override
     path: path # Input path
 ] {
-    let store_path = $store | default --empty $env.ZHY_STORE?
-    let store = open $store_path
+    let store = open (path-store) | from json
 
     if ("editor" in $store) {
+        let command = list-panes
+        | where id == $store.editor
+        | get 0.pane_command
+        let message = if ($command | str contains "hx ") {
+            $":open ($path | path expand)"
+        } else {
+            $"hx ($path | path expand)"
+        }
+
         zellij action focus-pane-id $store.editor
-        # Press escape key before sending Helix command.
-        zellij action write 27
-        zellij action write-chars $":open ($path | path expand)"
-        # Send Helix command with enter key.
-        zellij action write 13
+        zellij action send-keys "Esc"
+        zellij action write-chars $message
+        zellij action send-keys "Enter"
     } else {
         $store
-        | upsert editor $env.ZELLIJ_PANE_ID
-        | save --force $store_path
+        | upsert editor ($env.ZELLIJ_PANE_ID | into int)
+        | save --force (path-store)
+        open --raw (path-store) | save --append $"($env.HOME)/zhy.log"
         exec hx $path
     }
 }
@@ -100,8 +107,7 @@ def "main file" [
     --store (-s): path = "" # Store path override
     path: path # Input path
 ] {
-    let store = $store | default --empty $env.ZHY_STORE?
-    with-env { EDITOR: "zhy" ZHY_STORE: $store } { exec yazi $path }
+    with-env { EDITOR: "zhy" ZHY_STORE: (path-store) } { exec yazi $path }
 }
 
 # Get store path.
