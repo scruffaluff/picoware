@@ -19,11 +19,13 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Print message if error or logging is enabled.
-def --wrapped log [...args: string] {
-    if (
-        not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
-        or ("-e" in $args) or ("--stderr" in $args)
-    ) {
+def --wrapped log [
+    --stderr (-e) # Print to stderr instead of stdout
+    ...args: string
+] {
+    if $stderr {
+        print --stderr ...$args
+    } else if not ($env.SCRIPTS_NOLOG? | into bool --relaxed) {
         print ...$args
     }
 }

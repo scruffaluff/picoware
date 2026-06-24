@@ -11,6 +11,12 @@ def "http get" [url: string] {
 
 @test
 def json-parser-finds-all-scripts [] {
+    let ext = if $nu.os-info.name == "windows" { ".ps1" } else { ".sh" }
     let scripts = find-scripts "main"
-    assert equal $scripts ["mockscript" "newscript" "otherscript" "pyscript"]
+    assert equal $scripts [
+        $"mockscript($ext)"
+        "newscript.nu"
+        $"otherscript($ext)"
+        "pyscript.py"
+    ]
 }

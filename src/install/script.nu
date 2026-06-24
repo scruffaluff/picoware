@@ -74,7 +74,7 @@ def find-scripts [version: string = "main"] {
         | where {|path| ($path | str starts-with "src/script/") }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
-    | each {|name| $name | path parse | get stem }
+    | each {|name| $name | path basename }
 }
 
 # Find command to elevate as super user.
@@ -256,11 +256,13 @@ def install-wrapper [ext: string dest: path] {
 }
 
 # Print message if error or logging is enabled.
-def --wrapped log [...args: string] {
-    if (
-        not ($env.SCRIPTS_NOLOG? | into bool --relaxed)
-        or ("-e" in $args) or ("--stderr" in $args)
-    ) {
+def --wrapped log [
+    --stderr (-e) # Print to stderr instead of stdout
+    ...args: string
+] {
+    if $stderr {
+        print --stderr ...$args
+    } else if not ($env.SCRIPTS_NOLOG? | into bool --relaxed) {
         print ...$args
     }
 }
@@ -292,7 +294,7 @@ def main [
 
     let names = if $list {
         for script in (find-scripts $version) {
-            print $script
+            print ($script | path parse | get stem)
         }
         return
     } else if ($scripts | is-empty) {
