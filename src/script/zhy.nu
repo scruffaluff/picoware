@@ -79,7 +79,7 @@ def "main edit" [
 ] {
     let store = open (path-store) | from json
 
-    if ("editor" in $store) {
+    if "editor" in $store {
         let command = list-panes
         | where id == $store.editor
         | get 0.pane_command

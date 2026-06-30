@@ -26,7 +26,7 @@ def find-matlab [path: path] {
         $"(glob $search.pattern | last)/bin/matlab($search.extension)"
         | path expand
     } catch {
-        error make --unspanned {
+        error make {
             help: "Try setting the MLAB_PROGRAM environment variable."
             msg: "Unable to find Matlab installation."
         }

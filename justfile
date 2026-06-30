@@ -36,7 +36,7 @@ doc:
 # Format project files.
 [unix]
 format +paths=".":
-  npx prettier --write {{paths}}
+  prettier --write {{paths}}
   shfmt --write src test
   uv tool run ruff format {{paths}}
 
@@ -47,7 +47,7 @@ format +paths=".":
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue'
   $PSNativeCommandUseErrorActionPreference = $True
-  npx prettier --write {{paths}}
+  prettier --write {{paths}}
   Invoke-ScriptAnalyzer -Fix -Recurse -Path src -Settings CodeFormatting
   Invoke-ScriptAnalyzer -Fix -Recurse -Path test -Settings CodeFormatting
   $Scripts = Get-ChildItem -Recurse -Filter *.ps1 -Path src, test
@@ -84,7 +84,7 @@ install +programs="all": setup
 lint +paths=".":
   #!/usr/bin/env sh
   set -eu
-  deno run --allow-all npm:prettier --check {{paths}}
+  prettier --check {{paths}}
   shfmt --diff src test
   files="$(find src test -name '*.sh' -or -name '*.bats')"
   for file in ${files}; do
@@ -97,7 +97,7 @@ lint +paths=".":
 # Analyze files for issues.
 [windows]
 lint +paths=".":
-  deno run --allow-all npm:prettier --check {{paths}}
+  prettier --check {{paths}}
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings CodeFormatting
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path src -Settings \
@@ -166,6 +166,11 @@ setup:
       --depth 1 https://github.com/vyadh/nutest.git .vendor/lib/nutest
   fi
   echo "Using Nutest $(git -C .vendor/lib/nutest rev-parse HEAD)."
+  if ! command -v prettier > /dev/null 2>&1; then
+    echo 'Installing Prettier.'
+    deno install --allow-all --global npm:prettier
+  fi
+  echo "Using Prettier $(prettier --version)."
   if ! command -v shellcheck > /dev/null 2>&1; then
     echo 'Installing ShellCheck.'
     shellcheck_arch='{{arch()}}'
@@ -231,6 +236,11 @@ setup:
       https://github.com/vyadh/nutest.git .vendor/lib/nutest
   }
   Write-Output "Using Nutest $(git -C .vendor/lib/nutest rev-parse HEAD)."
+  if (-not (Get-Command -ErrorAction SilentlyContinue prettier)) {
+    Write-Output 'Installing Prettier.'
+    deno install --allow-all --global npm:prettier
+  }
+  Write-Output "Using Prettier $(prettier --version)."
   # If executing task from PowerShell Core, error such as "'Install-Module'
   # command was found in the module 'PowerShellGet', but the module could not be
   # loaded" unless earlier versions of PackageManagement and PowerShellGet are
@@ -270,7 +280,28 @@ setup:
 # Run tests (use DEBUG=1 for debugger).
 test: test-sh test-nu test-py
 
-# Run bash tests (use DEBUG=1 for debugger).
+# Run Nushell tests (use DEBUG=1 for debugger).
+[script("nu")]
+test-nu *args="--path test":
+  use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
+  if ($env.DEBUG? | into bool --relaxed) {
+    with-env { NU_BACKTRACE: "1" } {
+      run-tests --fail --display table {{args}}
+    }
+  } else {
+    run-tests --fail --display table {{args}}
+  }
+
+# Run Python tests (use DEBUG=1 for debugger).
+[script("nu")]
+test-py *args="test":
+  if ($env.DEBUG? | into bool --relaxed) {
+    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest --pdb {{args}}
+  } else {
+    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest {{args}}
+  }
+
+# Run Bash tests (use DEBUG=1 for debugger).
 [unix]
 test-sh *args="test":
   #!/usr/bin/env sh
@@ -298,24 +329,3 @@ test-sh *args:
     }
   }
   Invoke-Pester -Configuration $Config {{args}}
-
-# Run Nushell tests (use DEBUG=1 for debugger).
-[script("nu")]
-test-nu *args="--path test":
-  use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
-  if ($env.DEBUG? | into bool --relaxed) {
-    with-env { NU_BACKTRACE: "1" } {
-      run-tests --fail --display table {{args}}
-    }
-  } else {
-    run-tests --fail --display table {{args}}
-  }
-
-# Run Python tests (use DEBUG=1 for debugger).
-[script("nu")]
-test-py *args="test":
-  if ($env.DEBUG? | into bool --relaxed) {
-    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest --pdb {{args}}
-  } else {
-    uv tool run --python 3.12 --with loguru,typer,pyyaml pytest {{args}}
-  }

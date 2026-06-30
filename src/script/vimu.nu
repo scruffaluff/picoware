@@ -271,7 +271,7 @@ def --wrapped install-disk [
     ...args: string
 ] {
     mut args = virt-args $arch ...$args
-    if ($cloud_init) {
+    if $cloud_init {
         print "Creating cloud init account for virtual machine."
         let username = $env.VIMU_USERNAME? | default { input "Username: " }
         let password = $env.VIMU_PASSWORD? | default { ask-password }
@@ -829,6 +829,35 @@ def "main remove" [
     }
 }
 
+# Copy files between host and virtual machine.
+def --wrapped "main scp" [
+    --log-level (-l): string = "debug" # Log level
+    ...args: path # Secure copy arguments
+] {
+    $env.NU_LOG_LEVEL = $log_level | str upcase
+
+    mut domain = ""
+    mut params = $args
+    for iter in ($args | enumerate) {
+        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):.*$'
+        if ($match | is-not-empty) {
+            $domain = $match | get domain.0
+            $params = $params | update $iter.index (
+                $iter.item | str replace $"($domain):" "localhost:"
+            )
+        }
+    }
+    if ($domain | is-empty) {
+        error make $"No domain found in '($args | str join ' ')'."
+    }
+
+    if not (virsh list --name | str contains $domain) {
+        virsh start $domain
+    }
+    let port = main port $domain 22
+    tscp -i $"(path-config)/key" -P $port ...$params
+}
+
 # Configure machine for emulation.
 def "main setup" [
     --log-level (-l): string = "debug" # Log level
@@ -858,35 +887,6 @@ def "main snapshot-table" [
         virsh snapshot-list --parent $domain | str trim | lines | drop nth 1
         | str join "\n" | from ssv | insert Domain $domain | move Domain --first
     } | flatten
-}
-
-# Copy files between host and virtual machine.
-def --wrapped "main scp" [
-    --log-level (-l): string = "debug" # Log level
-    ...args: path # Secure copy arguments
-] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
-
-    mut domain = ""
-    mut params = $args
-    for iter in ($args | enumerate) {
-        let match = $iter.item | parse --regex '^(\w+@)?(?P<domain>\w+):.*$'
-        if ($match | is-not-empty) {
-            $domain = $match | get domain.0
-            $params = $params | update $iter.index (
-                $iter.item | str replace $"($domain):" "localhost:"
-            )
-        }
-    }
-    if ($domain | is-empty) {
-        error make $"No domain found in '($args | str join ' ')'."
-    }
-
-    if not (virsh list --name | str contains $domain) {
-        virsh start $domain
-    }
-    let port = main port $domain 22
-    tscp -i $"(path-config)/key" -P $port ...$params
 }
 
 # Connect to virtual machine with SSH.

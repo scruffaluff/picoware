@@ -10,11 +10,6 @@ setup() {
   load "${REPO_PATH}/.vendor/lib/bats-file/load"
   load "${REPO_PATH}/.vendor/lib/bats-support/load"
   bats_require_minimum_version 1.5.0
-  if [ -n "${DEBUG:-}" ]; then
-    run bash src/install/app.sh ${DEBUG:+--debug} --debug --list
-  else
-    run bash src/install/app.sh ${DEBUG:+--debug} --list
-  fi
 
   curl() {
     case "$*" in
@@ -48,7 +43,7 @@ json_parser_finds_all_apps() { # @test
   export _curl
   export -f curl
 
-  run bash src/install/app.sh ${DEBUG:+--debug} ${DEBUG:+--debug} --list
+  run bash src/install/app.sh ${DEBUG:+--debug} --list
   assert_success
   assert_output $'pyapp\nrsapp'
 }
