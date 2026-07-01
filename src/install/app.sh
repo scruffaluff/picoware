@@ -120,7 +120,7 @@ export PATH="${folder}:\${PATH}"
 # Resolve symlinks to find script folder.
 folder="\$(dirname "\$(realpath "\${0}")")"
 # Use interpeter to avoid env shebang conflicts.
-exec '${command}' "\${folder}/$(basename "${script}")" "\$@"
+exec ${command} "\${folder}/$(basename "${script}")" "\$@"
 EOF
   ${super:+"${super}"} chmod +rx "${path}"
 }

@@ -1,20 +1,26 @@
 #!/usr/bin/env nu
 
-# Capitalize app name.
+# Capitalize application name.
 def capitalize [name: string] {
-    $name | str replace '_' ' '
-    | split row ' '
+    $name
+    | str replace --regex "[_-]" " "
+    | split words
     | each { $in | str capitalize }
-    | str join ' '
+    | str join " "
 }
 
 # Create application entrypoint script.
-def create-entry [super: string script: path folder: string entry_path: path] {
+def create-entry [super: string script: path folder: string entry: path] {
+    let name = $script | path basename
     let shebang = open --raw $script | lines | first
-    let command = $shebang | str replace "#!/usr/bin/env -S " "" | str replace "#!/usr/bin/env " ""
-    let script_name = $script | path basename
+    let command = $shebang
+    | str replace "#!/usr/bin/env -S " ""
+    | str replace "#!/usr/bin/env " ""
 
-    let text = $"
+    if $nu.os-info.name == "windows" {
+        $"@echo off\n($command) %*\n" | save --force $entry
+    } else {
+        let text = $"
 #!/usr/bin/env sh
 set -eu
 
@@ -23,14 +29,15 @@ export PATH=\"($folder):${PATH}\"
 # Resolve symlinks to find script folder.
 folder=\"$\(dirname \"$\(realpath \"${0}\"\)\"\)\"
 # Use interpeter to avoid env shebang conflicts.
-exec '($command)' \"${folder}/($script_name)\" \"\$@\"
+exec ($command) \"${folder}/($name)\" \"\$@\"
 "
-    | str trim
-    | save --force $entry_path
-    if ($super | is-empty) {
-        chmod +rx $entry_path
-    } else {
-        ^$super chmod +x $entry_path
+        | str trim
+        | save --force $entry
+        if ($super | is-empty) {
+            chmod +rx $entry
+        } else {
+            ^$super chmod +x $entry
+        }
     }
 }
 
@@ -77,11 +84,11 @@ def deploy [
 def fetch-app [super: string version: string name: string dest: directory] {
     let url = $"https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/($version)/src/app/($name)"
     let files = http get $"https://api.github.com/repos/scruffaluff/picoware/git/trees/($version)?recursive=true"
-        | get tree
-        | where type == blob
-        | get path
-        | where {|path| ($path | str starts-with $"src/app/($name)/") }
-        | each {|path| $path | str replace $"src/app/($name)/" "" }
+    | get tree
+    | where type == blob
+    | get path
+    | where {|path| $path | str starts-with $"src/app/($name)/" }
+    | each {|path| $path | str replace $"src/app/($name)/" "" }
 
     if ($super | is-empty) {
         mkdir $dest
@@ -91,7 +98,7 @@ def fetch-app [super: string version: string name: string dest: directory] {
 
     mut script = ""
     for file in $files {
-        let dest_file = $dest | path join $file
+        let dest_file = $"($dest)/($file)"
         let ext = $file | path parse | get extension
 
         if $ext in ["nu" "ps1" "py" "rs" "sh" "ts"] {
@@ -116,7 +123,7 @@ def find-apps [version: string = "main"] {
         | get tree
         | where type == tree
         | get path
-        | where {|path| ($path | str starts-with "src/app/") }
+        | where {|path| $path | str starts-with "src/app/" }
         | each {|path| $path | str replace "src/app/" "" }
     }
 }
@@ -124,42 +131,33 @@ def find-apps [version: string = "main"] {
 # Find application runner.
 def find-runner [super: string script: path] {
     let ext = $script | path parse | get extension
+    mut args = ["--preserve-env"]
+    if ($super | is-not-empty) {
+        $args = [...$args "--global"]
+    }
+
     match $ext {
-        nu => {
-            which nu | first
-        }
+        nu => { which nu | get 0.path }
         py => {
             if (which uv | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if ($super | is-not-empty) {
-                    $args = [...$args "--global"]
-                }
                 http get https://scruffaluff.github.io/picoware/install/uv.nu
                 | nu -c $"($in | decode); main ($args | str join ' ')"
             }
-            which uv | first
+            which uv | get 0.path
         }
         rs => {
             if (which rust-script | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if ($super | is-not-empty) {
-                    $args = [...$args "--global"]
-                }
                 http get https://scruffaluff.github.io/picoware/install/rust-script.nu
                 | nu -c $"($in | decode); main ($args | str join ' ')"
             }
-            which rust-script | first
+            which rust-script | get 0.path
         }
-        ts => {
+        ts | tsx => {
             if (which deno | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if ($super | is-not-empty) {
-                    $args = [...$args "--global"]
-                }
                 http get https://scruffaluff.github.io/picoware/install/deno.nu
                 | nu -c $"($in | decode); main ($args | str join ' ')"
             }
-            which deno | first
+            which deno | get 0.path
         }
         _ => {
             error make $"Unable to find an application runner for ($script)."
@@ -186,33 +184,37 @@ Restart this script from an administrator console or install to a user directory
 }
 
 # Install application for Linux.
-def install-app-linux [super: string version: string name: string dest: directory] {
+def install-app-linux [super: string version: string name: string] {
+    let cli_dir = if ($super | is-empty) {
+        $"($env.HOME)/.local/bin"
+    } else {
+        "/usr/local/bin"
+    }
+    let dest = if ($super | is-empty) {
+        $"($env.HOME)/.local/app/($name)"
+    } else {
+        $"/usr/local/app/($name)"
+    }
     let url = $"https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/($version)"
     let title = capitalize $name
 
-    let cli_dir = if ($super | is-not-empty) {
-        "/usr/local/bin"
-    } else {
-        $"($env.HOME)/.local/bin"
-    }
-    let app_dest = $"($dest)/($name)"
     let manifest = if ($super | is-not-empty) {
-        "/usr/local/share/applications/($name).desktop"
+        $"/usr/local/share/applications/($name).desktop"
     } else {
         $"($env.HOME)/.local/share/applications/($name).desktop"
     }
-    let entry_point = $"($app_dest)/main.sh"
-    let icon = $"($app_dest)/icon.svg"
+    let entry = $"($dest)/main.sh"
+    let icon = $"($dest)/icon.svg"
 
     log $"Installing application ($title)."
     deploy --super $super $"($url)/data/image/icon.svg" $icon
-    let script = fetch-app $super $version $name $app_dest
+    let script = fetch-app $super $version $name $dest
     let runner = find-runner $super $script
-    create-entry $super $script ($runner | path dirname) $entry_point
+    create-entry $super $script ($runner | path dirname) $entry
     if ($super | is-empty) {
-        symlink $entry_point $"($cli_dir)/($name)"
+        ln -fs $entry $"($cli_dir)/($name)"
     } else {
-        ^$super ln -fs $entry_point $"($cli_dir)/($name)"
+        ^$super ln -fs $entry $"($cli_dir)/($name)"
     }
 
     # Parse window class to ensure correct dock icon.
@@ -225,19 +227,19 @@ def install-app-linux [super: string version: string name: string dest: director
 
     $"
 [Desktop Entry]
-Exec=($entry_point)
+Exec=($entry)
 Icon=($icon)
 Name=($title)
 StartupWMClass=($wmclass)
 Terminal=false
 Type=Application
 "
+    | str trim
     | if ($super | is-empty) {
         save --force $manifest
     } else {
         ^$super tee $manifest > /dev/null
     }
-
     if ($super | is-empty) {
         update-desktop-database ($manifest | path dirname)
     } else {
@@ -254,38 +256,34 @@ Type=Application
 }
 
 # Install application for MacOS.
-def install-app-macos [super: string version: string name: string dest: directory] {
-    let url = $"https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/($version)"
-    let title = capitalize $name
+def install-app-macos [super: string version: string name: string] {
     let identifier = $"com.scruffaluff.app-($name | str replace '_' '-')"
+    let title = capitalize $name
+    let url = $"https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/($version)"
 
-    let cli_dir = if ($super | is-not-empty) {
-        "/usr/local/bin"
-    } else {
+    let cli_dir = if ($super | is-empty) {
         $"($env.HOME)/.local/bin"
-    }
-    let app_dest = $"($dest)/($name)"
-    let icon = if ($super | is-not-empty) {
-        $"/Applications/($title).app/Contents/Resources/icon.icns"
     } else {
-        $"($env.HOME)/Applications/($title).app/Contents/Resources/icon.icns"
+        "/usr/local/bin"
     }
-    let manifest = if ($super | is-not-empty) {
-        $"/Applications/($title).app/Contents/Info.plist"
+    let dest = if ($super | is-empty) {
+        $"($env.HOME)/Applications/($title).app/Contents/MacOS"
     } else {
-        $"($env.HOME)/Applications/($title).app/Contents/Info.plist"
+        $"/Applications/($title).app/Contents/MacOS"
     }
-    let entry_point = $"($app_dest)/main.sh"
+    let icon = $"($dest | path dirname)/Resources/icon.icns"
+    let manifest = $"($dest | path dirname)/Info.plist"
+    let entry = $"($dest)/main.sh"
 
     log $"Installing application ($title)."
     deploy --super $super $"($url)/data/image/icon.icns" $icon
-    let script = fetch-app $super $version $name $app_dest
+    let script = fetch-app $super $version $name $dest
     let runner = find-runner $super $script
-    create-entry $super $script ($runner | path dirname) $entry_point
+    create-entry $super $script ($runner | path dirname) $entry
     if ($super | is-empty) {
-        symlink $entry_point $"($cli_dir)/($name)"
+        ln -fs $entry $"($cli_dir)/($name)"
     } else {
-        ^$super ln -fs $entry_point $"($cli_dir)/($name)"
+        ^$super ln -fs $entry $"($cli_dir)/($name)"
     }
 
     $"
@@ -340,30 +338,46 @@ def install-app-macos [super: string version: string name: string dest: director
 }
 
 # Install application for Windows.
-def install-app-windows [system: bool version: string name: string dest: directory] {
+def install-app-windows [global: bool version: string name: string] {
     let url = $"https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/($version)"
     let title = capitalize $name
 
-    let cli_dir = if $system {
+    let cli_dir = if $global {
         "C:\\Program Files\\Bin"
     } else {
         $"($env.LocalAppData)\\Programs\\Bin"
     }
-    let app_dest = $"($dest)/($name)"
-    let menu_dir = if $system {
+    let dest = if $global {
+        $"C:\\Program Files\\($title)"
+    } else {
+        $"($env.LocalAppData)\\Programs\\($title)"
+    }
+    let menu_dir = if $global {
         "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\App"
     } else {
         $"($env.AppData)\\Microsoft\\Windows\\Start Menu\\Programs\\App"
     }
 
     log $"Installing application ($title)."
-    deploy --super "" $"($url)/data/public/favicon.ico" $"($app_dest)/icon.ico"
-    let script = fetch-app "" $version $name $app_dest
-    setup-runner $name $script $app_dest $cli_dir $menu_dir $system
+    deploy --super "" $"($url)/data/public/favicon.ico" $"($dest)/icon.ico"
+    let script = fetch-app "" $version $name $dest
+    let runner = find-runner $global $script
+    create-entry $name $script $dest $cli_dir $menu_dir $system
+
+    # Create start menu shortcut via PowerShell.
+    powershell -command $"
+$WshShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut('($menu_dir)/($title).lnk')
+$Shortcut.Arguments = '($runner)'
+$Shortcut.IconLocation = '($dest)/icon.ico'
+$Shortcut.TargetPath = '($runner)'
+$Shortcut.WindowStyle = 7
+$Shortcut.Save()
+"
 
     # Update path variable if CLI is not in system path.
     if not ($cli_dir in $env.PATH) {
-        update-path $cli_dir $system
+        update-path $cli_dir $global
     }
 
     $env.PATH = [$cli_dir ...$env.PATH]
@@ -384,7 +398,6 @@ def --wrapped log [
 
 # Installer script for Picoware apps.
 def main [
-    --dest (-d): directory # Directory to install apps
     --global (-g) # Install apps for all users
     --list (-l) # List all available apps
     --quiet (-q) # Print only error messages
@@ -397,7 +410,7 @@ def main [
 
     let names = if $list {
         for app in (find-apps $version) {
-            print ($app | path parse | get stem)
+            print $app
         }
         return
     } else if ($apps | is-empty) {
@@ -408,135 +421,24 @@ def main [
         find-apps $version
     }
 
-    let dest_default = if $nu.os-info.name == "windows" {
-        if $global {
-            "C:\\Program Files\\App"
-        } else {
-            $"($env.LocalAppData)\\Programs\\App"
-        }
-    } else {
-        if $global { "/usr/local/app" } else { $"($env.HOME)/.local/app" }
-    }
-    let dest = $dest | default $dest_default | path expand
-
-    let system = need-super $dest $global
-    let super = if $system { find-super } else { "" }
-
-    for app_name in $apps {
+    let super = if $global { find-super } else { "" }
+    for app in $apps {
         mut match = false
-        for app in $names {
-            let stem = $app | path parse | get stem
-            if $app_name == $stem {
+        for name in $names {
+            if $app == $name {
                 $match = true
                 match $nu.os-info.name {
-                    macos => { install-app-macos $super $version $app $dest }
-                    windows => { install-app-windows $system $version $app $dest }
-                    _ => { install-app-linux $super $version $app $dest }
+                    macos => { install-app-macos $super $version $app }
+                    windows => { install-app-windows $global $version $app }
+                    _ => { install-app-linux $super $version $app }
                 }
             }
         }
 
         if not $match {
-            log --stderr $"error: No app found for '($app_name)'."
+            log --stderr $"error: No app found for '($app)'."
         }
     }
-}
-
-# Check if super user elevation is required.
-def need-super [dest: directory global: bool] {
-    if $global {
-        return true
-    }
-    try { mkdir $dest } catch { return true }
-    try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check"
-    false
-}
-
-# Create Windows runner for application.
-def setup-runner [
-    name: string
-    script: path
-    dest_dir: string
-    cli_dir: string
-    menu_dir: string
-    global: bool
-] {
-    let title = capitalize $name
-    let ext = $script | path parse | get extension
-    let runner = match $ext {
-        nu => {
-            if (which nu | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if $global {
-                    $args = [...$args "--global"]
-                }
-                http get https://scruffaluff.github.io/picoware/install/nushell.ps1
-                | powershell -command $"($in | Out-String) ($args | str join ' ')"
-            }
-            let runner = (which nu | first)
-            $"nu \"$script\""
-        }
-        py => {
-            if (which uv | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if $global {
-                    $args = [...$args "--global"]
-                }
-                http get https://scruffaluff.github.io/picoware/install/uv.ps1
-                | powershell -command $"($in | Out-String) ($args | str join ' ')"
-            }
-            let runner = (which uv | first)
-            $"uv --no-config --quiet run --script \"$script\""
-        }
-        rs => {
-            if (which rust-script | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if $global {
-                    $args = [...$args "--global"]
-                }
-                http get https://scruffaluff.github.io/picoware/install/rust-script.ps1
-                | powershell -command $"($in | Out-String) ($args | str join ' ')"
-            }
-            let runner = (which rust-script | first)
-            $"rust-script \"$script\""
-        }
-        ts => {
-            if (which deno | is-empty) {
-                mut args = ["--quiet" "--preserve-env"]
-                if $global {
-                    $args = [...$args "--global"]
-                }
-                http get https://scruffaluff.github.io/picoware/install/deno.ps1
-                | powershell -command $"($in | Out-String) ($args | str join ' ')"
-            }
-            let runner = (which deno | first)
-            $"deno run --allow-all --no-config --quiet --node-modules-dir=none \"$script\""
-        }
-        ps1 => {
-            let runner = (which powershell | first)
-            $"powershell -NoProfile -ExecutionPolicy RemoteSigned -File \"$script\""
-        }
-        _ => {
-            let runner = (which powershell | first)
-            $"powershell -NoProfile -ExecutionPolicy RemoteSigned -File \"$script\""
-        }
-    }
-
-    let cmd_content = $"@echo off\n($runner) %*\n"
-    $cmd_content | save --force $"($cli_dir)/($name).cmd"
-
-    # Create start menu shortcut via PowerShell.
-    let ps_script = $"
-\$WshShell = New-Object -ComObject WScript.Shell
-\$Shortcut = \$WshShell.CreateShortcut('($menu_dir)/($title).lnk')
-\$Shortcut.Arguments = '($runner)'
-\$Shortcut.IconLocation = '($dest_dir)/icon.ico'
-\$Shortcut.TargetPath = '($runner)'
-\$Shortcut.WindowStyle = 7
-\$Shortcut.Save()
-    d"
-    powershell -command $ps_script
 }
 
 # Add destination path to Windows environment path.
@@ -545,14 +447,14 @@ def update-path [dest: directory global: bool] {
     powershell -command $"
 $Dest = '($dest | path expand)'
 $Path = [Environment]::GetEnvironmentVariable\('Path', '($target)'\)
-if \(-not \($Path -like \"*$Dest*\"\)\) {{
+if \(-not \($Path -like \"*$Dest*\"\)\) {
     $PrependedPath = \"$Dest;$Path\"
     [System.Environment]::SetEnvironmentVariable\(
         'Path', \"$PrependedPath\", '($target)'
     \)
     Write-Output \"Added '$Dest' to the system path.\"
     Write-Output 'Source shell profile or restart shell after installation.'
-}}
+}
 "
 }
 
@@ -563,11 +465,11 @@ def update-shell [dest: directory] {
     let command = match $shell {
         fish => $"set --export PATH \"($dest)\" $PATH"
         nu => $"$env.PATH = [\"($dest)\" ...$env.PATH]"
-        _ => $"export PATH=\"($dest):${{PATH}}\""
+        _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
         bash => $"($env.HOME)/.bashrc"
-        fish => "($env.HOME)/.config/fish/config.fish"
+        fish => $"($env.HOME)/.config/fish/config.fish"
         nu => {
             if $nu.os-info.name == "macos" {
                 $"($env.HOME)/Library/Application Support/nushell/config.nu"

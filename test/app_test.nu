@@ -19,12 +19,13 @@ def create-entry-wraps-shebang [] {
     let script = $"($temp)/main.ts"
     let entry = $"($temp)/main.sh"
 
-    "#!/usr/bin/env deno" | save --force $script
+    "#!/usr/bin/env -S program --flag"
+    | save --force $script
     create-entry "" $script "/usr/local/bin" $entry
 
     let text = open --raw $entry
     assert str contains $text 'export PATH="/usr/local/bin:${PATH}"'
-    assert str contains $text "exec 'deno' \"${folder}/main.ts\" \"$@\""
+    assert str contains $text 'exec program --flag "${folder}/main.ts" "$@"'
 }
 
 @test

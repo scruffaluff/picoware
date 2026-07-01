@@ -71,7 +71,7 @@ def find-scripts [version: string = "main"] {
         | get tree
         | where type == blob
         | get path
-        | where {|path| ($path | str starts-with "src/script/") }
+        | where {|path| $path | str starts-with "src/script/" }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
     | each {|name| $name | path basename }
@@ -267,17 +267,6 @@ def --wrapped log [
     }
 }
 
-# Check if super user elevation is required.
-def need-super [dest: directory global: bool] {
-    if $global {
-        return true
-    }
-    try { mkdir $dest } catch { return true }
-    try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check"
-    false
-}
-
 # Installer script for Picoware scripts.
 def main [
     --dest (-d): directory # Directory to install scripts
@@ -333,6 +322,17 @@ def main [
             log --stderr $"error: No script found for '($script)'."
         }
     }
+}
+
+# Check if super user elevation is required.
+def need-super [dest: directory global: bool] {
+    if $global {
+        return true
+    }
+    try { mkdir $dest } catch { return true }
+    try { touch $"($dest)/.super_check" } catch { return true }
+    rm $"($dest)/.super_check"
+    false
 }
 
 # Add destination path to Windows environment path.
