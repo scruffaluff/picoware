@@ -66,7 +66,7 @@ def main [
             error make "Cannot start Zhy inside a Zellij tab with more than one pane."
         }
     } else {
-        with-env { ZHY_STORE: (path-store) } {
+        with-env {ZHY_STORE: (path-store)} {
             zellij --layout-string (layout $path)
         }
     }
@@ -107,7 +107,7 @@ def "main file" [
     --store (-s): path = "" # Store path override
     path: path # Input path
 ] {
-    with-env { EDITOR: "zhy" ZHY_STORE: (path-store) } { exec yazi $path }
+    with-env {EDITOR: "zhy" ZHY_STORE: (path-store)} { exec yazi $path }
 }
 
 # Get store path.

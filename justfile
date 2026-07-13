@@ -90,6 +90,7 @@ lint +paths=".":
   for file in ${files}; do
     shellcheck "${file}"
   done
+  deno lint {{paths}}
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
   uv tool run ty check {{paths}}
@@ -104,6 +105,7 @@ lint +paths=".":
     data/config/script_analyzer.psd1
   Invoke-ScriptAnalyzer -EnableExit -Recurse -Path test -Settings \
     data/config/script_analyzer.psd1
+  deno lint {{paths}}
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
   uv tool run ty check {{paths}}
@@ -285,7 +287,7 @@ test: test-sh test-nu test-py
 test-nu *args="--path test":
   use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
   if ($env.DEBUG? | into bool --relaxed) {
-    with-env { NU_BACKTRACE: "1" } {
+    with-env {NU_BACKTRACE: "1"} {
       run-tests --fail --display table {{args}}
     }
   } else {
