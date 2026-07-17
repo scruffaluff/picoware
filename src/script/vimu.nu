@@ -1282,34 +1282,9 @@ Start-Service sshd
 
     if not ($"($config)/.win_debloat" | path exists) {
         powershell -command '
-& ([ScriptBlock]::Create((irm "https://debloat.raphi.re/"))) `
-    -DisableBraveBloat `
-    -DisableDVR `
-    -DisableDeliveryOptimization `
-    -DisableDesktopSpotlight `
-    -DisableEdgeAI `
-    -DisableFindMyDevice `
-    -DisableGameBarIntegration `
-    -DisableLocationServices `
-    -DisableNotepadAI `
-    -DisablePaintAI `
-    -DisableSearchHighlights `
-    -DisableSearchHistory `
-    -DisableSettings365Ads `
-    -DisableStartPhoneLink `
-    -DisableStartRecommended `
-    -ExplorerToHome `
-    -HideOnedrive `
-    -HideSearchTb `
-    -HideTaskview `
-    -PreventUpdateAutoReboot `
-    -RemoveCommApps `
-    -RemoveDevApps `
-    -RemoveGamingApps `
-    -RemoveHPApps `
-    -RunDefaults `
-    -ShowHiddenFolders `
-    -Silent
+Invoke-WebRequest -UseBasicParsing -Uri `
+    https://scruffaluff.github.io/picoware/action/debloat-windows.ps1 `
+    | Invoke-Expression
 '
         touch $"($config)/.win_debloat"
     }

@@ -193,10 +193,11 @@ http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | 
 The one-time usage programs, from the following table, can be executed by piping
 them into Bash and PowerShell for Unix systems and Windows respectively.
 
-| Name          | Description                                    |
-| ------------- | ---------------------------------------------- |
-| purge-snap    | Remove all traces of the Snap package manager. |
-| tmate-session | Install and run Tmate for CI pipelines.        |
+| Name            | Description                                         |
+| --------------- | --------------------------------------------------- |
+| debloat-windows | Remove Windows clutter with Raphire's Win11Debloat. |
+| purge-snap      | Remove all traces of the Snap package manager.      |
+| tmate-session   | Install and run Tmate for CI pipelines.             |
 
 The following command runs the Tmate Session script. To execute the other
 actions, replace `tmate-session` with the installer name.

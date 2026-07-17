@@ -62,10 +62,11 @@ The following table shows the available action programs. These actions are Bash
 and PowerShell scripts that are intended for one-time usage to change system
 settings or run a temporary program.
 
-| Name          | Description                                    |
-| ------------- | ---------------------------------------------- |
-| purge-snap    | Remove all traces of the Snap package manager. |
-| tmate-session | Install and run Tmate for CI pipelines.        |
+| Name            | Description                                         |
+| --------------- | --------------------------------------------------- |
+| debloat-windows | Remove Windows clutter with Raphire's Win11Debloat. |
+| purge-snap      | Remove all traces of the Snap package manager.      |
+| tmate-session   | Install and run Tmate for CI pipelines.             |
 
 ## Contributing
 
