@@ -3,7 +3,7 @@
 # dependencies = [
 #   "loguru~=0.7.0",
 #   "pyyaml~=6.0",
-#   "typer~=0.26.7",
+#   "typer~=0.27.0",
 # ]
 # requires-python = "~=3.11"
 # ///
@@ -31,7 +31,7 @@ from typer import Option, Typer
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 cli = Typer(
     add_completion=False,
@@ -164,13 +164,14 @@ def parse_logs(
     source: str, dest: str, logs: Iterable[dict], rename: bool = False
 ) -> list[str]:
     """Parse Rclone logs for synchronization changes."""
-    if rename:
-        return [f"{source} -> {dest}" for log in logs if "object" in log][:1]
-    return [
-        f"{source}/{log['object']} -> {dest}/{log['object']}"
-        for log in logs
-        if "object" in log
-    ]
+    changes = []
+    for log in logs:
+        if "object" in log and "Skipped copy as --dry-run is set" in log.get("msg", ""):
+            if rename:
+                changes.append(f"{source} -> {dest}")
+            else:
+                changes.append(f"{source}/{log['object']} -> {dest}/{log['object']}")
+    return changes
 
 
 def print_version(value: bool) -> None:

@@ -16,7 +16,6 @@ export PSModulePath := if os() == "windows" {
   join(justfile_directory(), ".vendor\\lib\\powershell\\modules;") +
   env("PSModulePath", "")
 } else { "" }
-export UV_PYTHON := "~=3.12"
 export UV_TOOL_BIN_DIR := ".vendor/bin"
 export UV_TOOL_DIR := ".vendor/lib/uv"
 
@@ -93,7 +92,7 @@ lint +paths=".":
   deno lint {{paths}}
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
-  uv tool run ty check {{paths}}
+  uv tool run ty check --config-file ty.toml {{paths}}
 
 # Analyze files for issues.
 [windows]
@@ -108,7 +107,7 @@ lint +paths=".":
   deno lint {{paths}}
   uv tool run ruff format --check {{paths}}
   uv tool run ruff check {{paths}}
-  uv tool run ty check {{paths}}
+  uv tool run ty check --config-file ty.toml {{paths}}
 
 # List available commands.
 [default]
@@ -288,10 +287,10 @@ test-nu *args="--path test":
   use "{{replace(justfile_directory(), '\', '/') / '.vendor/lib/nutest/nutest'}}" run-tests
   if ($env.DEBUG? | into bool --relaxed) {
     with-env {NU_BACKTRACE: "1"} {
-      run-tests --fail --display table {{args}}
+      run-tests --fail {{args}}
     }
   } else {
-    run-tests --fail --display table {{args}}
+    run-tests --fail {{args}}
   }
 
 # Run Python tests (use DEBUG=1 for debugger).

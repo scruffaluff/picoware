@@ -223,7 +223,7 @@ def install-script [
     install-completion $super $system $version $script
 
     if $nu.os-info.name == "windows" {
-        let path_exts = $env.PATHEXT | str downcase | split row ";."
+        let path_exts = $env.PATHEXT | str lowercase | split row ";."
         if not ($ext in $path_exts) {
             install-wrapper $ext $"($dest)/($name)"
         }

@@ -347,7 +347,7 @@ def --wrapped main [
     --version (-v) # Print version information
     ...args: path # Virsh arguments
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     if $version {
         print "Vimu 0.1.7"
     } else if $args == ["-h"] or $args == ["--help"] {
@@ -391,7 +391,7 @@ def --wrapped "main adb" [
     domain: string # Virtual machine name
     ...args: path # Android debug bridge arguments.
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
@@ -405,7 +405,7 @@ def --wrapped "main bootstrap" [
     domain: string # Virtual machine name
     ...args: path # Bootware arguments.
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
@@ -423,7 +423,7 @@ def "main create" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     let arch = match $nu.os-info.arch {
         aarch64 => "arm64"
         x86_64 => "amd64"
@@ -525,7 +525,7 @@ def "main detach-cdroms" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     let cdroms = virsh domblklist --details $domain
     | from ssv
     | reject 0
@@ -543,7 +543,7 @@ def "main fetch" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     let arch = match $nu.os-info.arch {
         aarch64 => "arm64"
         x86_64 => "amd64"
@@ -658,7 +658,7 @@ def "main forget" [
     --dry-run (-d) # Only print actions to be taken
     --log-level (-l): string = "debug" # Log level
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     for file in [
         ".ansible"
         ".bash_history"
@@ -700,7 +700,7 @@ def "main gui" [
     domain: string # Virtual machine name
     ...args: path # Virt Viewer arguments
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
     }
@@ -719,7 +719,7 @@ def --wrapped "main install" [
     uri: string # Machine image URL or file path
     ...args: string
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     setup-host
     let arch = $arch | default $nu.os-info.arch
     let config = path-config
@@ -791,7 +791,7 @@ def "main remove" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     let home = path-home
     let libvirt = path-libvirt
     let title = $domain | str capitalize
@@ -834,7 +834,7 @@ def --wrapped "main scp" [
     --log-level (-l): string = "debug" # Log level
     ...args: path # Secure copy arguments
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
 
     mut domain = ""
     mut params = $args
@@ -864,7 +864,7 @@ def "main setup" [
     --desktop (-d): string = "gnome" # Desktop environment
     ...commands: string # Setup commands (desktop,guest,host)
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
 
     for command in $commands {
         match $command {
@@ -882,7 +882,7 @@ def "main setup" [
 def "main snapshot-table" [
     --log-level (-l): string = "debug" # Log level
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     virsh list --all --name | str trim | lines | each {|domain|
         virsh snapshot-list --parent $domain | str trim | lines | drop nth 1
         | str join "\n" | from ssv | insert Domain $domain | move Domain --first
@@ -895,7 +895,7 @@ def --wrapped "main ssh" [
     domain: string # Virtual machine name
     ...args: path # Secure shell arguments
 ]: [nothing -> nothing string -> string] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     let key = $"(path-config)/key"
     if not (virsh list --name | str contains $domain) {
         virsh start $domain
@@ -916,7 +916,7 @@ def "main upload" [
     --log-level (-l): string = "debug" # Log level
     domain: string # Virtual machine name
 ] {
-    $env.NU_LOG_LEVEL = $log_level | str upcase
+    $env.NU_LOG_LEVEL = $log_level | str uppercase
     const vimu = path self
     let info = os-info $domain
 
@@ -977,7 +977,7 @@ def os-info [domain: string] {
     } else {
         let query = (main ssh $domain uname -ms)
         | str trim
-        | str downcase
+        | str lowercase
         | split row " "
         {
             arch: ($query | get 1)

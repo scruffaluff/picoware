@@ -8,7 +8,7 @@
 #   "pywebview[qt]~=6.2; sys_platform == 'linux'",
 #   "soundfile~=0.14.0",
 #   "tsdownsample~=0.1.5",
-#   "typer~=0.26.7",
+#   "typer~=0.27.0",
 # ]
 # requires-python = "~=3.11"
 # ///
