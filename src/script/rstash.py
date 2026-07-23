@@ -48,7 +48,7 @@ os.environ["RCLONE_NO_UPDATE_DIR_MODTIME"] = "true"
 os.environ["RCLONE_NO_UPDATE_MODTIME"] = "true"
 
 # Shared state to hold global application flags.
-state: dict[str, Any] = {"config": None, "dry_run": False}
+state: dict[str, Any] = {"config": None, "dry": False}
 
 
 class Manifest:
@@ -224,7 +224,7 @@ def download() -> None:
         return
 
     print(f"Changes to be synced.\n{changes}\n")
-    if state["dry_run"]:
+    if state["dry"]:
         return
     confirm = typer.confirm("Sync changes?")
     if confirm:
@@ -237,9 +237,9 @@ def main(
         Path | None,
         Option("-c", "--config", help="Configuration file path."),
     ] = None,
-    dry_run: Annotated[
+    dry: Annotated[
         bool,
-        Option("-d", "--dry-run", help="Only print actions to be taken."),
+        Option("-d", "--dry", help="Only print actions to be taken."),
     ] = False,
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level.")] = "info",
     version: Annotated[  # noqa: ARG001
@@ -256,7 +256,7 @@ def main(
     """Setup global state for commands."""
     logger.remove()
     logger.add(sys.stderr, level=log_level.upper())
-    state["dry_run"] = dry_run
+    state["dry"] = dry
 
     if config_path is not None:
         state["config"] = config_path
@@ -289,7 +289,7 @@ def sync() -> None:
         return
 
     print(f"Changes to be synced.\n{changes}\n")
-    if state["dry_run"]:
+    if state["dry"]:
         return
     confirm = typer.confirm("Sync changes?")
     if confirm:
@@ -306,7 +306,7 @@ def upload() -> None:
         return
 
     print(f"Changes to be synced.\n{changes}\n")
-    if state["dry_run"]:
+    if state["dry"]:
         return
     confirm = typer.confirm("Sync changes?")
     if confirm:

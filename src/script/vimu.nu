@@ -655,7 +655,7 @@ def "main fetch" [
 
 # Clear history files.
 def "main forget" [
-    --dry-run (-d) # Only print actions to be taken
+    --dry (-d) # Only print actions to be taken
     --log-level (-l): string = "debug" # Log level
 ] {
     $env.NU_LOG_LEVEL = $log_level | str uppercase
@@ -687,7 +687,7 @@ def "main forget" [
         let path = $"($env.HOME)/($file)"
         if ($path | path exists) {
             log info $"Deleting file ($path)."
-            if not $dry_run {
+            if not $dry {
                 rm --force --recursive $path
             }
         }
