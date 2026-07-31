@@ -94,7 +94,7 @@ def main [
     --version (-v): string # Version of Rust to install
 ] {
     if $quiet { $env.SCRIPTS_NOLOG = "true" }
-    let dest = $dest | default $"(path-home)/.cargo" | path expand
+    let dest = $dest | default $"($nu.home-dir)/.cargo" | path expand
     let bin = $dest | path join "bin"
 
     # Check if admin permissions are required since rustup cannot be installed
@@ -117,15 +117,6 @@ def main [
 
     $env.PATH = $env.PATH | prepend $bin
     log $"Installed (cargo --version)."
-}
-
-# Get user home folder.
-def path-home [] {
-    if $nu.os-info.name == "windows" {
-        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
-    } else {
-        $env.HOME?
-    }
 }
 
 # Add destination path to Windows environment path.
@@ -154,17 +145,17 @@ def update-shell [dest: directory] {
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        bash => $"($env.HOME)/.bashrc"
-        fish => $"($env.HOME)/.config/fish/config.fish"
+        bash => $"($nu.home-dir)/.bashrc"
+        fish => $"($nu.home-dir)/.config/fish/config.fish"
         nu => {
             if $nu.os-info.name == "macos" {
-                $"($env.HOME)/Library/Application Support/nushell/config.nu"
+                $"($nu.home-dir)/Library/Application Support/nushell/config.nu"
             } else {
-                $"($env.HOME)/.config/nushell/config.nu"
+                $"($nu.home-dir)/.config/nushell/config.nu"
             }
         }
-        zsh => $"($env.HOME)/.zshrc"
-        _ => $"($env.HOME)/.profile"
+        zsh => $"($nu.home-dir)/.zshrc"
+        _ => $"($nu.home-dir)/.profile"
     }
 
     # Create profile parent directory and add export command to profile.

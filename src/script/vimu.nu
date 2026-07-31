@@ -67,12 +67,11 @@ users:
 # Create application desktop entry.
 def create-app [domain: string] {
     let config = path-config
-    let home = path-home
     let title = $domain | str capitalize
 
     match $nu.os-info.name {
         macos => {
-            let dest = $"($home)/Applications/($title).app/Contents"
+            let dest = $"($nu.home-dir)/Applications/($title).app/Contents"
             mkdir $"($dest)/MacOS" $"($dest)/Resources"
             cp $"($config)/icon.icns" $"($dest)/Resources/icon.icns"
             create-entry $domain $"($dest)/MacOS/main.sh"
@@ -120,7 +119,7 @@ def create-app [domain: string] {
         }
         windows => { error make "Windows application is not yet supported." }
         _ => {
-            let dest = $"($home)/.local/share/applications"
+            let dest = $"($nu.home-dir)/.local/share/applications"
             mkdir $dest
             (
                 $"
@@ -240,7 +239,6 @@ def --wrapped install-cdrom [
     cdrom: path
     ...args: string
 ] {
-    let home = path-home
     let args = virt-args $arch ...$args
     let disk = $"(path-libvirt)/cdrom/($domain).iso"
     cp $cdrom $disk
@@ -684,7 +682,7 @@ def "main forget" [
         "Library/Application Support/nushell/history.sqlite3-wal"
         "Library/Application Support/nushell/history.txt"
     ] {
-        let path = $"($env.HOME)/($file)"
+        let path = $"($nu.home-dir)/($file)"
         if ($path | path exists) {
             log info $"Deleting file ($path)."
             if not $dry {
@@ -792,7 +790,6 @@ def "main remove" [
     domain: string # Virtual machine name
 ] {
     $env.NU_LOG_LEVEL = $log_level | str uppercase
-    let home = path-home
     let libvirt = path-libvirt
     let title = $domain | str capitalize
 
@@ -815,14 +812,14 @@ def "main remove" [
         linux => {
             (
                 rm --force --recursive
-                $"($home)/.local/share/applications/($domain).desktop"
+                $"($nu.home-dir)/.local/share/applications/($domain).desktop"
                 $"($libvirt)/cdrom/($domain).iso"
             )
         }
         macos => {
             (
                 rm --force --recursive
-                $"($home)/Applications/($title).app"
+                $"($nu.home-dir)/Applications/($title).app"
                 $"($libvirt)/cdrom/($domain).iso"
             )
         }
@@ -988,26 +985,16 @@ def os-info [domain: string] {
 
 # Get Vimu configuration folder.
 def path-config [] {
-    let home = path-home
     match $nu.os-info.name {
-        macos => $"($home)/Library/Application Support/vimu"
-        windows => $"($home)/AppData/Roaming/vimu"
-        _ => $"($home)/.config/vimu"
-    }
-}
-
-# Get user home folder.
-def path-home [] {
-    if $nu.os-info.name == "windows" {
-        $env.HOME? | default $"($env.HOMEDRIVE?)($env.HOMEPATH?)"
-    } else {
-        $env.HOME?
+        macos => $"($nu.home-dir)/Library/Application Support/vimu"
+        windows => $"($nu.home-dir)/AppData/Roaming/vimu"
+        _ => $"($nu.home-dir)/.config/vimu"
     }
 }
 
 # Get Libvirt folder.
 def path-libvirt [] {
-    $"(path-home)/.config/libvirt"
+    $"($nu.home-dir)/.config/libvirt"
 }
 
 # Configure desktop environment on guest filesystem.
@@ -1101,7 +1088,6 @@ def setup-desktop [desktop: string = "gnome"] {
 
 # Configure guest filesystem.
 def setup-guest [] {
-    let home = path-home
     let super = find-super
 
     match $nu.os-info.name {
@@ -1131,8 +1117,14 @@ def setup-guest [] {
 "
             }
 
-            mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-            chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
+            (
+                mkdir $"($nu.home-dir)/.config/rclone"
+                $"($nu.home-dir)/.config/rstash"
+            )
+            (
+                chmod 700 $"($nu.home-dir)/.config/rclone"
+                $"($nu.home-dir)/.config/rstash"
+            )
         }
         linux => { setup-guest-linux $super }
         windows => { setup-guest-windows }
@@ -1146,9 +1138,9 @@ def setup-guest [] {
     | nu -c $"($in | decode); main --global ($programs | str join ' ')"
 
     let nushell_folder = match $nu.os-info.name {
-        macos => $"($home)/Library/Application Support/nushell"
-        windows => $"($home)/AppData/Roaming/nushell"
-        _ => $"($home)/.config/nushell"
+        macos => $"($nu.home-dir)/Library/Application Support/nushell"
+        windows => $"($nu.home-dir)/AppData/Roaming/nushell"
+        _ => $"($nu.home-dir)/.config/nushell"
     }
     mkdir $nushell_folder
     http get https://raw.githubusercontent.com/scruffaluff/bootware/refs/heads/main/ansible_collections/scruffaluff/bootware/roles/nushell/files/config.nu
@@ -1168,13 +1160,11 @@ notify_each_step = false
 skip_notify = true
 '
     | str trim --left
-    | save --force $"($home)/.config/topgrade.toml"
+    | save --force $"($nu.home-dir)/.config/topgrade.toml"
 }
 
 # Configure guest filesystem for Linux.
 def setup-guest-linux [super: string] {
-    let home = path-home
-
     if (which apk | is-not-empty) {
         ^$super apk update
         (
@@ -1239,13 +1229,12 @@ def setup-guest-linux [super: string] {
     tar xf $"($temp)/topgrade.tar.gz" -C $temp
     ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
 
-    mkdir $"($home)/.config/rclone" $"($home)/.config/rstash"
-    chmod 700 $"($home)/.config/rclone" $"($home)/.config/rstash"
+    mkdir $"($nu.home-dir)/.config/rclone" $"($nu.home-dir)/.config/rstash"
+    chmod 700 $"($nu.home-dir)/.config/rclone" $"($nu.home-dir)/.config/rstash"
 }
 
 # Configure guest filesystem for Windows.
 def setup-guest-windows [] {
-    let home = path-home
     let config = path-config
     mkdir $config
 
@@ -1302,13 +1291,15 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rclone.zip'
         cp $rclone "C:/Program Files/Bin/rclone.exe"
     }
 
-    mkdir $"($home)/.config/rclone" $"($home)/AppData/Roaming/rstash"
+    (
+        mkdir $"($nu.home-dir)/.config/rclone"
+        $"($nu.home-dir)/AppData/Roaming/rstash"
+    )
 }
 
 # Configure host machine.
 def setup-host [] {
     let config = path-config
-    let home = path-home
     let libvirt = path-libvirt
 
     (

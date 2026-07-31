@@ -97,7 +97,7 @@ def "main edit" [
         $store
         | upsert editor ($env.ZELLIJ_PANE_ID | into int)
         | save --force (path-store)
-        open --raw (path-store) | save --append $"($env.HOME)/zhy.log"
+        open --raw (path-store) | save --append $"($nu.home-dir)/zhy.log"
         exec hx $path
     }
 }

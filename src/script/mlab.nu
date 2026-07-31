@@ -67,7 +67,7 @@ def --wrapped "main jupyter" [
 ] {
     let venv = match $nu.os-info.name {
         windows => $"($env.LocalAppData)/mlab/venv"
-        _ => $"($env.HOME)/.local/share/mlab/venv"
+        _ => $"($nu.home-dir)/.local/share/mlab/venv"
     } | path expand
     let venv_bin = match $nu.os-info.name {
         windows => {

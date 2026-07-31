@@ -166,7 +166,7 @@ def install-completion [
             _ => {fish: $"/etc/fish/completions/($name).fish"}
         }
     } else {
-        {fish: $"($env.HOME)/.config/fish/completions/($name).fish"}
+        {fish: $"($nu.home-dir)/.config/fish/completions/($name).fish"}
     }
 
     for completion in $completions {
@@ -312,7 +312,7 @@ def main [
             $"($env.LocalAppData)\\Programs\\Bin"
         }
     } else {
-        if $global { "/usr/local/bin" } else { $"($env.HOME)/.local/bin" }
+        if $global { "/usr/local/bin" } else { $"($nu.home-dir)/.local/bin" }
     }
     let dest = $dest | default $dest_default | path expand
 
@@ -362,17 +362,17 @@ def update-shell [dest: directory] {
         _ => $"export PATH=\"($dest):${PATH}\""
     }
     let profile = match $shell {
-        bash => $"($env.HOME)/.bashrc"
-        fish => $"($env.HOME)/.config/fish/config.fish"
+        bash => $"($nu.home-dir)/.bashrc"
+        fish => $"($nu.home-dir)/.config/fish/config.fish"
         nu => {
             if $nu.os-info.name == "macos" {
-                $"($env.HOME)/Library/Application Support/nushell/config.nu"
+                $"($nu.home-dir)/Library/Application Support/nushell/config.nu"
             } else {
-                $"($env.HOME)/.config/nushell/config.nu"
+                $"($nu.home-dir)/.config/nushell/config.nu"
             }
         }
-        zsh => $"($env.HOME)/.zshrc"
-        _ => $"($env.HOME)/.profile"
+        zsh => $"($nu.home-dir)/.zshrc"
+        _ => $"($nu.home-dir)/.profile"
     }
 
     # Create profile parent directory and add export command to profile.
