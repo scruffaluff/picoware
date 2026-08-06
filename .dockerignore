@@ -1,0 +1,6 @@
+# Docker configuration file for ignoring paths while collecting context.
+#
+# For more information, visit
+# https://codefresh.io/docker-tutorial/not-ignore-dockerignore-2.
+
+*

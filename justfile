@@ -3,7 +3,7 @@
 # For more information, visit https://just.systems.
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
-export DENO_INSTALL_ROOT := ".vendor/lib/deno"
+export DENO_INSTALL_ROOT := justfile_directory() / ".vendor/lib/deno"
 export PATH := if os() == "windows" {
   join(justfile_directory(), ".vendor\\bin;") + join(justfile_directory(),
   ".vendor\\lib\\deno\\bin;") + env("PATH")
@@ -16,8 +16,9 @@ export PSModulePath := if os() == "windows" {
   join(justfile_directory(), ".vendor\\lib\\powershell\\modules;") +
   env("PSModulePath", "")
 } else { "" }
-export UV_TOOL_BIN_DIR := ".vendor/bin"
-export UV_TOOL_DIR := ".vendor/lib/uv"
+export UV_PYTHON_INSTALL_DIR :=  justfile_directory() / ".vendor/lib/uv/python"
+export UV_TOOL_BIN_DIR := justfile_directory() / ".vendor/bin"
+export UV_TOOL_DIR := justfile_directory() / ".vendor/lib/uv/tool"
 
 # Run continuous integration pipeline.
 ci: setup lint test doc

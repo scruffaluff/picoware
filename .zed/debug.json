@@ -1,0 +1,13 @@
+[
+  {
+    "adapter": "JavaScript",
+    "attachSimplePort": 9229,
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "label": "Deno",
+    "program": "$ZED_FILE",
+    "request": "launch",
+    "runtimeArgs": ["run", "--allow-all", "--inspect-wait"],
+    "runtimeExecutable": "deno",
+    "type": "pwa-node"
+  }
+]

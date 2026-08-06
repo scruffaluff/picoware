@@ -179,7 +179,7 @@ find_jq() {
   else
     response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
     tmp_dir="$(mktemp -d)"
-    echo "${response}" | sh -s -- --quiet --dest "${tmp_dir}"
+    echo "${response}" | sh -s -- --preserve-env --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi
 }
