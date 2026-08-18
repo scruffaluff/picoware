@@ -77,7 +77,7 @@ class App:
 
 
 def print_version(value: bool) -> None:
-    """Print Rstash version string."""
+    """Print Augraph version string."""
     if value:
         print(f"Augraph {__version__}")
         sys.exit()

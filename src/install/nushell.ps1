@@ -105,7 +105,9 @@ function Main() {
     $ArgIdx = 0
     $DestDir = ''
     $PreserveEnv = $False
-    $Version = ''
+    # TODO: Revert version to empty string once version 0.115.0+ handles http
+    # script arguments correctly.
+    $Version = '0.114.1'
 
     while ($ArgIdx -lt $Args[0].Count) {
         switch ($Args[0][$ArgIdx]) {

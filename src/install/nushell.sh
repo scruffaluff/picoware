@@ -317,7 +317,9 @@ log() {
 # Script entrypoint.
 #######################################
 main() {
-  local dst_dir='' global_='' preserve_env='' super='' version=''
+  # TODO: Revert version to empty string once version 0.115.0+ handles http
+  # script arguments correctly.
+  local dst_dir='' global_='' preserve_env='' super='' version='0.114.1'
 
   # Parse command line arguments.
   while [ "${#}" -gt 0 ]; do

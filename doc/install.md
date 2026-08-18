@@ -148,24 +148,24 @@ The following apps are demos with little functionality.
 | Name    | Description                                    |
 | ------- | ---------------------------------------------- |
 | augraph | Audio plotting example application.            |
-| denoui  | Example GUI application with Deno.             |
+| rustui  | Example GUI application with Rust.             |
 | strudel | Application wrapper around https://strudel.cc. |
 
-The following command will install the augraph and denoui apps. Other apps can
+The following command will install the augraph and strudel apps. Other apps can
 be installed by replacing the program names.
 
 ::: code-group
 
 ```sh [Bash]
-curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- augraph denoui
+curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- augraph strudel
 ```
 
 ```powershell [PowerShell]
-& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/app.ps1))) augraph denoui
+& ([ScriptBlock]::Create((irm https://scruffaluff.github.io/picoware/install/app.ps1))) augraph strudel
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main augraph denoui"
+http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main augraph strudel"
 ```
 
 :::

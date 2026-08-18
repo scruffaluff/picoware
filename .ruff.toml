@@ -8,20 +8,27 @@ cache-dir = ".vendor/cache/ruff"
 docstring-code-format = true
 
 [lint]
-pydocstyle = { convention = "google" }
 ignore = [
-  "COM",    # Rule conflicts with formatter.
+  "COM", # Flake8 comma lints conflict with formatter.
   "CPY001", # Copyright notices are not required.
+  "DOC201", # Not all docstrings should require a returns section.
   "E402",   # Code is required before imports to test standalone scripts.
+  "E731", # Lambda statements sometimes increase readability.
   "EXE003", # Uv should be shebang executor.
-  "FBT",    # Boolean function arguments are acceptable.
-  "FIX",    # Todo comments are acceptable.
-  "ICN",    # Import abbreviations reduce readability.
+  "FBT", # Boolean function arguments are acceptable.
+  "FIX", # Todo comments are acceptable.
+  "ICN", # Import abbreviations reduce readability.
   "INP",    # Standalone scripts should not be part of a package.
-  "S101",   # Assert statements are standard for test functions.
-  "S603",   # Rule warns about using subprocess commands without a solution.
-  "S607",   # Partial paths for process executables is more cross platform.
-  "T201",   # Print statements are acceptable for CLI applications.
-  "TD",     # Todo formatting is excessive for personal projects.
+  "PLR2004", # Constant numerical comparisons are often readable.
+  "RUF201", # Ruff rule codes in configuration files are readable.
+  "RUF067", # Init modules should allow code designed for export.
+  "S101", # Assert statements are standard for test functions.
+  "S603", # Subprocess commands are acceptable.
+  "S607", # Partial paths for process executables is more cross platform.
+  "SIM105", # Try except pass blocks are faster than contextlib supress.
+  "T201", # Print statements are acceptable for CLI applications.
+  "T203", # Print statements are acceptable for CLI applications.
+  "TD", # Todo formatting is excessive for personal projects.
 ]
+pydocstyle = { convention = "google" }
 select = ["ALL"]

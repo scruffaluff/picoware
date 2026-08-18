@@ -53,7 +53,7 @@ currently minimal example GUI applications meant as placeholders.
 | Name    | Description                                    |
 | ------- | ---------------------------------------------- |
 | augraph | Audio plotting example application.            |
-| denoui  | Example GUI application with Deno.             |
+| rustui  | Example GUI application with Rust.             |
 | strudel | Application wrapper around https://strudel.cc. |
 
 ## Actions

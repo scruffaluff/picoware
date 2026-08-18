@@ -203,13 +203,13 @@ def install-script [
     }
     if $ext == "py" and (which uv | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/uv.nu
-        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
     } else if $ext == "rs" and (which rust-script | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/rust-script.nu
-        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
     } else if $ext in ["ts" "tsx"] and (which deno | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/deno.nu
-        | nu -c $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
     }
 
     let program = if $nu.os-info.name == "windows" {
