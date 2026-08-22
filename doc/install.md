@@ -54,7 +54,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/deno.sh | sh
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $"($in | decode); main"
+http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $in
 ```
 
 :::
@@ -72,7 +72,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- --h
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/deno.nu | nu -c $in --help
 ```
 
 :::
@@ -110,7 +110,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/script.sh | sh -s -- c
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $"($in | decode); main clear-cache rgi"
+http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $in clear-cache rgi
 ```
 
 :::
@@ -128,7 +128,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/script.sh | sh -s -- -
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/script.nu | nu -c $in --help
 ```
 
 :::
@@ -165,7 +165,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- augr
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main augraph strudel"
+http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $in augraph strudel
 ```
 
 :::
@@ -183,7 +183,7 @@ curl -LSfs https://scruffaluff.github.io/picoware/install/app.sh | sh -s -- --he
 ```
 
 ```nushell [Nushell]
-http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $"($in | decode); main --help"
+http get https://scruffaluff.github.io/picoware/install/app.nu | nu -c $in --help
 ```
 
 :::

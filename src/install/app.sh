@@ -120,7 +120,7 @@ export PATH="${folder}:\${PATH}"
 # Resolve symlinks to find script folder.
 folder="\$(dirname "\$(realpath "\${0}")")"
 # Use interpeter to avoid env shebang conflicts.
-exec '${command}' "\${folder}/$(basename "${script}")" "\$@"
+exec ${command} "\${folder}/$(basename "${script}")" "\$@"
 EOF
   ${super:+"${super}"} chmod +rx "${path}"
 }
@@ -222,6 +222,10 @@ fetch_app() {
     esac
   done
 
+  if [ -z "${script}" ]; then
+    log --stderr "error: No entry point found in app ${name}."
+    exit 1
+  fi
   echo "${script}"
 }
 
@@ -279,37 +283,33 @@ find_jq() {
 find_runner() {
   # System path is temporarily updated to ensure that runners can be found.
   local script="${2}" super="${1}"
-  local runner='' PATH="${HOME}/.local/bin:/usr/local/bin:${PATH}"
-  export PATH
+  local runner=''
+  export PATH="${HOME}/.local/bin:/usr/local/bin:${PATH}"
 
   if [ "${script##*.}" = 'nu' ]; then
-    runner="$(command -v nu)"
-    if [ ! -x "${runner}" ]; then
+    if ! command -v nu > /dev/null 2>&1; then
       fetch https://scruffaluff.github.io/picoware/install/nushell.sh | sh -s \
         -- ${super:+--global} --preserve-env --quiet
-      runner="$(command -v nu)"
     fi
+    runner="$(command -v nu)"
   elif [ "${script##*.}" = 'py' ]; then
-    runner="$(command -v uv)"
-    if [ ! -x "${runner}" ]; then
+    if ! command -v uv > /dev/null 2>&1; then
       fetch https://scruffaluff.github.io/picoware/install/uv.sh | sh -s -- \
         ${super:+--global} --preserve-env --quiet
-      runner="$(command -v uv)"
     fi
+    runner="$(command -v uv)"
   elif [ "${script##*.}" = 'rs' ]; then
-    runner="$(command -v rust-script)"
-    if [ ! -x "${runner}" ]; then
+    if ! command -v rust-script > /dev/null 2>&1; then
       fetch https://scruffaluff.github.io/picoware/install/rust-script.sh | sh \
         -s -- ${super:+--global} --preserve-env --quiet
-      runner="$(command -v rust-script)"
     fi
+    runner="$(command -v rust-script)"
   elif [ "${script##*.}" = 'ts' ]; then
-    runner="$(command -v deno)"
-    if [ ! -x "${runner}" ]; then
+    if ! command -v deno > /dev/null 2>&1; then
       fetch https://scruffaluff.github.io/picoware/install/deno.sh | sh -s -- \
         ${super:+--global} --preserve-env --quiet
-      runner="$(command -v deno)"
     fi
+    runner="$(command -v deno)"
   else
     log --stderr "error: Unable to find an application runner for ${script}."
     exit 1
@@ -342,20 +342,66 @@ find_super() {
 }
 
 #######################################
-# Install application for Linux.
+# Install application.
 # Arguments:
 #   Super user command for installation.
+#   Whether to perform system installation.
 #   Repository version branch.
 #   App name.
 #######################################
+install_app() {
+  local global_="${2}" name="${4}" super="${1}" version="${3}"
+  local installer='' os='' runner='' script='' title='' tmp_dir=''
+
+  # Do not use long form flags for uname. They are not supported on some
+  # systems.
+  #
+  # Flags:
+  #   -s: Show operating system kernel name.
+  os="$(uname -s)"
+  title="$(capitalize "${name}")"
+  case "${os}" in
+    Darwin)
+      installer='install_app_macos'
+      ;;
+    Linux)
+      installer='install_app_linux'
+      ;;
+    *)
+      log --stderr "error: Operating system ${os} is not supported"
+      exit 1
+      ;;
+  esac
+
+  log "Installing application ${title}."
+  tmp_dir="$(mktemp -d)"
+  script="$(fetch_app "${super}" "${version}" "${name}" "${tmp_dir}")"
+  runner="$(find_runner "${super}" "${script}")"
+
+  "${installer}" "${super}" "${global_}" "${version}" "${name}" "${tmp_dir}" \
+    "${script}" "${runner}"
+}
+
+#######################################
+# Install application for Linux.
+# Arguments:
+#   Super user command for installation.
+#   Whether to perform system installation.
+#   Repository version branch.
+#   App name.
+#   Download folder.
+#   Application script name.
+#   Application runner path.
+#######################################
 install_app_linux() {
-  local name="${3}" super="${1}" version="${2}"
-  local runner='' script='' title=''
+  local dest='' global_="${2}" name="${4}" runner="${7}" script="${6}" \
+    src="${5}" super="${1}" version="${3}"
+  local title=''
   local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}"
   local icon_url="${url}/data/image/icon.svg"
   title="$(capitalize "${name}")"
 
-  if [ -n "${super}" ]; then
+  if [ -n "${global_}" ]; then
     cli_dir="/usr/local/bin"
     dest="/usr/local/app/${name}"
     manifest="/usr/local/share/applications/${name}.desktop"
@@ -367,12 +413,16 @@ install_app_linux() {
   entry_point="${dest}/main.sh"
   icon="${dest}/icon.svg"
 
-  log "Installing application ${title}."
-  fetch --dest "${icon}" --super "${super}" "${icon_url}"
-  script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
-  runner="$(find_runner "${super}" "${script}")"
-  create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
+  if [ ! -f "${src}/icon.svg" ]; then
+    fetch --dest "${src}/icon.svg" "${icon_url}"
+  fi
+  find . -delete -name "icon.*" -not -name "icon.svg"
+  create_entry "" "${script}" "$(dirname "${runner}")" "${src}/main.sh"
+
+  ${super:+"${super}"} mkdir -p "$(dirname "${dest}")"
+  ${super:+"${super}"} cp "${src}" "${dest}"
   ${super:+"${super}"} ln -fs "${entry_point}" "${cli_dir}/${name}"
+  rm -fr "${src}"
 
   # Parse window class to ensure correct dock icon.
   case "$(basename "${runner}")" in
@@ -417,38 +467,44 @@ EOF
 # Install application for MacOS.
 # Arguments:
 #   Super user command for installation.
+#   Whether to perform system installation.
 #   Repository version branch.
 #   App name.
+#   Download folder.
+#   Application script name.
+#   Application runner path.
 #######################################
 install_app_macos() {
-  local name="${3}" super="${1}" version="${2}"
-  local identifier='' title=''
+  local dest='' global_="${2}" name="${4}" runner="${7}" script="${6}" \
+    src="${5}" super="${1}" version="${3}"
+  local bundle='' identifier='' title=''
   local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}"
   local icon_url="${url}/data/image/icon.icns"
   identifier="com.scruffaluff.app-$(echo "${name}" | sed 's/_/-/g')"
   title="$(capitalize "${name}")"
 
-  if [ -n "${super}" ]; then
+  if [ -n "${global_}" ]; then
+    bundle="/Applications/${title}.app/Contents"
     cli_dir="/usr/local/bin"
-    dest="/Applications/${title}.app/Contents/MacOS"
-    icon="/Applications/${title}.app/Contents/Resources/icon.icns"
-    manifest="/Applications/${title}.app/Contents/Info.plist"
   else
+    bundle="${HOME}/Applications/${title}.app/Contents"
     cli_dir="${HOME}/.local/bin"
-    dest="${HOME}/Applications/${title}.app/Contents/MacOS"
-    icon="${HOME}/Applications/${title}.app/Contents/Resources/icon.icns"
-    manifest="${HOME}/Applications/${title}.app/Contents/Info.plist"
   fi
-  entry_point="${dest}/main.sh"
+  dest="${bundle}/MacOS"
 
-  log "Installing application ${title}."
-  fetch --dest "${icon}" --super "${super}" "${icon_url}"
-  script="$(fetch_app "${super}" "${version}" "${name}" "${dest}")"
-  runner="$(find_runner "${super}" "${script}")"
-  create_entry "${super}" "${script}" "$(dirname "${runner}")" "${entry_point}"
-  ${super:+"${super}"} ln -fs "${entry_point}" "${cli_dir}/${name}"
+  if [ ! -f "${src}/icon.icns" ]; then
+    fetch --dest "${icon}" "${src}/icon.icns"
+  fi
+  create_entry "" "${script}" "$(dirname "${runner}")" "${src}/main.sh"
 
-  cat << EOF | ${super:+"${super}"} tee "${manifest}" > /dev/null
+  ${super:+"${super}"} mkdir -p "$(dirname "${dest}")" "${bundle}/Resources"
+  ${super:+"${super}"} cp -r "${src}/icon.icns" "${bundle}/Resources/icon.icns"
+  rm "${src}"/icon.*
+  ${super:+"${super}"} cp -r "${src}" "${dest}"
+  ${super:+"${super}"} ln -fs "${dest}/main.sh" "${cli_dir}/${name}"
+  rm -fr "${src}"
+
+  cat << EOF | ${super:+"${super}"} tee "${bundle}/Info.plist" > /dev/null
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -599,28 +655,12 @@ main() {
       global_='true'
     fi
 
-    # Do not use long form flags for uname. They are not supported on some
-    # systems.
-    os="$(uname -s)"
-    case "${os}" in
-      Darwin)
-        installer='install_app_macos'
-        ;;
-      Linux)
-        installer='install_app_linux'
-        ;;
-      *)
-        log --stderr "error: Operating system ${os} is not supported"
-        exit 1
-        ;;
-    esac
-
     for name in ${names}; do
       match_found=''
       for app in ${apps}; do
         if [ "${app%.*}" = "${name}" ]; then
           match_found='true'
-          "${installer}" "${super}" "${version}" "${app}"
+          install_app "${super}" "${global_}" "${version}" "${app}"
         fi
       done
 

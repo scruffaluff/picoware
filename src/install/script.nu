@@ -71,7 +71,7 @@ def find-scripts [version: string = "main"] {
         | get tree
         | where type == blob
         | get path
-        | where {|path| ($path | str starts-with "src/script/") }
+        | where {|path| $path | str starts-with "src/script/" }
     }
     | where {|name| ($name | path parse | get extension) in $exts }
     | each {|name| $name | path basename }
@@ -203,13 +203,13 @@ def install-script [
     }
     if $ext == "py" and (which uv | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/uv.nu
-        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $in --quiet ($args | str join ' ')
     } else if $ext == "rs" and (which rust-script | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/rust-script.nu
-        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $in --quiet ($args | str join ' ')
     } else if $ext in ["ts" "tsx"] and (which deno | is-empty) {
         http get https://scruffaluff.github.io/picoware/install/deno.nu
-        | nu --commands $"($in | decode); main --quiet ($args | str join ' ')"
+        | nu --commands $in --quiet ($args | str join ' ')
     }
 
     let program = if $nu.os-info.name == "windows" {
@@ -267,17 +267,6 @@ def --wrapped log [
     }
 }
 
-# Check if super user elevation is required.
-def need-super [dest: directory global: bool] {
-    if $global {
-        return true
-    }
-    try { mkdir $dest } catch { return true }
-    try { touch $"($dest)/.super_check" } catch { return true }
-    rm $"($dest)/.super_check"
-    false
-}
-
 # Installer script for Picoware scripts.
 def main [
     --dest (-d): directory # Directory to install scripts
@@ -333,6 +322,17 @@ def main [
             log --stderr $"error: No script found for '($script)'."
         }
     }
+}
+
+# Check if super user elevation is required.
+def need-super [dest: directory global: bool] {
+    if $global {
+        return true
+    }
+    try { mkdir $dest } catch { return true }
+    try { touch $"($dest)/.super_check" } catch { return true }
+    rm $"($dest)/.super_check"
+    false
 }
 
 # Add destination path to Windows environment path.

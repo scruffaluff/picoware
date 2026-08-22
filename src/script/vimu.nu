@@ -1131,11 +1131,11 @@ def setup-guest [] {
     }
 
     http get https://scruffaluff.github.io/bootware/install.nu
-    | nu --commands $"($in | decode); main --global"
+    | nu --commands $in --global
 
     let programs = ["clear-cache" "fdi" "rgi" "rstash" "vimu"]
     http get https://scruffaluff.github.io/picoware/install/script.nu
-    | nu --commands $"($in | decode); main --global ($programs | str join ' ')"
+    | nu --commands $in --global ($programs | str join ' ')
 
     let nushell_folder = match $nu.os-info.name {
         macos => $"($nu.home-dir)/Library/Application Support/nushell"
@@ -1329,7 +1329,7 @@ def setup-host [] {
     | where {|program| which $program | is-empty }
     if ($programs | is-not-empty) {
         http get https://scruffaluff.github.io/picoware/install/script.nu
-        | nu --commands $"($in | decode); main --global ($programs | str join ' ')"
+        | nu --commands $in --global ($programs | str join ' ')
     }
 }
 

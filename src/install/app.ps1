@@ -47,18 +47,16 @@ function FetchApp($Version, $Name, $Dest) {
 
     New-Item -Force -ItemType Directory -Path $Dest | Out-Null
     foreach ($File in $Files) {
+        $DestFile = "$Dest\$File"
         if (
             $File.EndsWith('.nu') -or $File.EndsWith('.ps1') -or
             $File.EndsWith('.py') -or $File.EndsWith('.rs') -or
             $File.EndsWith('.ts')
         ) {
-            $DestFile = "$Dest\$File"
-            $Script = $DestFile
+            if ([System.IO.Path]::GetFileNameWithoutExtension($File) -eq 'main') {
+                $Script = $DestFile
+            }
         }
-        else {
-            $DestFile = "$Dest\$File"
-        }
-
         Invoke-WebRequest -UseBasicParsing -OutFile $DestFile -Uri "$Url/$File"
     }
 
@@ -109,10 +107,12 @@ function InstallApp($Target, $Version, $Name) {
     New-Item -Force -ItemType Directory -Path $MenuDir | Out-Null
 
     Log "Installing app $Title."
-    Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\icon.ico" -Uri `
-        "$Url/data/public/favicon.ico"
     $Script = FetchApp $Version $Name $DestDir
-    SetupRunner $Name $Script $DestDir $CliDir
+    if (-not (Test-Path "$DestDir\icon.ico")) {
+        Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\icon.ico" -Uri `
+            "$Url/data/image/icon.ico"
+    }
+    SetupRunner $Name $Script $DestDir $CliDir $Url $Target
 
     # Update path variable if CLI is not in system path.
     $Path = [Environment]::GetEnvironmentVariable('Path', "$Target")
@@ -144,19 +144,16 @@ function Log($Text) {
 }
 
 # Find application runner.
-function SetupRunner($Name, $Script, $DestDir, $CliDir) {
+function SetupRunner($Name, $Script, $DestDir, $CliDir, $Url, $TargetEnv) {
     if ($Script.EndsWith('.nu')) {
         if (-not (Get-Command -ErrorAction SilentlyContinue nu)) {
             $NushellArgs = ''
             if ($TargetEnv -eq 'Machine') {
                 $NushellArgs = "$NushellArgs --global"
             }
-            if ($PreserveEnv) {
-                $NushellArgs = "$NushellArgs --preserve-env"
-            }
 
             $NushellScript = Invoke-WebRequest -UseBasicParsing -Uri `
-                "$URL/src/install/nushell.ps1"
+                "$Url/src/install/nushell.ps1"
             Invoke-Expression "& { $NushellScript } $NushellArgs"
         }
 
@@ -169,12 +166,9 @@ function SetupRunner($Name, $Script, $DestDir, $CliDir) {
             if ($TargetEnv -eq 'Machine') {
                 $UvArgs = "$UvArgs --global"
             }
-            if ($PreserveEnv) {
-                $UvArgs = "$UvArgs --preserve-env"
-            }
 
             $UvScript = Invoke-WebRequest -UseBasicParsing -Uri `
-                "$URL/src/install/uv.ps1"
+                "$Url/src/install/uv.ps1"
             Invoke-Expression "& { $UvScript } $UvArgs"
         }
 
@@ -187,12 +181,9 @@ function SetupRunner($Name, $Script, $DestDir, $CliDir) {
             if ($TargetEnv -eq 'Machine') {
                 $RustArgs = "$RustArgs --global"
             }
-            if ($PreserveEnv) {
-                $RustArgs = "$RustArgs --preserve-env"
-            }
 
             $RustScript = Invoke-WebRequest -UseBasicParsing -Uri `
-                "$URL/src/install/rust-script.ps1"
+                "$Url/src/install/rust-script.ps1"
             Invoke-Expression "& { $RustScript } $RustArgs"
         }
 
@@ -205,16 +196,13 @@ function SetupRunner($Name, $Script, $DestDir, $CliDir) {
             if ($TargetEnv -eq 'Machine') {
                 $DenoArgs = "$DenoArgs --global"
             }
-            if ($PreserveEnv) {
-                $DenoArgs = "$DenoArgs --preserve-env"
-            }
 
             $DenoScript = Invoke-WebRequest -UseBasicParsing -Uri `
-                "$URL/src/install/deno.ps1"
+                "$Url/src/install/deno.ps1"
             Invoke-Expression "& { $DenoScript } $DenoArgs"
         }
 
-        $Arguments = "run --allow-all --no-config --quiet --node-modules-dir=none `"$Script`""
+        $Arguments = "desktop --allow-all --hmr --no-config --quiet --node-modules-dir=none `"$Script`""
         $Runner = $(Get-Command deno).Source
     }
     else {
