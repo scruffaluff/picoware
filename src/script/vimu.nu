@@ -1135,7 +1135,7 @@ def setup-guest [] {
 
     let programs = ["clear-cache" "fdi" "rgi" "rstash" "vimu"]
     http get https://scruffaluff.github.io/picoware/install/script.nu
-    | nu --commands $in --global ($programs | str join ' ')
+    | nu --commands $in --global ...$programs
 
     let nushell_folder = match $nu.os-info.name {
         macos => $"($nu.home-dir)/Library/Application Support/nushell"
