@@ -31,14 +31,17 @@ Options:
 }
 
 # Find or download Jq JSON parser.
-function FindJq() {
+function FindJq($TempDir) {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
     if ($JqBin) {
         $JqBin
     }
     else {
         $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
-        $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
+        if (-not $TempDir) {
+            $TempDir = MkTempDir
+        }
+        $TempFile = "$TempDir\jq.exe"
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
         $TempFile
@@ -47,10 +50,12 @@ function FindJq() {
 
 # Find latest Rust Script version.
 function FindLatest($Version) {
-    $JqBin = FindJq
+    $TempDir = MkTempDir
+    $JqBin = FindJq $TempDir
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         https://formulae.brew.sh/api/formula/rust-script.json
     "$Response" | & $JqBin --exit-status --raw-output '.versions.stable'
+    Remove-Item -Recurse -Force $TempDir | Out-Null
 }
 
 # Check if script is run from an admin console.
@@ -66,9 +71,7 @@ function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
         -replace 'ARM64', 'aarch64'
 
     Log "Installing Rust Script to '$DestDir\rust-script.exe'."
-    $TmpDir = [System.IO.Path]::GetTempFileName()
-    Remove-Item $TmpDir | Out-Null
-    New-Item -ItemType Directory -Path $TmpDir | Out-Null
+    $TmpDir = MkTempDir
 
     $Target = "rust-script-$Arch-pc-windows-msvc"
     Invoke-WebRequest -UseBasicParsing -OutFile "$TmpDir\$Target.zip" -Uri `
@@ -76,6 +79,7 @@ function InstallRustScript($TargetEnv, $Version, $DestDir, $PreserveEnv) {
 
     Expand-Archive -DestinationPath $TmpDir -Path "$TmpDir\$Target.zip"
     Copy-Item -Destination $DestDir -Path "$TmpDir\rust-script.exe"
+    Remove-Item -Force -Recurse $TmpDir | Out-Null
 
     if (-not $PreserveEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', $TargetEnv)
@@ -177,6 +181,13 @@ Restart this script from an administrator console or install to a user directory
         $Version = FindLatest
     }
     InstallRustScript $TargetEnv $Version $DestDir $PreserveEnv
+}
+
+# Create a new temporary directory.
+function MkTempDir() {
+    $TempDir = Join-Path $Env:Temp $([Guid]::NewGuid())
+    New-Item -Path $TempDir -Type Directory | Out-Null
+    $TempDir
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

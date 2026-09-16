@@ -54,6 +54,7 @@ create_wrapper_for_incompatible_env() { # @test
   assert_equal "$(head -n 1 "${temp}/pyscript")" "#!/usr/bin/env sh"
   assert_equal "$(head -n 1 "${temp}/pyscript.py")" \
     "#!/usr/bin/env -S uv --no-config --quiet run --script"
+  rm -fr "${temp}"
 }
 
 json_parser_finds_all_unix_scripts() { # @test

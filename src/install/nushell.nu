@@ -75,6 +75,7 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/nu.zip'
             }
         }
     }
+    rm --force --recursive $temp
 }
 
 # Print message if error or logging is enabled.

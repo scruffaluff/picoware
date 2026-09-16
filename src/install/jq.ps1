@@ -42,9 +42,6 @@ function InstallJq($TargetEnv, $Version, $DestDir, $PreserveEnv) {
     }
 
     Log "Installing Jq to '$DestDir\jq.exe'."
-    $TmpDir = [System.IO.Path]::GetTempFileName()
-    Remove-Item $TmpDir | Out-Null
-    New-Item -ItemType Directory -Path $TmpDir | Out-Null
     Invoke-WebRequest -UseBasicParsing -OutFile "$DestDir\jq.exe" -Uri `
         "https://github.com/jqlang/jq/releases/$Subpath/jq-windows-$Arch.exe"
 

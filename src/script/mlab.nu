@@ -185,4 +185,8 @@ def script [
             ^$program ...$flags -r $code
         }
     }
+
+    if $shebang {
+        rm --force --recursive $folder
+    }
 }

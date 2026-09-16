@@ -57,10 +57,11 @@ def deploy [
     let folder = $dest | path dirname
 
     # Download to temporary file to avoid permission restrictions.
+    mut temp = ""
     let file = if ($source | path exists) {
         $source
     } else {
-        let temp = mktemp --tmpdir
+        $temp = mktemp --tmpdir
         if $quiet {
             http get $source | save --force $temp
         } else {
@@ -82,6 +83,10 @@ def deploy [
         if ($mode | is-not-empty) and $nu.os-info.name != "windows" {
             ^$super chmod $mode $dest
         }
+    }
+
+    if ($temp | is-not-empty) {
+        rm --force $temp
     }
 }
 

@@ -4,8 +4,9 @@ ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install essential packages.
-RUN apt-get update --ignore-missing && apt-get install --quiet --yes \
-  gcc curl git sudo tar zip
+RUN apt-get update --ignore-missing && apt-get install --no-install-recommends \
+  --quiet --yes ca-certificates curl gcc git sudo tar zip && rm --force \
+  --recursive /var/lib/apt/lists/*
 
 # Create non-priviledged user and grant user passwordless sudo.
 RUN useradd --create-home --no-log-init debian \

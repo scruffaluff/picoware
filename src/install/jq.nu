@@ -65,6 +65,7 @@ def install-jq [super: string dest: directory subpath: string] {
             ^$super chmod 755 $dest_file
         }
     }
+    rm --force --recursive $temp
 }
 
 # Check if super user elevation is required.

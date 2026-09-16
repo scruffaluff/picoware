@@ -54,10 +54,7 @@ function InstallCargo($Version, $DestDir, $PreserveEnv) {
     }
 
     Log "Installing Cargo to '$DestDir\bin\cargo.exe'."
-    $TmpDir = [System.IO.Path]::GetTempFileName()
-    Remove-Item $TmpDir | Out-Null
-    New-Item -ItemType Directory -Path $TmpDir | Out-Null
-
+    $TmpDir = MkTempDir
     Invoke-WebRequest -UseBasicParsing -OutFile "$TmpDir\rustup-init.exe" -Uri `
         "https://static.rust-lang.org/rustup/dist/$Arch-pc-windows-msvc/rustup-init.exe"
 
@@ -65,6 +62,7 @@ function InstallCargo($Version, $DestDir, $PreserveEnv) {
     $Env:RUSTUP_HOME = $RustupHome
     $Env:Path = "$BinDir;$Env:Path"
     & "$TmpDir\rustup-init.exe" $ArgsList
+    Remove-Item -Force -Recurse $TmpDir | Out-Null
 
     if (-not $PreserveEnv) {
         $Path = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -137,6 +135,13 @@ function Main() {
     New-Item -Force -ItemType Directory -Path $DestDir | Out-Null
     $DestDir = [System.IO.Path]::GetFullPath($DestDir)
     InstallCargo $Version $DestDir $PreserveEnv
+}
+
+# Create a new temporary directory.
+function MkTempDir() {
+    $TempDir = Join-Path $Env:Temp $([Guid]::NewGuid())
+    New-Item -Path $TempDir -Type Directory | Out-Null
+    $TempDir
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

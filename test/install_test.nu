@@ -10,6 +10,7 @@ def deno-prints=version [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "Installed deno 2."
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -19,6 +20,7 @@ def deno-quiet-is-silent [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert equal $result.stdout ""
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -28,6 +30,7 @@ def jq-prints-version [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "Installed jq-1."
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -37,6 +40,7 @@ def jq-quiet-is-silent [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert equal $result.stdout ""
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -46,6 +50,7 @@ def just-prints-version [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "Installed just 1."
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -55,6 +60,7 @@ def just-quiet-is-silent [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert equal $result.stdout ""
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -64,6 +70,7 @@ def rust-script-prints=version [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "Installed rust-script 0."
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -75,6 +82,7 @@ def rust-script-quiet-is-silent [] {
     )
     assert equal $result.exit_code 0 $result.stderr
     assert equal $result.stdout ""
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -84,6 +92,7 @@ def uv-prints-version [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert str contains $result.stdout "Installed uv 0."
+    rm --force --recursive $tmp_dir
 }
 
 @test
@@ -93,4 +102,5 @@ def uv-quiet-is-silent [] {
     | complete
     assert equal $result.exit_code 0 $result.stderr
     assert equal $result.stdout ""
+    rm --force --recursive $tmp_dir
 }

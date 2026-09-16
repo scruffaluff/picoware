@@ -64,6 +64,7 @@ def install-cargo-windows [dest: directory version?: string] {
     } {
         ^$"($temp)\\rustup-init.exe" ...$args
     }
+    rm --force --recursive $temp
 }
 
 # Print message if error or logging is enabled.

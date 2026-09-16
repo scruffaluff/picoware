@@ -26,6 +26,7 @@ def handle-shebang-creates-shell-wrapper [] {
     let text = open --raw $script
     assert path $"($script).py"
     assert str contains $text $"exec uv --no-config --quiet run --script '($script).py' \"$@\""
+    rm --force --recursive $temp
 }
 
 @test

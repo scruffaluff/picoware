@@ -144,11 +144,13 @@ fetch() {
 
 #######################################
 # Find or download Jq JSON parser.
+# Arguments:
+#   Optional folder for Jq download.
 # Outputs:
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin='' response='' tmp_dir=''
+  local jq_bin='' response='' tmp_dir="${1:-}"
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -162,7 +164,9 @@ find_jq() {
     echo "${jq_bin}"
   else
     response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
-    tmp_dir="$(mktemp -d)"
+    if [ -z "${tmp_dir}" ]; then
+      tmp_dir="$(mktemp -d)"
+    fi
     echo "${response}" | sh -s -- --preserve-env --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi
@@ -172,11 +176,13 @@ find_jq() {
 # Find latest Just version.
 #######################################
 find_latest() {
-  local jq_bin='' response=''
-  jq_bin="$(find_jq)"
+  local jq_bin='' response='' tmp_dir=''
+  tmp_dir="$(mktemp -d)"
+  jq_bin="$(find_jq "${tmp_dir}")"
   response="$(fetch 'https://formulae.brew.sh/api/formula/just.json')"
   printf "%s" "${response}" | "${jq_bin}" --exit-status --raw-output \
     '.versions.stable'
+  rm -fr "${tmp_dir}"
 }
 
 #######################################
@@ -260,6 +266,7 @@ install_just() {
     "https://github.com/casey/just/releases/download/${version}/just-${version}-${target}.tar.gz"
   tar fx "${tmp_dir}/just.tar.gz" -C "${tmp_dir}"
   ${super:+"${super}"} install "${tmp_dir}/just" "${dst_file}"
+  rm -fr "${tmp_dir}"
 
   # Update shell profile if destination is not in system path.
   #

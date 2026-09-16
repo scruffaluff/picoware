@@ -22,5 +22,6 @@ def main [] {
         let temp = mktemp --tmpdir --suffix ".png"
         magick $"($data)/image/icon.svg" -background none -resize 256x256 $temp
         sips -s format icns $temp --out $"($data)/image/icon.icns"
+        rm --force $temp
     }
 }

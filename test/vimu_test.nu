@@ -25,6 +25,7 @@ exec vimu gui machine
     create-entry machine $temp
     let text = open --raw $temp
     assert equal $text $expected
+    rm --force $temp
 }
 
 @test

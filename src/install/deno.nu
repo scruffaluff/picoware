@@ -84,6 +84,7 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/deno.zip'
             ^$super chmod 755 $dest_file
         }
     }
+    rm --force --recursive $temp
 }
 
 # Download and install Deno for Alpine.

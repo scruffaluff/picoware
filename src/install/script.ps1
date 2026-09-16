@@ -32,14 +32,17 @@ Options:
 }
 
 # Find or download Jq JSON parser.
-function FindJq() {
+function FindJq($TempDir) {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
     if ($JqBin) {
         $JqBin
     }
     else {
         $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
-        $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
+        if (-not $TempDir) {
+            $TempDir = MkTempDir
+        }
+        $TempFile = "$TempDir\jq.exe"
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
         $TempFile
@@ -49,10 +52,12 @@ function FindJq() {
 # Find all installable scripts inside repository.
 function FindScripts($Version) {
     $Filter = '.tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/script/\")) | select(endswith(\".nu\") or endswith(\".ps1\") or endswith(\".py\") or endswith(\".rs\") or endswith(\".ts\")) | ltrimstr(\"src/script/\")'
-    $JqBin = FindJq
+    $TempDir = MkTempDir
+    $JqBin = FindJq $TempDir
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     "$Response" | & $JqBin --exit-status --raw-output "$Filter"
+    Remove-Item -Recurse -Force $TempDir | Out-Null
 }
 
 # Install script and update path.
@@ -289,6 +294,13 @@ Restart this script from an administrator console or install to a user directory
         Log "Run 'install-scripts --help' for usage."
         exit 2
     }
+}
+
+# Create a new temporary directory.
+function MkTempDir() {
+    $TempDir = Join-Path $Env:Temp $([Guid]::NewGuid())
+    New-Item -Path $TempDir -Type Directory | Out-Null
+    $TempDir
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

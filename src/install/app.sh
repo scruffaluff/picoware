@@ -199,12 +199,14 @@ fetch() {
 fetch_app() {
   local dest="${4}" name="${3}" super="${1}" version="${2}"
   local filter=".tree[] | select(.type == \"blob\") | .path | select(startswith(\"src/app/${name}\")) | ltrimstr(\"src/app/${name}/\")"
-  local jq_bin='' response='' script=''
+  local jq_bin='' response='' script='' tmp_dir=''
   local url="https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/${version}/src/app/${name}"
 
-  jq_bin="$(find_jq)"
+  tmp_dir="$(mktemp -d)"
+  jq_bin="$(find_jq "${tmp_dir}")"
   response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   files="$(echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}")"
+  rm -fr "${tmp_dir}"
 
   ${super:+"${super}"} mkdir -p "${dest}"
   for file in ${files}; do
@@ -239,20 +241,24 @@ fetch_app() {
 find_apps() {
   local version="${1:-main}"
   local filter='.tree[] | select(.type == "tree") | .path | select(startswith("src/app/")) | ltrimstr("src/app/")'
-  local jq_bin='' response=''
+  local jq_bin='' response='' tmp_dir=''
 
-  jq_bin="$(find_jq)"
+  tmp_dir="$(mktemp -d)"
+  jq_bin="$(find_jq "${tmp_dir}")"
   response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
+  rm -fr "${tmp_dir}"
 }
 
 #######################################
 # Find or download Jq JSON parser.
+# Arguments:
+#   Optional folder for Jq download.
 # Outputs:
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin='' response='' tmp_dir=''
+  local jq_bin='' response='' tmp_dir="${1:-}"
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -266,7 +272,9 @@ find_jq() {
     echo "${jq_bin}"
   else
     response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
-    tmp_dir="$(mktemp -d)"
+    if [ -z "${tmp_dir}" ]; then
+      tmp_dir="$(mktemp -d)"
+    fi
     echo "${response}" | sh -s -- --preserve-env --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi

@@ -25,6 +25,7 @@ def create-entry-wraps-shebang [] {
     assert path $"($temp)/main.sh"
     let text = open --raw $"($temp)/main.sh"
     assert str contains $text 'exec nu "${folder}/main.nu" "$@"'
+    rm --force --recursive $temp
 }
 
 @test

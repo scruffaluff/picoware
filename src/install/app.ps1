@@ -40,10 +40,12 @@ function FetchApp($Version, $Name, $Dest) {
     $Filter = ".tree[] | select(.type == \`"blob\`") | .path | select(startswith(\`"src/app/$Name/\`")) | ltrimstr(\`"src/app/$Name/\`")"
     $Url = "https://raw.githubusercontent.com/scruffaluff/picoware/refs/heads/$Version/src/app/$Name"
 
-    $JqBin = FindJq
+    $TempDir = MkTempDir
+    $JqBin = FindJq $TempDir
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     $Files = "$Response" | & $JqBin --exit-status --raw-output "$Filter"
+    Remove-Item -Recurse -Force $TempDir | Out-Null
 
     New-Item -Force -ItemType Directory -Path $Dest | Out-Null
     foreach ($File in $Files) {
@@ -66,21 +68,26 @@ function FetchApp($Version, $Name, $Dest) {
 # Find all apps inside repository.
 function FindApps($Version) {
     $Filter = '.tree[] | select(.type == \"tree\") | .path | select(startswith(\"src/app/\")) | ltrimstr(\"src/app/\")'
-    $JqBin = FindJq
+    $TempDir = MkTempDir
+    $JqBin = FindJq $TempDir
     $Response = Invoke-WebRequest -UseBasicParsing -Uri `
         "https://api.github.com/repos/scruffaluff/picoware/git/trees/$Version`?recursive=true"
     "$Response" | & $JqBin --exit-status --raw-output "$Filter"
+    Remove-Item -Recurse -Force $TempDir | Out-Null
 }
 
 # Find or download Jq JSON parser.
-function FindJq() {
+function FindJq($TempDir) {
     $JqBin = $(Get-Command -ErrorAction SilentlyContinue jq).Source
     if ($JqBin) {
         $JqBin
     }
     else {
         $Arch = $Env:PROCESSOR_ARCHITECTURE.ToLower()
-        $TempFile = [System.IO.Path]::GetTempFileName() -replace '.tmp', '.exe'
+        if (-not $TempDir) {
+            $TempDir = MkTempDir
+        }
+        $TempFile = "$TempDir\jq.exe"
         Invoke-WebRequest -UseBasicParsing -OutFile $TempFile -Uri `
             "https://github.com/jqlang/jq/releases/latest/download/jq-windows-$Arch.exe"
         $TempFile
@@ -141,6 +148,91 @@ function Log($Text) {
     if (!"$Env:SCRIPTS_NOLOG") {
         Write-Output $Text
     }
+}
+
+# Script entrypoint.
+function Main() {
+    $ArgIdx = 0
+    $List = $False
+    $Names = @()
+    $TargetEnv = 'User'
+    $Version = 'main'
+
+    while ($ArgIdx -lt $Args[0].Count) {
+        switch ($Args[0][$ArgIdx]) {
+            { $_ -in '-g', '--global' } {
+                $TargetEnv = 'Machine'
+                $ArgIdx += 1
+                break
+            }
+            { $_ -in '-h', '--help' } {
+                Usage
+                exit 0
+            }
+            { $_ -in '-l', '--list' } {
+                $List = $True
+                $ArgIdx += 1
+                break
+            }
+            { $_ -in '-q', '--quiet' } {
+                $Env:SCRIPTS_NOLOG = 'true'
+                $ArgIdx += 1
+                break
+            }
+            { $_ -in '-v', '--version' } {
+                $Version = $Args[0][$ArgIdx + 1]
+                $ArgIdx += 2
+                break
+            }
+            default {
+                $Names += $Args[0][$ArgIdx]
+                $ArgIdx += 1
+            }
+        }
+    }
+
+    $Apps = FindApps "$Version"
+    if ($List) {
+        foreach ($App in $Apps) {
+            Write-Output "$([IO.Path]::GetFileNameWithoutExtension($App))"
+        }
+    }
+    elseif ($Names) {
+        if (($TargetEnv -eq 'Machine') -and (-not (IsAdministrator))) {
+            Log @'
+System level installation requires an administrator console.
+Restart this script from an administrator console or install to a user directory.
+'@
+            exit 1
+        }
+
+        foreach ($Name in $Names) {
+            $MatchFound = $False
+            foreach ($App in $Apps) {
+                $AppName = [IO.Path]::GetFileNameWithoutExtension($App)
+                if ($AppName -eq $Name) {
+                    $MatchFound = $True
+                    InstallApp $TargetEnv $Version $App
+                }
+            }
+
+            if (-not $MatchFound) {
+                Log "error: No script name match found for '$Name'"
+            }
+        }
+    }
+    else {
+        Log 'error: App argument required.'
+        Log "Run 'install-apps --help' for usage."
+        exit 2
+    }
+}
+
+# Create a new temporary directory.
+function MkTempDir() {
+    $TempDir = Join-Path $Env:Temp $([Guid]::NewGuid())
+    New-Item -Path $TempDir -Type Directory | Out-Null
+    $TempDir
 }
 
 # Find application runner.
@@ -224,84 +316,6 @@ function SetupRunner($Name, $Script, $DestDir, $CliDir, $Url, $TargetEnv) {
     $Shortcut.TargetPath = $Runner
     $Shortcut.WindowStyle = 7 # Minimize initial terminal flash.
     $Shortcut.Save()
-}
-
-# Script entrypoint.
-function Main() {
-    $ArgIdx = 0
-    $List = $False
-    $Names = @()
-    $TargetEnv = 'User'
-    $Version = 'main'
-
-    while ($ArgIdx -lt $Args[0].Count) {
-        switch ($Args[0][$ArgIdx]) {
-            { $_ -in '-g', '--global' } {
-                $TargetEnv = 'Machine'
-                $ArgIdx += 1
-                break
-            }
-            { $_ -in '-h', '--help' } {
-                Usage
-                exit 0
-            }
-            { $_ -in '-l', '--list' } {
-                $List = $True
-                $ArgIdx += 1
-                break
-            }
-            { $_ -in '-q', '--quiet' } {
-                $Env:SCRIPTS_NOLOG = 'true'
-                $ArgIdx += 1
-                break
-            }
-            { $_ -in '-v', '--version' } {
-                $Version = $Args[0][$ArgIdx + 1]
-                $ArgIdx += 2
-                break
-            }
-            default {
-                $Names += $Args[0][$ArgIdx]
-                $ArgIdx += 1
-            }
-        }
-    }
-
-    $Apps = FindApps "$Version"
-    if ($List) {
-        foreach ($App in $Apps) {
-            Write-Output "$([IO.Path]::GetFileNameWithoutExtension($App))"
-        }
-    }
-    elseif ($Names) {
-        if (($TargetEnv -eq 'Machine') -and (-not (IsAdministrator))) {
-            Log @'
-System level installation requires an administrator console.
-Restart this script from an administrator console or install to a user directory.
-'@
-            exit 1
-        }
-
-        foreach ($Name in $Names) {
-            $MatchFound = $False
-            foreach ($App in $Apps) {
-                $AppName = [IO.Path]::GetFileNameWithoutExtension($App)
-                if ($AppName -eq $Name) {
-                    $MatchFound = $True
-                    InstallApp $TargetEnv $Version $App
-                }
-            }
-
-            if (-not $MatchFound) {
-                Log "error: No script name match found for '$Name'"
-            }
-        }
-    }
-    else {
-        Log 'error: App argument required.'
-        Log "Run 'install-apps --help' for usage."
-        exit 2
-    }
 }
 
 # Only run Main if invoked as script. Otherwise import functions as library.

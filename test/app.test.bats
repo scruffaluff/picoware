@@ -37,6 +37,7 @@ create_entry_wraps_shebang() { # @test
   run cat "${entry}"
   assert_line 'export PATH="/usr/local/bin:${PATH}"'
   assert_line 'exec nu "${folder}/main.nu" "$@"'
+  rm -fr "${temp}"
 }
 
 json_parser_finds_all_apps() { # @test

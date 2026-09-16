@@ -13,10 +13,14 @@ setup() {
 }
 
 deno_prints_version() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/deno.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed deno 2.'
+  rm -fr "${dst_dir}"
 }
 
 deno_shows_error_if_zip_missing() { # @test
@@ -30,8 +34,11 @@ deno_shows_error_if_zip_missing() { # @test
   }
   export -f command
 
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/deno.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_failure
   assert_output "$(
     cat << EOF
@@ -39,13 +46,18 @@ error: Unable to find zip file archiver.
 Install zip, https://en.wikipedia.org/wiki/ZIP_(file_format), manually before continuing.
 EOF
   )"
+  rm -fr "${dst_dir}"
 }
 
 jq_prints_version() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/jq.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed jq-1.'
+  rm -fr "${dst_dir}"
 }
 
 jq_global_owner_is_root() { # @test
@@ -56,13 +68,18 @@ jq_global_owner_is_root() { # @test
     --dest "${dst_dir}"
   assert_success
   assert_file_owner root "${dst_dir}/jq"
+  rm -fr "${dst_dir}"
 }
 
 jq_quiet_is_silent() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/jq.sh ${DEBUG:+--debug} --preserve-env --quiet --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output ''
+  rm -fr "${dst_dir}"
 }
 
 just_shows_error_usage_for_bad_argument() { # @test
@@ -77,10 +94,14 @@ EOF
 }
 
 just_prints_version() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/just.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed just 1.'
+  rm -fr "${dst_dir}"
 }
 
 just_downloads_jq_if_missing() { # @test
@@ -94,17 +115,25 @@ just_downloads_jq_if_missing() { # @test
   }
   export -f command
 
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/just.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed just 1.'
+  rm -fr "${dst_dir}"
 }
 
 nushell_prints_version() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/nushell.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed Nushell 0.'
+  rm -fr "${dst_dir}"
 }
 
 nushell_shows_error_if_tar_missing() { # @test
@@ -118,8 +147,11 @@ nushell_shows_error_if_tar_missing() { # @test
   }
   export -f command
 
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/nushell.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_failure
   assert_output "$(
     cat << EOF
@@ -127,18 +159,27 @@ error: Unable to find tar file archiver.
 Install tar, https://gnu.org/software/tar, manually before continuing.
 EOF
   )"
+  rm -fr "${dst_dir}"
 }
 
 rust_script_prints_version() { # @test
-  run bash src/install/rust-script.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
+  run bash src/install/rust-script.sh ${DEBUG:+--debug} --preserve-env \
+    --dest "${dst_dir}"
   assert_success
   assert_output --partial 'Installed rust-script 0.'
+  rm -fr "${dst_dir}"
 }
 
 uv_prints_version() { # @test
+  local dst_dir
+  dst_dir="$(mktemp -d)"
+
   run bash src/install/uv.sh ${DEBUG:+--debug} --preserve-env --dest \
-    "$(mktemp -d)"
+    "${dst_dir}"
   assert_success
   assert_output --partial 'Installed uv 0.'
+  rm -fr "${dst_dir}"
 }

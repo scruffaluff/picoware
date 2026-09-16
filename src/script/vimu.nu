@@ -23,11 +23,13 @@ def ask-password [] {
 
 # Generate cloud init data.
 def cloud-init [
+    --dest (-d): string
     --super (-s): string = "sudo"
     domain: string
     username: string
     password: string
 ] {
+    let dest = $dest | default (mktemp --directory --tmpdir)
     let pub_key = open --raw $"(path-config)/key.pub" | str trim
     let super_config = match $super {
         doas => $"doas: ['permit nopass ($username)']"
@@ -37,10 +39,10 @@ def cloud-init [
 
     # Some Cloud-Init systems requires a metadata file as mentioned at
     # https://github.com/virt-manager/virt-manager/issues/975#issuecomment-3246370350.
-    let meta_path = mktemp --tmpdir --suffix .yaml
+    let meta_path = $"($dest)/meta.yaml"
     let meta_data = $"hostname: '($domain)'" | save --force $meta_path
 
-    let user_path = mktemp --tmpdir --suffix .yaml
+    let user_path = $"($dest)/user.yaml"
     let user_data = $"
 #cloud-config
 groups:
@@ -269,11 +271,16 @@ def --wrapped install-disk [
     ...args: string
 ] {
     mut args = virt-args $arch ...$args
+    mut temp = ""
+
     if $cloud_init {
         print "Creating cloud init account for virtual machine."
+        $temp = mktemp --directory --tmpdir
         let username = $env.VIMU_USERNAME? | default { input "Username: " }
         let password = $env.VIMU_PASSWORD? | default { ask-password }
-        let cloud_data = cloud-init --super $super $domain $username $password
+        let cloud_data = (
+            cloud-init --dest $temp --super $super $domain $username $password
+        )
         $args = ["--cloud-init" $cloud_data ...$args]
     }
 
@@ -295,6 +302,10 @@ def --wrapped install-disk [
         --vcpus 2
         ...$args
     )
+
+    if ($temp | is-not-empty) {
+        rmf --force --recursive $temp
+    }
 }
 
 # Create a Windows virtual machine from an ISO disk.
@@ -940,7 +951,9 @@ nu "%~dnp0.nu" %*
         | save --force $temp
         main scp $temp $"($domain):C:/Windows/Temp/vimu_upload.ps1"
         main ssh $domain powershell -file "C:/Windows/Temp/vimu_upload.ps1"
+        main ssh $domain "Remove-Item -Force 'C:/Windows/Temp/vimu_upload.ps1'"
         main scp $vimu $"($domain):C:/Program Files/Bin/vimu.nu"
+        rm --force $temp
     } else {
         let check = main ssh $domain command -v nu | complete
         if $check.exit_code != 0 {
@@ -955,6 +968,7 @@ if command -v doas > /dev/null 2>&1; then
 else
     sudo install /tmp/vimu /usr/local/bin/vimu
 fi
+rm /tmp/vimu
 "
     }
 }
@@ -1228,6 +1242,7 @@ def setup-guest-linux [super: string] {
     | save --progress $"($temp)/topgrade.tar.gz"
     tar xf $"($temp)/topgrade.tar.gz" -C $temp
     ^$super install $"($temp)/topgrade" /usr/local/bin/topgrade
+    rm --force --recursive $temp
 
     mkdir $"($nu.home-dir)/.config/rclone" $"($nu.home-dir)/.config/rstash"
     chmod 700 $"($nu.home-dir)/.config/rclone" $"($nu.home-dir)/.config/rstash"
@@ -1289,6 +1304,7 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/rclone.zip'
 "
         let rclone = glob $"($temp)/**/rclone.exe" | first
         cp $rclone "C:/Program Files/Bin/rclone.exe"
+        rm --force --recursive $temp
     }
 
     (
@@ -1351,26 +1367,31 @@ def setup-rustdesk [] {
                 let temp = mktemp --tmpdir --suffix ".apk"
                 http get $"($url)/($target)-signed.apk" | save --force --progress $temp
                 ^$super apk add $temp
+                rm --force $temp
             } else if (which apt-get | is-not-empty) {
                 # Avoid APT interactive configuration requests.
                 $env.DEBIAN_FRONTEND = "noninteractive"
                 let temp = mktemp --tmpdir --suffix ".deb"
                 http get $"($url)/($target).deb" | save --force --progress $temp
                 ^$super -E apt install --yes $temp
+                rm --force $temp
             } else if (which dnf | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".rpm"
                 http get $"($url)/rustdesk-($version)-0.($nu.os-info.arch).rpm"
                 | save --force --progress $temp
                 ^$super dnf install --assumeyes $temp
+                rm --force $temp
             } else if (which pacman | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".pkg.tar.zst"
                 http get $"($url)/rustdesk-($version)-0-($nu.os-info.arch).pkg.tar.zst"
                 | save --force --progress $temp
                 ^$super pacman --noconfirm --upgrade $temp
+                rm --force $temp
             } else if (which zypper | is-not-empty) {
                 let temp = mktemp --tmpdir --suffix ".rpm"
                 http get $"($url)/($target)-suse.rpm" | save --force --progress $temp
                 ^$super zypper install --no-confirm $temp
+                rm --force $temp
             }
         }
         macos => {
@@ -1379,11 +1400,13 @@ def setup-rustdesk [] {
             hdiutil attach $temp
             sudo cp -R $"/Volumes/rustdesk-($version)/RustDesk.app" /Applications/
             hdiutil detach $"/Volumes/rustdesk-($version)"
+            rm --force $temp
         }
         windows => {
             let temp = mktemp --tmpdir --suffix ".msi"
             http get $"($url)/($target).msi" | save --force --progress $temp
             msiexec /quiet /i $temp
+            rm --force $temp
         }
     }
 }
@@ -1397,6 +1420,7 @@ def setup-tailscale [] {
         http get $"https://pkgs.tailscale.com/stable/tailscale-setup-($version)-amd64.msi"
         | save --force --progress $temp
         msiexec /quiet /i $temp
+        rm --force $temp
     } else if (which tailscale | is-empty) {
         http get https://tailscale.com/install.sh | sh
     }

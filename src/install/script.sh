@@ -151,20 +151,24 @@ fetch() {
 find_completions() {
   local version="${1:-main}"
   local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/completion/")) | select(endswith(".bash") or endswith(".fish") or endswith(".nu")) | ltrimstr("src/completion/")'
-  local jq_bin='' response=''
+  local jq_bin='' response='' tmp_dir=''
 
-  jq_bin="$(find_jq)"
+  tmp_dir="$(mktemp -d)"
+  jq_bin="$(find_jq "${tmp_dir}")"
   response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
+  rm -fr "${tmp_dir}"
 }
 
 #######################################
 # Find or download Jq JSON parser.
+# Arguments:
+#   Optional folder for Jq download.
 # Outputs:
 #   Path to Jq binary.
 #######################################
 find_jq() {
-  local jq_bin='' response='' tmp_dir=''
+  local jq_bin='' response='' tmp_dir="${1:-}"
 
   # Do not use long form flags for uname. They are not supported on some
   # systems.
@@ -178,7 +182,9 @@ find_jq() {
     echo "${jq_bin}"
   else
     response="$(fetch 'https://scruffaluff.github.io/picoware/install/jq.sh')"
-    tmp_dir="$(mktemp -d)"
+    if [ -z "${tmp_dir}" ]; then
+      tmp_dir="$(mktemp -d)"
+    fi
     echo "${response}" | sh -s -- --preserve-env --quiet --dest "${tmp_dir}"
     echo "${tmp_dir}/jq"
   fi
@@ -194,11 +200,13 @@ find_jq() {
 find_scripts() {
   local version="${1:-main}"
   local filter='.tree[] | select(.type == "blob") | .path | select(startswith("src/script/")) | select(endswith(".nu") or endswith(".py") or endswith(".rs") or endswith(".sh") or endswith(".ts")) | ltrimstr("src/script/")'
-  local jq_bin='' response=''
+  local jq_bin='' response='' tmp_dir=''
 
-  jq_bin="$(find_jq)"
+  tmp_dir="$(mktemp -d)"
+  jq_bin="$(find_jq "${tmp_dir}")"
   response="$(fetch "https://api.github.com/repos/scruffaluff/picoware/git/trees/${version}?recursive=true")"
   echo "${response}" | "${jq_bin}" --exit-status --raw-output "${filter}"
+  rm -fr "${tmp_dir}"
 }
 
 #######################################

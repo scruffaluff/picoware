@@ -73,6 +73,7 @@ Expand-Archive -DestinationPath '($temp)' -Path '($temp)/uv.zip'
             ^$super chmod 755 $dest_file
         }
     }
+    rm --force --recursive $temp
 }
 
 # Print message if error or logging is enabled.

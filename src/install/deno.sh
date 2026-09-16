@@ -222,6 +222,7 @@ install_deno() {
     "https://dl.deno.land/release/${version}/deno-${target}.zip"
   unzip -d "${tmp_dir}" "${tmp_dir}/deno.zip"
   ${super:+"${super}"} install "${tmp_dir}/deno" "${dst_file}"
+  rm -fr "${tmp_dir}"
 
   # Update shell profile if destination is not in system path.
   #
