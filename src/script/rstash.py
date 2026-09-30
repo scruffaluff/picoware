@@ -84,7 +84,7 @@ class Manifest:
             self.source = Path(source).expanduser().as_posix()
 
     # TODO: Refactor into standalone function to fix lint.
-    @functools.cache  # noqa: B019
+    @functools.cache  # ruff: ignore[B019]
     def args(self, upload: bool = True) -> list[str]:
         """Create Rclone synchronization arguments."""
         arguments = (["--filter", filter_] for filter_ in self.filters)
@@ -244,7 +244,7 @@ def main(
         Option("-d", "--dry", help="Only print actions to be taken."),
     ] = False,
     log_level: Annotated[str, Option("-l", "--log-level", help="Log level.")] = "info",
-    version: Annotated[  # noqa: ARG001
+    version: Annotated[  # ruff: ignore[ARG001]
         bool,
         Option(
             "-v",

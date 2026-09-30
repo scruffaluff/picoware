@@ -90,7 +90,7 @@ def main(
         bool,
         Option("--dev", help="Launch application in developer mode."),
     ] = False,
-    version: Annotated[  # noqa: ARG001
+    version: Annotated[  # ruff: ignore[ARG001]
         bool,
         Option(
             "-v",
