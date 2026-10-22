@@ -37,6 +37,9 @@ def install-nushell [super: string dest: directory version: string] {
         linux => $"nu-($version)-($nu.os-info.arch)-unknown-linux-musl"
         macos => $"nu-($version)-($nu.os-info.arch)-apple-darwin"
         windows => $"nu-($version)-($nu.os-info.arch)-pc-windows-msvc"
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
+        }
     }
     let dest_file = $"($dest)/nu($ext)"
 

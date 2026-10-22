@@ -48,6 +48,9 @@ def install-deno [super: string dest: directory version: string] {
         linux => $"deno-($nu.os-info.arch)-unknown-linux-gnu"
         macos => $"deno-($nu.os-info.arch)-apple-darwin"
         windows => $"deno-($nu.os-info.arch)-pc-windows-msvc"
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
+        }
     }
     let dest_file = $"($dest)/deno($ext)"
 

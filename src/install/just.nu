@@ -37,6 +37,9 @@ def install-just [super: string dest: directory version: string] {
         linux => $"just-($version)-($nu.os-info.arch)-unknown-linux-musl"
         macos => $"just-($version)-($nu.os-info.arch)-apple-darwin"
         windows => $"just-($version)-($nu.os-info.arch)-pc-windows-msvc"
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
+        }
     }
     let dest_file = $"($dest)/just($ext)"
 

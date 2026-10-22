@@ -115,11 +115,11 @@ def create-app [domain: string] {
 </dict>
 </plist>
 "
-                | str trim
+                | str trim --left
                 | save --force $"($dest)/Info.plist"
             )
         }
-        windows => { error make "Windows application is not yet supported." }
+        windows => { error make "Windows application is not supported." }
         _ => {
             let dest = $"($nu.home-dir)/.local/share/applications"
             mkdir $dest
@@ -1142,6 +1142,9 @@ def setup-guest [] {
         }
         linux => { setup-guest-linux $super }
         windows => { setup-guest-windows }
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
+        }
     }
 
     http get https://scruffaluff.github.io/bootware/install.nu
@@ -1407,6 +1410,9 @@ def setup-rustdesk [] {
             http get $"($url)/($target).msi" | save --force --progress $temp
             msiexec /quiet /i $temp
             rm --force $temp
+        }
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
         }
     }
 }

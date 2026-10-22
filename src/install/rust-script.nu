@@ -37,6 +37,9 @@ def install-rust-script [super: string dest: directory version: string] {
         linux => $"rust-script-($nu.os-info.arch)-unknown-linux-musl"
         macos => $"rust-script-($nu.os-info.arch)-apple-darwin"
         windows => $"rust-script-($nu.os-info.arch)-pc-windows-msvc"
+        _ => {
+            error make $"Operating system ($nu.os-info.name) is not supported."
+        }
     }
     let dest_file = $"($dest)/rust-script($ext)"
 

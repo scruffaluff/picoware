@@ -10,7 +10,7 @@
 #   "tsdownsample~=0.1.5",
 #   "typer~=0.27.0",
 # ]
-# requires-python = "~=3.11"
+# requires-python = ">=3.11.0,<4.0.0"
 # ///
 
 """Audio plotting example application."""

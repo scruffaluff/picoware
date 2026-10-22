@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv --no-config --quiet run --script
 # /// script
-# requires-python = "~=3.11"
+# requires-python = ">=3.11.0,<4.0.0"
 # ///
 
 """Mock script for testing."""

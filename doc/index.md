@@ -40,6 +40,7 @@ that perform convenience tasks. They can be installed with the repository's
 | caffeinate  | Prevent system from sleeping during a program. |
 | clear-cache | Remove package manager caches.                 |
 | fdi         | Interactive Fd searcher.                       |
+| mari        | Manage Marimo desktop applications.            |
 | mlab        | Wrapper script for running Matlab as a CLI.    |
 | rgi         | Interactive Ripgrep searcher.                  |
 | rstash      | Interactive Rclone backup manager.             |

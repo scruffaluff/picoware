@@ -227,6 +227,9 @@ def install-app [
         windows => {
             install-app-windows $global $version $name $src $script $runner
         }
+        _ => {
+			error make $"Operating system ($nu.os-info.name) is not supported."
+		}
     }
 }
 
@@ -300,6 +303,8 @@ StartupWMClass=($wmclass)
 Terminal=false
 Type=Application
 "
+    | str trim --left
+
     if ($super | is-empty) {
         $desktop | save --force $manifest
     } else {
@@ -417,6 +422,8 @@ def install-app-macos [
 </dict>
 </plist>
 "
+    | str trim --left
+
     if ($super | is-empty) {
         $plist | save --force $manifest
     } else {
@@ -549,11 +556,29 @@ def main [
     }
 }
 
-# Delete all icons except for given filename from fold.er
+# Delete all icons except for given filename from folder.
 def remove-icons [folder: path name: string] {
     glob $"($folder)/icon.*"
     | where ($it | path basename) != $name
     | each { rm --force $in }
+}
+
+# Find command-line arguments for application runner.
+def runner-args [script: path runner: string] {
+    let ext = $script | path parse | get extension
+    match ($runner | path basename) {
+        deno => $"desktop --allow-all --hmr --no-config --quiet --node-modules-dir=none \"($script)\""
+        nu => $"\"($script)\""
+        rust-script => $"\"($script)\""
+        uv => $"--no-config --quiet run --script \"($script)\""
+        _ => {
+            if $ext == "ps1" {
+                $"-NoProfile -ExecutionPolicy RemoteSigned -File \"($script)\""
+            } else {
+                $"\"($script)\""
+            }
+        }
+    }
 }
 
 # Add destination path to Windows environment path.
