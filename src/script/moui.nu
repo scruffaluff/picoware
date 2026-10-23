@@ -264,13 +264,13 @@ def find-runner [] {
     which uv | get 0.path
 }
 
-# Manage Marimo desktop applications.
+# Create desktop applications from Marimo notebooks.
 def main [
     --version (-v) # Print version information
     command?: string # Subcommand
 ] {
     if $version {
-        print "Mari 0.0.1"
+        print "Moui 0.0.1"
         return
     }
     ensure-subcmd --meta (metadata $command) $command

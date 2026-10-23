@@ -9,7 +9,7 @@ see the commit logs. The format is based on
 
 ### Added
 
-- Fdi, Mari, and Rstash scripts.
+- Fdi, Moui, and Rstash scripts.
 
 ## 0.2.0 - 2025-05-17
 

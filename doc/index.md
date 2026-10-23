@@ -35,20 +35,20 @@ The following table shows the available scripts. These are single file programs
 that perform convenience tasks. They can be installed with the repository's
 `scripts` installer.
 
-| Name        | Description                                    |
-| ----------- | ---------------------------------------------- |
-| caffeinate  | Prevent system from sleeping during a program. |
-| clear-cache | Remove package manager caches.                 |
-| fdi         | Interactive Fd searcher.                       |
-| mari        | Manage Marimo desktop applications.            |
-| mlab        | Wrapper script for running Matlab as a CLI.    |
-| rgi         | Interactive Ripgrep searcher.                  |
-| rstash      | Interactive Rclone backup manager.             |
-| trsync      | Rsync for one time remote connections.         |
-| tscp        | SCP for one time remote connections.           |
-| tssh        | SSH for one time remote connections.           |
-| vimu        | Convenience script for QEMU and Virsh.         |
-| zhy         | Zellij workspace with Helix and Yazi.          |
+| Name        | Description                                        |
+| ----------- | -------------------------------------------------- |
+| caffeinate  | Prevent system from sleeping during a program.     |
+| clear-cache | Remove package manager caches.                     |
+| fdi         | Interactive Fd searcher.                           |
+| mlab        | Wrapper script for running Matlab as a CLI.        |
+| moui        | Create desktop applications from Marimo notebooks. |
+| rgi         | Interactive Ripgrep searcher.                      |
+| rstash      | Interactive Rclone backup manager.                 |
+| trsync      | Rsync for one time remote connections.             |
+| tscp        | SCP for one time remote connections.               |
+| tssh        | SSH for one time remote connections.               |
+| vimu        | Convenience script for QEMU and Virsh.             |
+| zhy         | Zellij workspace with Helix and Yazi.              |
 
 ## Applications
 
